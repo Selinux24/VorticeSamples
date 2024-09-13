@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <StartupObject>DX12Windows.Program</StartupObject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Libs\Direct3D12\Direct3D12.csproj" />
+    <ProjectReference Include="..\..\Platforms\WindowsPlatform\WindowsPlatform.csproj" />
+  </ItemGroup>
+
+</Project>
