@@ -24,11 +24,11 @@ namespace WindowsPlatform.Native
             [MarshalAs(UnmanagedType.Bool)] bool bMenu,
             WindowStylesEx dwExStyle);
 
-        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        [DllImport("user32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.U2)]
         public static extern ushort RegisterClassExW([In] ref WNDCLASSEXW lpwcx);
 
-        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        [DllImport("user32.dll", SetLastError = true)]
         public static extern IntPtr CreateWindowExW(
             WindowStylesEx dwExStyle,
             [MarshalAs(UnmanagedType.LPWStr)] string lpClassName,
@@ -86,7 +86,7 @@ namespace WindowsPlatform.Native
             }
         }
 
-        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
+        [StructLayout(LayoutKind.Sequential)]
         public struct WNDCLASSEXW
         {
             [MarshalAs(UnmanagedType.U4)] public int cbSize;

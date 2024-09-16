@@ -1,12 +1,15 @@
 ﻿using Engine;
+using Engine.Graphics;
 
 namespace DX12Windows
 {
-    class HelloWorldApp(IPlatformFactory factory) : Application(factory)
+    class HelloWorldApp(IPlatformFactory platformFactory, IGraphicsFactory graphicsFactory) : Application(platformFactory, graphicsFactory)
     {
-        public static HelloWorldApp Start<T>() where T : IPlatformFactory, new()
+        public static HelloWorldApp Start<TPlatform, TGraphics>()
+            where TPlatform : IPlatformFactory, new()
+            where TGraphics : IGraphicsFactory, new()
         {
-            return new HelloWorldApp(new T());
+            return new HelloWorldApp(new TPlatform(), new TGraphics());
         }
     }
 }

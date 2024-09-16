@@ -1,4 +1,5 @@
-﻿using WindowsPlatform;
+﻿using Direct3D12;
+using WindowsPlatform;
 
 namespace DX12Windows
 {
@@ -7,7 +8,7 @@ namespace DX12Windows
         static void Main()
         {
             HelloWorldApp
-                .Start<Win32PlatformFactory>()
+                .Start<Win32PlatformFactory, D3D12GraphicsFactory>()
                 .Run();
         }
     }

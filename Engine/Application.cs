@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using Engine.Graphics;
+using System.Threading.Tasks;
 
 namespace Engine
 {
@@ -7,6 +8,7 @@ namespace Engine
         public static Application Current { get; private set; }
 
         private readonly Platform platform;
+        private readonly Graphics.Graphics graphics;
         private readonly Time time = new();
         private readonly object tickLock = new();
 
@@ -29,9 +31,10 @@ namespace Engine
             }
         }
 
-        protected Application(IPlatformFactory factory)
+        protected Application(IPlatformFactory platformFactory, IGraphicsFactory graphicsFactory)
         {
-            platform = factory.CreatePlatform();
+            platform = platformFactory.CreatePlatform();
+            graphics = graphicsFactory.CreateGraphics();
 
             Current = this;
         }
