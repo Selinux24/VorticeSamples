@@ -18,17 +18,17 @@ namespace Direct3D12
             throw new NotImplementedException();
         }
         /// <inheritdoc/>
-        public override void RemoveSurface(int id)
+        public override void RemoveSurface(uint id)
         {
             throw new NotImplementedException();
         }
         /// <inheritdoc/>
-        public override void ResizeSurface(int id, uint width, uint height)
+        public override void ResizeSurface(uint id, uint width, uint height)
         {
             throw new NotImplementedException();
         }
         /// <inheritdoc/>
-        public override void RenderSurface(int id, IFrameInfo info)
+        public override void RenderSurface(uint id, IFrameInfo info)
         {
             throw new NotImplementedException();
         }
@@ -39,17 +39,17 @@ namespace Direct3D12
             throw new NotImplementedException();
         }
         /// <inheritdoc/>
-        public override void RemoveCamera(int id)
+        public override void RemoveCamera(uint id)
         {
             throw new NotImplementedException();
         }
         /// <inheritdoc/>
-        public override void SetCameraParameter<T>(int id, ICameraParameters parameter, T value)
+        public override void SetCameraParameter<T>(uint id, ICameraParameters parameter, T value)
         {
             throw new NotImplementedException();
         }
         /// <inheritdoc/>
-        public override T GetCameraParameter<T>(int id, ICameraParameters parameter)
+        public override T GetCameraParameter<T>(uint id, ICameraParameters parameter)
         {
             throw new NotImplementedException();
         }
@@ -70,58 +70,58 @@ namespace Direct3D12
             throw new NotImplementedException();
         }
         /// <inheritdoc/>
-        public override void RemoveLight(int id, ulong lightSetKey)
+        public override void RemoveLight(uint id, ulong lightSetKey)
         {
             throw new NotImplementedException();
         }
         /// <inheritdoc/>
-        public override void SetLightParameter<T>(int id, ulong lightSetKey, ILightParameters parameter, T value)
+        public override void SetLightParameter<T>(uint id, ulong lightSetKey, ILightParameters parameter, T value)
         {
             throw new NotImplementedException();
         }
         /// <inheritdoc/>
-        public override T GetLightParameter<T>(int id, ulong lightSetKey, ILightParameters parameter)
+        public override T GetLightParameter<T>(uint id, ulong lightSetKey, ILightParameters parameter)
         {
             throw new NotImplementedException();
         }
 
         /// <inheritdoc/>
-        public override int AddSubmesh(byte[] data)
+        public override uint AddSubmesh(byte[] data)
         {
             throw new NotImplementedException();
         }
         /// <inheritdoc/>
-        public override void RemoveSubmesh(int id)
+        public override void RemoveSubmesh(uint id)
         {
             throw new NotImplementedException();
         }
         /// <inheritdoc/>
-        public override int AddTexture(byte[] data)
+        public override uint AddTexture(byte[] data)
         {
             throw new NotImplementedException();
         }
         /// <inheritdoc/>
-        public override void RemoveTexture(int id)
+        public override void RemoveTexture(uint id)
         {
             throw new NotImplementedException();
         }
         /// <inheritdoc/>
-        public override int AddMaterial(IMaterialInfo info)
+        public override uint AddMaterial(IMaterialInfo info)
         {
             throw new NotImplementedException();
         }
         /// <inheritdoc/>
-        public override void RemoveMaterial(int id)
+        public override void RemoveMaterial(uint id)
         {
             throw new NotImplementedException();
         }
         /// <inheritdoc/>
-        public override int AddRenderItem(int entityId, int geometryContentId, int materialCount, int[] materialIds)
+        public override uint AddRenderItem(uint entityId, uint geometryContentId, uint[] materialIds)
         {
             throw new NotImplementedException();
         }
         /// <inheritdoc/>
-        public override void RemoveRenderItem(int id)
+        public override void RemoveRenderItem(uint id)
         {
             throw new NotImplementedException();
         }
