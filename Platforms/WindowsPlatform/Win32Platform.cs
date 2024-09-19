@@ -53,7 +53,7 @@ namespace WindowsPlatform
                 cbWndExtra = 0,
                 hInstance = hInstance,
                 hIcon = IntPtr.Zero,
-                hCursor = LoadCursor(IntPtr.Zero, (int)IDC_STANDARD_CURSORS.IDC_ARROW),
+                hCursor = LoadCursorW(IntPtr.Zero, (int)IDC_STANDARD_CURSORS.IDC_ARROW),
                 hbrBackground = default,
                 lpszMenuName = null,
                 lpszClassName = WINDOWCLASSNAME,
@@ -116,10 +116,10 @@ namespace WindowsPlatform
             Vortice.Win32.NativeMessage msg = default;
             while (msg.msg != WM_QUIT)
             {
-                if (PeekMessageA(out msg, IntPtr.Zero, 0, 0, (int)PEEK_MESSAGE_REMOVE_TYPE.PM_REMOVE) != 0)
+                if (PeekMessageW(out msg, IntPtr.Zero, 0, 0, (int)PEEK_MESSAGE_REMOVE_TYPE.PM_REMOVE) != 0)
                 {
                     _ = TranslateMessage(ref msg);
-                    _ = DispatchMessageA(ref msg);
+                    _ = DispatchMessageW(ref msg);
                 }
             }
 
@@ -131,7 +131,7 @@ namespace WindowsPlatform
         {
             if (!windows.TryGetValue(hWnd, out _))
             {
-                return DefWindowProc(hWnd, msg, wParam, lParam);
+                return DefWindowProcW(hWnd, msg, wParam, lParam);
             }
 
             switch (msg)
@@ -148,7 +148,7 @@ namespace WindowsPlatform
                     break;
             }
 
-            return DefWindowProc(hWnd, msg, wParam, lParam);
+            return DefWindowProcW(hWnd, msg, wParam, lParam);
         }
     }
 }

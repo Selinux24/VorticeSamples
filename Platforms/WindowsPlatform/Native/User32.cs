@@ -44,10 +44,22 @@ namespace WindowsPlatform.Native
             IntPtr lpParam);
 
         [DllImport("user32.dll")]
-        public static extern IntPtr DefWindowProc(IntPtr hWnd, uint uMsg, IntPtr wParam, IntPtr lParam);
+        public static extern IntPtr DefWindowProcW(IntPtr hWnd, uint uMsg, IntPtr wParam, IntPtr lParam);
 
         [DllImport("user32.dll")]
-        public static extern IntPtr LoadCursor(IntPtr hInstance, int lpCursorName);
+        public static extern IntPtr LoadCursorW(IntPtr hInstance, int lpCursorName);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        public static extern int PeekMessageW(out NativeMessage lpMsg, IntPtr hWnd, int wMsgFilterMin, int wMsgFilterMax, int wRemoveMsg);
+
+        [DllImport("user32.dll")]
+        public static extern int DispatchMessageW(ref NativeMessage lpMsg);
+
+        [DllImport("user32.dll")]
+        public static extern int TranslateMessage(ref NativeMessage lpMsg);
+
+        [DllImport("user32.dll")]
+        public static extern int PostQuitMessage(int nExitCode);
 
         [DllImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -55,18 +67,6 @@ namespace WindowsPlatform.Native
 
         [DllImport("user32.dll", SetLastError = true)]
         public static extern bool DestroyWindow(IntPtr hWnd);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        public static extern int PeekMessageA(out NativeMessage lpMsg, IntPtr hWnd, int wMsgFilterMin, int wMsgFilterMax, int wRemoveMsg);
-
-        [DllImport("user32.dll")]
-        public static extern int TranslateMessage(ref NativeMessage lpMsg);
-
-        [DllImport("user32.dll")]
-        public static extern int DispatchMessageA(ref NativeMessage lpMsg);
-
-        [DllImport("user32.dll")]
-        public static extern int PostQuitMessage(int nExitCode);
 
         [StructLayout(LayoutKind.Sequential)]
         public struct RECT
