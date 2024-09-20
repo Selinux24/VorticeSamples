@@ -4,9 +4,9 @@ using System.Numerics;
 
 namespace Engine.Components
 {
-    public class Transform(TransformId id)
+    public class Transform
     {
-        public TransformId Id { get; private set; } = id;
+        public TransformId Id { get; private set; }
         public Quaternion Rotation
         {
             get
@@ -38,6 +38,15 @@ namespace Engine.Components
                 Debug.Assert(IsValid());
                 return TransformComponent.Scales[(int)IdDetail.Index(Id)];
             }
+        }
+
+        public Transform()
+        {
+            Id = TransformId.MaxValue;
+        }
+        public Transform(TransformId id)
+        {
+            Id = id;
         }
 
         public bool IsValid()

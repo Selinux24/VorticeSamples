@@ -28,7 +28,7 @@ namespace Engine.Components
                 id = (EntityId)generations.Count;
                 generations.Add(0);
 
-                Transforms.Add(null);
+                Transforms.Add(new());
             }
 
             Entity entity = new(id);
@@ -44,7 +44,7 @@ namespace Engine.Components
             Debug.Assert(IsAlive(id));
 
             TransformComponent.Remove(Transforms[(int)index]);
-            Transforms[(int)index] = null;
+            Transforms[(int)index] = new();
         }
         public static bool IsAlive(EntityId id)
         {

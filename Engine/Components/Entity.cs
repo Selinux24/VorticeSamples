@@ -4,9 +4,9 @@ using System.Numerics;
 
 namespace Engine.Components
 {
-    public class Entity(EntityId id)
+    public class Entity
     {
-        public EntityId Id { get; private set; } = id;
+        public EntityId Id { get; private set; }
 
         public Transform Transform
         {
@@ -43,6 +43,15 @@ namespace Engine.Components
             {
                 return Transform.Scale;
             }
+        }
+
+        public Entity()
+        {
+            Id = EntityId.MaxValue;
+        }
+        public Entity(EntityId id)
+        {
+            Id = id;
         }
 
         public bool IsValid()

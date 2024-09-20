@@ -4,19 +4,18 @@ using System.Diagnostics;
 
 namespace Engine.Common
 {
-    static class IdDetail
+    public static class IdDetail
     {
-        const IdType One = 1u;
+        public const IdType One = 1u;
         public const uint GenerationBits = 8;
         public const uint IndexBits = sizeof(IdType) * 8 - GenerationBits;
         public const IdType IndexMask = (One << (int)IndexBits) - 1;
         public const IdType GenerationMask = (One << (int)GenerationBits) - 1;
-        public const IdType InvalidId = One - 1;
         public const uint MinDeletedElements = 1024;
 
         public static bool IsValid(IdType id)
         {
-            return id != InvalidId;
+            return id != IdType.MaxValue;
         }
         public static IdType Index(IdType id)
         {
