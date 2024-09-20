@@ -14,11 +14,6 @@ namespace Engine.Components
                 Debug.Assert(IsValid());
                 return TransformComponent.Rotations[(int)IdDetail.Index(Id)];
             }
-            set
-            {
-                Debug.Assert(IsValid());
-                TransformComponent.Rotations[(int)IdDetail.Index(Id)] = value;
-            }
         }
         public Vector3 Orientation
         {
@@ -35,11 +30,6 @@ namespace Engine.Components
                 Debug.Assert(IsValid());
                 return TransformComponent.Positions[(int)IdDetail.Index(Id)];
             }
-            set
-            {
-                Debug.Assert(IsValid());
-                TransformComponent.Positions[(int)IdDetail.Index(Id)] = value;
-            }
         }
         public Vector3 Scale
         {
@@ -47,11 +37,6 @@ namespace Engine.Components
             {
                 Debug.Assert(IsValid());
                 return TransformComponent.Scales[(int)IdDetail.Index(Id)];
-            }
-            set
-            {
-                Debug.Assert(IsValid());
-                TransformComponent.Scales[(int)IdDetail.Index(Id)] = value;
             }
         }
 
@@ -77,4 +62,14 @@ namespace Engine.Components
 
         All = Rotation | Orientation | Position | Scale
     }
+
+    struct TransformCache
+    {
+        public Quaternion Rotation { get; set; }
+        public Vector3 Orientation { get; set; }
+        public Vector3 Position { get; set; }
+        public Vector3 Scale { get; set; }
+        public TransformId Id { get; set; }
+        public TransformFlags Flags { get; set; }
+    };
 }

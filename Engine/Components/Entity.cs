@@ -7,7 +7,7 @@ namespace Engine.Components
     public class Entity(EntityId id)
     {
         public EntityId Id { get; private set; } = id;
-        
+
         public Transform Transform
         {
             get
@@ -15,33 +15,32 @@ namespace Engine.Components
                 Debug.Assert(IsValid());
                 return EntityComponent.Transforms[(int)IdDetail.Index(Id)];
             }
-            set
+        }
+        public Quaternion Rotation
+        {
+            get
             {
-                Debug.Assert(IsValid());
-                EntityComponent.Transforms[(int)IdDetail.Index(Id)] = value;
+                return Transform.Rotation;
+            }
+        }
+        public Vector3 Orientation
+        {
+            get
+            {
+                return Transform.Orientation;
             }
         }
         public Vector3 Position
         {
             get
             {
-                Debug.Assert(EntityComponent.IsAlive(Id));
                 return Transform.Position;
-            }
-        }
-        public Quaternion Rotation
-        {
-            get
-            {
-                Debug.Assert(EntityComponent.IsAlive(Id));
-                return Transform.Rotation;
             }
         }
         public Vector3 Scale
         {
             get
             {
-                Debug.Assert(EntityComponent.IsAlive(Id));
                 return Transform.Scale;
             }
         }

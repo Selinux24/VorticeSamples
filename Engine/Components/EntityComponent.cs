@@ -7,10 +7,10 @@ namespace Engine.Components
 {
     public static class EntityComponent
     {
-        public static readonly List<Transform> Transforms = [];
-
         private static readonly List<GenerationType> generations = [];
         private static readonly Queue<GenerationType> freeIds = [];
+
+        public static List<Transform> Transforms { get; } = [];
 
         public static Entity Create(EntityInfo info)
         {
