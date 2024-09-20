@@ -39,9 +39,15 @@ namespace EngineTests.Components
                 count = 1000;
             }
             TransformInfo transformInfo = new();
+            GeometryInfo geometryInfo = new()
+            {
+                GeometryContentId = 1u,
+                MaterialIds = [1u, 2u, 3u],
+            };
             EntityInfo entityInfo = new()
             {
                 TransformInfo = transformInfo,
+                GeometryInfo = geometryInfo,
             };
 
             while (count > 0)

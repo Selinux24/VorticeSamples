@@ -45,6 +45,15 @@ namespace Engine.Components
             }
         }
 
+        public Geometry Geometry
+        {
+            get
+            {
+                Debug.Assert(IsValid());
+                return EntityComponent.Geometries[(int)IdDetail.Index(Id)];
+            }
+        }
+
         public Entity()
         {
             Id = EntityId.MaxValue;
@@ -62,6 +71,7 @@ namespace Engine.Components
 
     public struct EntityInfo()
     {
-        public TransformInfo TransformInfo { get; set; }
+        public TransformInfo TransformInfo { get; set; } = new();
+        public GeometryInfo GeometryInfo { get; set; } = new();
     }
 }
