@@ -44,9 +44,9 @@ namespace Engine.Components
         {
             Id = TransformId.MaxValue;
         }
-        public Transform(TransformId id)
+        public Transform(Entity entity)
         {
-            Id = id;
+            Id = entity.Id;
         }
 
         public bool IsValid()
@@ -54,31 +54,4 @@ namespace Engine.Components
             return IdDetail.IsValid(Id);
         }
     }
-
-    public struct TransformInfo()
-    {
-        public Vector3 Position { get; set; } = Vector3.Zero;
-        public Quaternion Rotation { get; set; } = Quaternion.Identity;
-        public Vector3 Scale { get; set; } = Vector3.One;
-    }
-
-    public enum TransformFlags : uint
-    {
-        Rotation = 0x01,
-        Orientation = 0x02,
-        Position = 0x04,
-        Scale = 0x08,
-
-        All = Rotation | Orientation | Position | Scale
-    }
-
-    struct TransformCache
-    {
-        public Quaternion Rotation { get; set; }
-        public Vector3 Orientation { get; set; }
-        public Vector3 Position { get; set; }
-        public Vector3 Scale { get; set; }
-        public TransformId Id { get; set; }
-        public TransformFlags Flags { get; set; }
-    };
 }

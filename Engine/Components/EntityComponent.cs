@@ -11,6 +11,7 @@ namespace Engine.Components
         private static readonly Queue<EntityId> freeIds = [];
 
         public static List<Transform> Transforms { get; } = [];
+        public static List<Script> Scripts { get; } = [];
         public static List<Geometry> Geometries { get; } = [];
 
         public static Entity Create(EntityInfo info)
@@ -28,14 +29,30 @@ namespace Engine.Components
                 id = (EntityId)generations.Count;
                 generations.Add(0);
                 Transforms.Add(new());
+                Scripts.Add(new());
                 Geometries.Add(new());
             }
 
             Entity entity = new(id);
             IdType index = IdDetail.Index(id);
 
+            Debug.Assert(!Transforms[(int)index].IsValid());
             Transforms[(int)index] = TransformComponent.Create(info.TransformInfo, entity);
-            Geometries[(int)index] = GeometryComponent.Create(info.GeometryInfo, entity);
+            Debug.Assert(Transforms[(int)index].IsValid());
+
+            if (info.ScriptInfo != null && info.ScriptInfo?.ScriptCreator != null)
+            {
+                Debug.Assert(!Scripts[(int)index].IsValid());
+                Scripts[(int)index] = ScriptComponent.Create(info.ScriptInfo.Value, entity);
+                Debug.Assert(Scripts[(int)index].IsValid());
+            }
+
+            if (info.GeometryInfo != null)
+            {
+                Debug.Assert(!Geometries[(int)index].IsValid());
+                Geometries[(int)index] = GeometryComponent.Create(info.GeometryInfo.Value, entity);
+                Debug.Assert(Geometries[(int)index].IsValid());
+            }
 
             return entity;
         }
@@ -48,6 +65,12 @@ namespace Engine.Components
             {
                 TransformComponent.Remove(Transforms[(int)index]);
                 Transforms[(int)index] = new();
+            }
+
+            if (Scripts[(int)index].IsValid())
+            {
+                ScriptComponent.Remove(Scripts[(int)index]);
+                Scripts[(int)index] = new();
             }
 
             if (Geometries[(int)index].IsValid())
@@ -63,13 +86,12 @@ namespace Engine.Components
         }
         public static bool IsAlive(EntityId id)
         {
-            Debug.Assert(IdDetail.IsValid(id));
+            Debug.Assert(IdDetail.IsValid(id), "The entity id is not valid.");
             IdType index = IdDetail.Index(id);
-            Debug.Assert(index < generations.Count);
-            return generations[(int)index] == 
-                IdDetail.Generation(id) && 
-                Transforms[(int)index].IsValid() &&
-                Geometries[(int)index].IsValid();
+            Debug.Assert(index < generations.Count, "Index is outside of the generation list bounds.");
+            return generations[(int)index] ==
+                IdDetail.Generation(id) &&
+                Transforms[(int)index].IsValid();
         }
     }
 }

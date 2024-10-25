@@ -12,44 +12,23 @@ namespace Engine.Components
         {
             get
             {
-                Debug.Assert(IsValid());
+                Debug.Assert(EntityComponent.IsAlive(Id), $"The transform's entity id {Id} is not alive.");
                 return EntityComponent.Transforms[(int)IdDetail.Index(Id)];
             }
         }
-        public Quaternion Rotation
+        public Script Script
         {
             get
             {
-                return Transform.Rotation;
+                Debug.Assert(EntityComponent.IsAlive(Id), $"The script's entity id {Id} is not alive.");
+                return EntityComponent.Scripts[(int)IdDetail.Index(Id)];
             }
         }
-        public Vector3 Orientation
-        {
-            get
-            {
-                return Transform.Orientation;
-            }
-        }
-        public Vector3 Position
-        {
-            get
-            {
-                return Transform.Position;
-            }
-        }
-        public Vector3 Scale
-        {
-            get
-            {
-                return Transform.Scale;
-            }
-        }
-
         public Geometry Geometry
         {
             get
             {
-                Debug.Assert(IsValid());
+                Debug.Assert(EntityComponent.IsAlive(Id), $"The geometry's entity id {Id} is not alive.");
                 return EntityComponent.Geometries[(int)IdDetail.Index(Id)];
             }
         }
@@ -67,11 +46,5 @@ namespace Engine.Components
         {
             return IdDetail.IsValid(Id);
         }
-    }
-
-    public struct EntityInfo()
-    {
-        public TransformInfo TransformInfo { get; set; } = new();
-        public GeometryInfo GeometryInfo { get; set; } = new();
     }
 }

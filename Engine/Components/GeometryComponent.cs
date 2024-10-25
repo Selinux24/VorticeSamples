@@ -41,17 +41,18 @@ namespace Engine.Components
             else
             {
                 id = (GeometryId)generations.Count;
-                generations.Add(0);
+                generations.Add(default);
                 idMapping.Add(0);
             }
 
+            Debug.Assert(IdDetail.IsValid(id));
             IdType index = (IdType)renderItemIds.Count;
             activeLod.Add(0);
-            renderItemIds.Add(0);
+            renderItemIds.Add(AddRenderItem(entity.Id, info));
             ownerIds.Add(IdDetail.Index(id));
             idMapping[(int)IdDetail.Index(id)] = index;
 
-            return new(id);
+            return new(entity);
         }
         public static void Remove(Geometry c)
         {
@@ -59,7 +60,7 @@ namespace Engine.Components
             GeometryId id = c.Id;
             IdType index = idMapping[(int)IdDetail.Index(id)];
             GeometryId last_id = ownerIds[^1];
-            //TODO Remove graphics content
+            //TODO Remove content
             idMapping[(int)IdDetail.Index(last_id)] = index;
             idMapping[(int)IdDetail.Index(id)] = IdType.MaxValue;
 
@@ -71,6 +72,12 @@ namespace Engine.Components
         public static IdType[] GetRenderItemIds()
         {
             return [.. renderItemIds];
+        }
+
+        private static uint lastRenderId = 0;
+        private static IdType AddRenderItem(EntityId entityId, GeometryInfo geometryInfo)
+        {
+            return ++lastRenderId;
         }
     }
 }

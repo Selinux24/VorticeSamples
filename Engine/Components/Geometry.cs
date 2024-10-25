@@ -10,20 +10,14 @@ namespace Engine.Components
         {
             Id = GeometryId.MaxValue;
         }
-        public Geometry(GeometryId id)
+        public Geometry(Entity entity)
         {
-            Id = id;
+            Id = entity.Id;
         }
 
         public bool IsValid()
         {
             return IdDetail.IsValid(Id);
         }
-    }
-
-    public struct GeometryInfo()
-    {
-        public IdType GeometryContentId { get; set; } = IdType.MaxValue;
-        public IdType[] MaterialIds { get; set; } = [];
     }
 }

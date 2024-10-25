@@ -87,17 +87,25 @@ namespace Engine.Components
             {
                 Positions[(int)entityIndex] = info.Position;
                 Rotations[(int)entityIndex] = info.Rotation;
+                Orientations[(int)entityIndex] = CalculateOrientation(info.Rotation);
                 Scales[(int)entityIndex] = info.Scale;
+                hasTransforms[(int)entityIndex] = 0;
+                changesFromPreviousFrame[(int)entityIndex] = TransformFlags.All;
             }
             else
             {
                 Debug.Assert(Positions.Count == entityIndex);
-                Positions.Add(info.Position);
+                toWorld.Add(default);
+                invWorld.Add(default);
                 Rotations.Add(info.Rotation);
+                Orientations.Add(CalculateOrientation(info.Rotation));
+                Positions.Add(info.Position);
                 Scales.Add(info.Scale);
+                hasTransforms.Add(0);
+                changesFromPreviousFrame.Add(TransformFlags.All);
             }
 
-            return new(entity.Id);
+            return new(entity);
         }
         public static void Remove(Transform c)
         {

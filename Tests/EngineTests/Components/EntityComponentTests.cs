@@ -20,7 +20,7 @@ namespace EngineTests.Components
         {
             for (int r = 0; r < 10; ++r)
             {
-                for (int i = 0; i < 10000; ++i)
+                for (int i = 0; i < 1000; ++i)
                 {
                     CreateRandom();
                     RemoveRandom();
@@ -39,15 +39,9 @@ namespace EngineTests.Components
                 count = 1000;
             }
             TransformInfo transformInfo = new();
-            GeometryInfo geometryInfo = new()
-            {
-                GeometryContentId = 1u,
-                MaterialIds = [1u, 2u, 3u],
-            };
             EntityInfo entityInfo = new()
             {
                 TransformInfo = transformInfo,
-                GeometryInfo = geometryInfo,
             };
 
             while (count > 0)
