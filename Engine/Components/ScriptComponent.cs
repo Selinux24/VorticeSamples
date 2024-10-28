@@ -1,5 +1,6 @@
 ﻿global using ScriptId = uint;
 using Engine.Common;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 
@@ -7,10 +8,11 @@ namespace Engine.Components
 {
     public static class ScriptComponent
     {
-        private static readonly List<Entity> entityScripts = [];
+        private static readonly List<Script> entityScripts = [];
         private static readonly List<IdType> idMapping = [];
         private static readonly List<GenerationType> generations = [];
         private static readonly Queue<ScriptId> freeIds = [];
+        private static readonly Dictionary<uint, Func<Entity, Script>> scriptRegistery = [];
 
         private static bool Exists(ScriptId id)
         {
@@ -18,9 +20,23 @@ namespace Engine.Components
             IdType index = IdDetail.Index(id);
             Debug.Assert(index < generations.Count && !(IdDetail.IsValid(idMapping[(int)index]) && idMapping[(int)index] >= entityScripts.Count));
             Debug.Assert(generations[(int)index] == IdDetail.Generation(id));
-            return (generations[(int)index] == IdDetail.Generation(id)) &&
-                IdDetail.IsValid(idMapping[(int)index]) &&
-                true /*IdDetail.IsValid(entityScripts[(int)idMapping[(int)index]])*/;
+            return IdDetail.IsValid(idMapping[(int)index]) &&
+                generations[(int)index] == IdDetail.Generation(id) &&
+                entityScripts[(int)idMapping[(int)index]] != null &&
+                entityScripts[(int)idMapping[(int)index]].IsValid();
+        }
+
+        public static bool RegisterScript(uint tag, Func<Entity, Script> func)
+        {
+            bool result = scriptRegistery.TryAdd(tag, func);
+            Debug.Assert(result);
+            return result;
+        }
+        public static Func<Entity, Script> GetScriptCreator(uint tag)
+        {
+            bool result = scriptRegistery.TryGetValue(tag, out Func<Entity, Script> func);
+            Debug.Assert(result);
+            return func;
         }
 
         public static Script Create(ScriptInfo info, Entity entity)
@@ -57,7 +73,7 @@ namespace Engine.Components
             ScriptId id = c.Id;
             IdType index = idMapping[(int)IdDetail.Index(id)];
             ScriptId last_id = entityScripts[^1].Script.Id;
-            
+
             //Erase unordered
             entityScripts[(int)index] = entityScripts[^1];
             entityScripts.RemoveAt(entityScripts.Count - 1);
@@ -68,6 +84,14 @@ namespace Engine.Components
             if (generations[(int)index] < GenerationType.MaxValue)
             {
                 freeIds.Enqueue(id);
+            }
+        }
+
+        public static void Update(float dt)
+        {
+            foreach (var script in entityScripts)
+            {
+                script.Update(dt);
             }
         }
     }

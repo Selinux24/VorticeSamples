@@ -1,6 +1,5 @@
 ﻿using Engine.Common;
 using System.Diagnostics;
-using System.Numerics;
 
 namespace Engine.Components
 {
