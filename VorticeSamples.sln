@@ -21,6 +21,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{EFF65604
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EngineTests", "Tests\EngineTests\EngineTests.csproj", "{182604A7-B9A1-4F8D-B188-90A2A144C1A6}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EngineDLL", "EngineDLL\EngineDLL.csproj", "{B3B46339-FE8E-4FA8-B7EF-A61237BF21B1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -47,6 +49,10 @@ Global
 		{182604A7-B9A1-4F8D-B188-90A2A144C1A6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{182604A7-B9A1-4F8D-B188-90A2A144C1A6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{182604A7-B9A1-4F8D-B188-90A2A144C1A6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B3B46339-FE8E-4FA8-B7EF-A61237BF21B1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B3B46339-FE8E-4FA8-B7EF-A61237BF21B1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B3B46339-FE8E-4FA8-B7EF-A61237BF21B1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B3B46339-FE8E-4FA8-B7EF-A61237BF21B1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -12,7 +12,7 @@ namespace Engine.Components
         private static readonly List<IdType> idMapping = [];
         private static readonly List<GenerationType> generations = [];
         private static readonly Queue<ScriptId> freeIds = [];
-        private static readonly Dictionary<uint, Func<Entity, Script>> scriptRegistery = [];
+        private static readonly Dictionary<string, Func<Entity, Script>> scriptRegistery = [];
 
         private static bool Exists(ScriptId id)
         {
@@ -26,13 +26,13 @@ namespace Engine.Components
                 entityScripts[(int)idMapping[(int)index]].IsValid();
         }
 
-        public static bool RegisterScript(uint tag, Func<Entity, Script> func)
+        public static bool RegisterScript(string tag, Func<Entity, Script> func)
         {
             bool result = scriptRegistery.TryAdd(tag, func);
             Debug.Assert(result);
             return result;
         }
-        public static Func<Entity, Script> GetScriptCreator(uint tag)
+        public static Func<Entity, Script> GetScriptCreator(string tag)
         {
             bool result = scriptRegistery.TryGetValue(tag, out Func<Entity, Script> func);
             Debug.Assert(result);
