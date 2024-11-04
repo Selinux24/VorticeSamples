@@ -41,7 +41,7 @@ namespace EngineTests.Components
             TransformInfo transformInfo = new();
             EntityInfo entityInfo = new()
             {
-                TransformInfo = transformInfo,
+                Transform = transformInfo,
             };
 
             while (count > 0)

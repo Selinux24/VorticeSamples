@@ -37,20 +37,20 @@ namespace Engine.Components
             IdType index = IdDetail.Index(id);
 
             Debug.Assert(!Transforms[(int)index].IsValid());
-            Transforms[(int)index] = TransformComponent.Create(info.TransformInfo, entity);
+            Transforms[(int)index] = TransformComponent.Create(info.Transform, entity);
             Debug.Assert(Transforms[(int)index].IsValid());
 
-            if (info.ScriptInfo != null && info.ScriptInfo?.ScriptCreator != null)
+            if (info.Script != null && info.Script?.ScriptCreator != null)
             {
                 Debug.Assert(!Scripts[(int)index].IsValid());
-                Scripts[(int)index] = ScriptComponent.Create(info.ScriptInfo.Value, entity);
+                Scripts[(int)index] = ScriptComponent.Create(info.Script.Value, entity);
                 Debug.Assert(Scripts[(int)index].IsValid());
             }
 
-            if (info.GeometryInfo != null)
+            if (info.Geometry != null)
             {
                 Debug.Assert(!Geometries[(int)index].IsValid());
-                Geometries[(int)index] = GeometryComponent.Create(info.GeometryInfo.Value, entity);
+                Geometries[(int)index] = GeometryComponent.Create(info.Geometry.Value, entity);
                 Debug.Assert(Geometries[(int)index].IsValid());
             }
 
