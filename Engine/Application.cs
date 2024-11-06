@@ -53,6 +53,8 @@ namespace Engine
             time.Update();
 
             platform.Run();
+
+            Shutdown();
         }
         protected virtual void Initialize()
         {
@@ -114,6 +116,11 @@ namespace Engine
 
         }
         protected virtual void EndDraw()
+        {
+
+        }
+
+        protected virtual void Shutdown()
         {
 
         }

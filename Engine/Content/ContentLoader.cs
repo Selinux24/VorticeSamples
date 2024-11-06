@@ -7,7 +7,7 @@ using System.Text;
 
 namespace Engine.Content
 {
-    public class ContentLoader
+    static class ContentLoader
     {
         enum ComponentType
         {
@@ -22,9 +22,9 @@ namespace Engine.Content
             ReadScript,
         ];
 
-        readonly List<Entity> entities = [];
+        static readonly List<Entity> entities = [];
 
-        public bool LoadGame(string path)
+        public static bool LoadGame(string path)
         {
             using FileStream fileStream = new(path, FileMode.Open, FileAccess.Read);
             using BinaryReader reader = new(fileStream, Encoding.UTF8, false);
@@ -66,7 +66,7 @@ namespace Engine.Content
             return true;
         }
 
-        public void UnloadGame()
+        public static void UnloadGame()
         {
             foreach (var entity in entities)
             {
