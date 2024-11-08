@@ -1,4 +1,5 @@
 ﻿using Engine;
+using Engine.Platform;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -8,7 +9,7 @@ using static WindowsPlatform.Native.User32;
 
 namespace WindowsPlatform
 {
-    class Win32Platform : Platform
+    class Win32Platform : PlatformBase
     {
         const string WINDOWCLASSNAME = nameof(Win32Window);
         const uint WM_DESTROY = 2;
@@ -121,6 +122,7 @@ namespace WindowsPlatform
                     _ = TranslateMessage(ref msg);
                     _ = DispatchMessageW(ref msg);
                 }
+                Application.Current.Tick();
             }
 
             mainWindow.Destroy();
@@ -134,21 +136,11 @@ namespace WindowsPlatform
                 return DefWindowProcW(hWnd, msg, wParam, lParam);
             }
 
-            switch (msg)
+            return msg switch
             {
-                case WM_PAINT:
-                    Application.Current.Tick();
-                    break;
-
-                case WM_DESTROY:
-                    _ = PostQuitMessage(0);
-                    break;
-
-                default:
-                    break;
-            }
-
-            return DefWindowProcW(hWnd, msg, wParam, lParam);
+                WM_DESTROY => PostQuitMessage(0),
+                _ => DefWindowProcW(hWnd, msg, wParam, lParam),
+            };
         }
     }
 }

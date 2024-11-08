@@ -1,5 +1,6 @@
 ﻿using Engine;
 using Engine.Graphics;
+using Engine.Platform;
 
 namespace DX12Windows
 {

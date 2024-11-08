@@ -1,15 +1,15 @@
 ﻿using System.Drawing;
 
-namespace Engine
+namespace Engine.Platform
 {
-    public abstract class Platform
+    public abstract class PlatformBase
     {
         protected const string WINDOWTITLE = "Engine";
         protected readonly static Size WINDOWSIZE = new(800, 600);
 
         public abstract Window MainWindow { get; }
 
-        protected Platform()
+        protected PlatformBase()
         {
 
         }

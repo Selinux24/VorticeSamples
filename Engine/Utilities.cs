@@ -1,4 +1,5 @@
-﻿using SharpGen.Runtime;
+﻿using Engine.Platform;
+using SharpGen.Runtime;
 using System.Drawing;
 using System.Runtime.CompilerServices;
 using Vortice.DXGI;

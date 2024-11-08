@@ -1,4 +1,5 @@
 ﻿using Engine.Graphics;
+using Engine.Platform;
 using System.Threading.Tasks;
 
 namespace Engine
@@ -7,8 +8,8 @@ namespace Engine
     {
         public static Application Current { get; private set; }
 
-        private readonly Platform platform;
-        private readonly Graphics.Graphics graphics;
+        private readonly PlatformBase platform;
+        private readonly GraphicsBase graphics;
         private readonly Time time = new();
         private readonly object tickLock = new();
 

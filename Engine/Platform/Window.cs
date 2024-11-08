@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Drawing;
 
-namespace Engine
+namespace Engine.Platform
 {
     public abstract class Window
     {

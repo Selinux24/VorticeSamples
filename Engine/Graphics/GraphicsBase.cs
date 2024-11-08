@@ -1,7 +1,8 @@
-﻿
+﻿using Engine.Platform;
+
 namespace Engine.Graphics
 {
-    public abstract class Graphics
+    public abstract class GraphicsBase
     {
         public abstract void Shutdown();
 

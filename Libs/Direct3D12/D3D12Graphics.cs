@@ -1,10 +1,10 @@
-﻿using Engine;
-using Engine.Graphics;
+﻿using Engine.Graphics;
+using Engine.Platform;
 using System;
 
 namespace Direct3D12
 {
-    public class D3D12Graphics : Graphics
+    public class D3D12Graphics : GraphicsBase
     {
         /// <inheritdoc/>
         public override void Shutdown()
