@@ -93,10 +93,7 @@ namespace Engine.Content
 
         private static bool ReadScript(byte[] data, ref EntityInfo info)
         {
-            using MemoryStream stream = new(data);
-            using BinaryReader reader = new(stream, Encoding.UTF8, false);
-
-            string scriptName = reader.ReadString();
+            string scriptName = Encoding.UTF8.GetString(data);
 
             ScriptInfo script = new()
             {
