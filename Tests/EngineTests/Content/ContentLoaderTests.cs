@@ -1,6 +1,4 @@
-﻿using Engine.Components;
-using Engine.EngineAPI;
-using NUnit.Framework;
+﻿using NUnit.Framework;
 using System.IO;
 using System.Text;
 
@@ -29,9 +27,6 @@ namespace EngineTests.Content
             writer.Write(numEntities);
             for (int i = 0; i < numEntities; i++)
             {
-                string tag = $"script{i}";
-                Script.RegisterScript(tag, (entity) => { return new(new Entity((uint)i)); });
-
                 writer.Write(0); // Reserved for future use
                 writer.Write(numComponents); // Number of components
 
@@ -43,7 +38,7 @@ namespace EngineTests.Content
                 writer.Write(6f); writer.Write(7f); writer.Write(8f);
 
                 writer.Write(1); // Component type script
-                byte[] stringData = Encoding.UTF8.GetBytes(tag);
+                byte[] stringData = Encoding.UTF8.GetBytes($"script{i}");
                 int scriptComponentSize = stringData.Length;
                 writer.Write(scriptComponentSize);
                 writer.Write(stringData);

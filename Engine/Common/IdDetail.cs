@@ -1,6 +1,9 @@
 ﻿global using GenerationType = ushort; //Based on GenerationBits: ushort when <=8, uint when <=16, ulong when <=32, else not possible
 global using IdType = uint;
+using System;
 using System.Diagnostics;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace Engine.Common
 {
@@ -30,6 +33,14 @@ namespace Engine.Common
             IdType generation = Generation(id) + One;
             Debug.Assert(generation < (One << (int)GenerationBits) - 1);
             return Index(id) | generation << (int)IndexBits;
+        }
+
+        public static string StringHash<T>()
+        {
+            byte[] byteArray = SHA256.HashData(Encoding.UTF8.GetBytes($"{typeof(T)}"));
+            string hash = Convert.ToHexString(byteArray);
+
+            return hash;
         }
     }
 }

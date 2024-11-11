@@ -1,6 +1,7 @@
 ﻿global using EntityId = uint;
 using Engine.Common;
 using Engine.EngineAPI;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 
@@ -93,6 +94,15 @@ namespace Engine.Components
             return generations[(int)index] ==
                 IdDetail.Generation(id) &&
                 Transforms[(int)index].IsValid();
+        }
+
+        public static bool RegisterScript<T>() where T : EntityScript
+        {
+            return Script.RegisterScript(IdDetail.StringHash<T>(), CreateScript<T>);
+        }
+        private static T CreateScript<T>(Entity entity) where T : EntityScript
+        {
+            return (T)Activator.CreateInstance(typeof(T), [entity]);
         }
     }
 }

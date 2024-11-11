@@ -7,7 +7,7 @@ using System.Diagnostics;
 
 namespace Engine.Components
 {
-    public static class Script
+    static class Script
     {
         private static readonly List<EntityScript> entityScripts = [];
         private static readonly List<IdType> idMapping = [];
