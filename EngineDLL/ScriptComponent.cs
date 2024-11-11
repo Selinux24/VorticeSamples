@@ -1,11 +1,12 @@
 ﻿using Engine.Components;
+using Engine.EngineAPI;
 using System;
 
 namespace EngineDLL
 {
     public struct ScriptComponent
     {
-        public Func<Entity, Script> ScriptCreator { get; set; }
+        public Func<Entity, EntityScript> ScriptCreator { get; set; }
 
         public ScriptInfo ToScriptInfo()
         {

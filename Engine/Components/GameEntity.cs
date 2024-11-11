@@ -1,18 +1,19 @@
 ﻿global using EntityId = uint;
 using Engine.Common;
+using Engine.EngineAPI;
 using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace Engine.Components
 {
-    public static class EntityComponent
+    public static class GameEntity
     {
         private static readonly List<GenerationType> generations = [];
         private static readonly Queue<EntityId> freeIds = [];
 
-        public static List<Transform> Transforms { get; } = [];
-        public static List<Script> Scripts { get; } = [];
-        public static List<Geometry> Geometries { get; } = [];
+        internal static List<TransformComponent> Transforms { get; } = [];
+        internal static List<ScriptComponent> Scripts { get; } = [];
+        internal static List<GeometryComponent> Geometries { get; } = [];
 
         public static Entity Create(EntityInfo info)
         {
@@ -37,20 +38,20 @@ namespace Engine.Components
             IdType index = IdDetail.Index(id);
 
             Debug.Assert(!Transforms[(int)index].IsValid());
-            Transforms[(int)index] = TransformComponent.Create(info.Transform, entity);
+            Transforms[(int)index] = Transform.Create(info.Transform, entity);
             Debug.Assert(Transforms[(int)index].IsValid());
 
             if (info.Script != null && info.Script?.ScriptCreator != null)
             {
                 Debug.Assert(!Scripts[(int)index].IsValid());
-                Scripts[(int)index] = ScriptComponent.Create(info.Script.Value, entity);
+                Scripts[(int)index] = Script.Create(info.Script.Value, entity);
                 Debug.Assert(Scripts[(int)index].IsValid());
             }
 
             if (info.Geometry != null)
             {
                 Debug.Assert(!Geometries[(int)index].IsValid());
-                Geometries[(int)index] = GeometryComponent.Create(info.Geometry.Value, entity);
+                Geometries[(int)index] = Geometry.Create(info.Geometry.Value, entity);
                 Debug.Assert(Geometries[(int)index].IsValid());
             }
 
@@ -63,19 +64,19 @@ namespace Engine.Components
 
             if (Transforms[(int)index].IsValid())
             {
-                TransformComponent.Remove(Transforms[(int)index]);
+                Transform.Remove(Transforms[(int)index]);
                 Transforms[(int)index] = new();
             }
 
             if (Scripts[(int)index].IsValid())
             {
-                ScriptComponent.Remove(Scripts[(int)index]);
+                Script.Remove(Scripts[(int)index]);
                 Scripts[(int)index] = new();
             }
 
             if (Geometries[(int)index].IsValid())
             {
-                GeometryComponent.Remove(Geometries[(int)index]);
+                Geometry.Remove(Geometries[(int)index]);
                 Geometries[(int)index] = new();
             }
 

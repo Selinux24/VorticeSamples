@@ -4,7 +4,7 @@ using System.Drawing;
 using System.Runtime.CompilerServices;
 using Vortice.DXGI;
 
-namespace Engine
+namespace Direct3D12
 {
     public static class Utilities
     {

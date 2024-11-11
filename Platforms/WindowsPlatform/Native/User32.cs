@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Runtime.InteropServices;
-using Vortice.Win32;
 
 namespace WindowsPlatform.Native
 {
@@ -68,6 +67,20 @@ namespace WindowsPlatform.Native
         [DllImport("user32.dll", SetLastError = true)]
         public static extern bool DestroyWindow(IntPtr hWnd);
 
+        [StructLayout(LayoutKind.Sequential)]
+        public partial struct NativeMessage
+        {
+            //[NativeTypeName("HWND")]
+            public nint hwnd;
+            public uint msg;
+            //[NativeTypeName("WPARAM")]
+            public nuint wParam;
+            //[NativeTypeName("LPARAM")]
+            public nint lParam;
+            public uint time;
+            public int ptx;
+            public int pty;
+        }
         [StructLayout(LayoutKind.Sequential)]
         public struct RECT
         {

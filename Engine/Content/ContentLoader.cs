@@ -1,4 +1,5 @@
 ﻿using Engine.Components;
+using Engine.EngineAPI;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -55,7 +56,7 @@ namespace Engine.Content
                     }
                 }
 
-                var entity = EntityComponent.Create(info);
+                var entity = GameEntity.Create(info);
                 if (!entity.IsValid())
                 {
                     return false;
@@ -70,7 +71,7 @@ namespace Engine.Content
         {
             foreach (var entity in entities)
             {
-                EntityComponent.Remove(entity.Id);
+                GameEntity.Remove(entity.Id);
             }
         }
 
@@ -97,7 +98,7 @@ namespace Engine.Content
 
             ScriptInfo script = new()
             {
-                ScriptCreator = ScriptComponent.GetScriptCreator(scriptName)
+                ScriptCreator = Script.GetScriptCreator(scriptName)
             };
 
             info.Script = script;

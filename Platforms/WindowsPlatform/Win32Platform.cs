@@ -114,7 +114,7 @@ namespace WindowsPlatform
         {
             mainWindow.Show();
 
-            Vortice.Win32.NativeMessage msg = default;
+            NativeMessage msg = default;
             while (msg.msg != WM_QUIT)
             {
                 if (PeekMessageW(out msg, IntPtr.Zero, 0, 0, (int)PEEK_MESSAGE_REMOVE_TYPE.PM_REMOVE) != 0)

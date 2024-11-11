@@ -12,7 +12,7 @@ namespace Engine.Core
 
         public static void EngineUpdate(float dt)
         {
-            ScriptComponent.Update(dt);
+            Script.Update(dt);
         }
 
         public static void EngineShutdown()

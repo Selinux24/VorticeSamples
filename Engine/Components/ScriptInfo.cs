@@ -1,9 +1,10 @@
 ﻿using System;
+using Engine.EngineAPI;
 
 namespace Engine.Components
 {
     public struct ScriptInfo()
     {
-        public Func<Entity, Script> ScriptCreator { get; set; }
+        public Func<Entity, EntityScript> ScriptCreator { get; set; }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using Engine.Common;
 using Engine.Components;
+using Engine.EngineAPI;
 using System.Diagnostics;
 
 namespace EngineDLL
@@ -21,13 +22,13 @@ namespace EngineDLL
                 Script = scriptInfo
             };
 
-            return EntityComponent.Create(info).Id;
+            return GameEntity.Create(info).Id;
         }
 
         public static void RemoveGameEntity(uint id)
         {
             Debug.Assert(IdDetail.IsValid(id));
-            EntityComponent.Remove(id);
+            GameEntity.Remove(id);
         }
     }
 }

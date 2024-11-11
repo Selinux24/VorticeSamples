@@ -1,5 +1,6 @@
 ﻿using Engine.Common;
 using Engine.Components;
+using Engine.EngineAPI;
 using NUnit.Framework;
 using NUnit.Framework.Internal;
 using System;
@@ -47,10 +48,10 @@ namespace EngineTests.Components
             while (count > 0)
             {
                 ++added;
-                Entity entity = EntityComponent.Create(entityInfo);
+                Entity entity = GameEntity.Create(entityInfo);
                 Assert.That(entity.IsValid(), Is.EqualTo(IdDetail.IsValid(entity.Id)), "The entity id is not valid");
                 entities.Add(entity);
-                Assert.That(EntityComponent.IsAlive(entity.Id), Is.True, "The entity is not alive");
+                Assert.That(GameEntity.IsAlive(entity.Id), Is.True, "The entity is not alive");
                 --count;
             }
         }
@@ -69,9 +70,9 @@ namespace EngineTests.Components
                 Assert.That(entity.IsValid(), Is.EqualTo(IdDetail.IsValid(entity.Id)), "The entity id is not valid");
                 if (entity.IsValid())
                 {
-                    EntityComponent.Remove(entity.Id);
+                    GameEntity.Remove(entity.Id);
                     entities.RemoveAt(index);
-                    Assert.That(!EntityComponent.IsAlive(entity.Id), Is.True, "The entity is alive");
+                    Assert.That(!GameEntity.IsAlive(entity.Id), Is.True, "The entity is alive");
                     ++removed;
                 }
                 --count;

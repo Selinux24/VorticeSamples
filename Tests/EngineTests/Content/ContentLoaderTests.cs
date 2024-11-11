@@ -1,4 +1,5 @@
 ﻿using Engine.Components;
+using Engine.EngineAPI;
 using NUnit.Framework;
 using System.IO;
 using System.Text;
@@ -26,28 +27,26 @@ namespace EngineTests.Content
             using BinaryWriter writer = new(fileStream, Encoding.UTF8, false);
 
             writer.Write(numEntities);
-            writer.Write(0); // Reserved for future use
             for (int i = 0; i < numEntities; i++)
             {
                 string tag = $"script{i}";
-                ScriptComponent.RegisterScript(tag, (entity) => { return new(new Entity((uint)i)); });
+                Script.RegisterScript(tag, (entity) => { return new(new Entity((uint)i)); });
 
+                writer.Write(0); // Reserved for future use
                 writer.Write(numComponents); // Number of components
-                for (int j = 0; j < numComponents; j++)
-                {
-                    writer.Write(0); // Component type transform
-                    int transformComponentSize = sizeof(float) * 9;
-                    writer.Write(transformComponentSize);
-                    writer.Write(0f); writer.Write(1f); writer.Write(2f);
-                    writer.Write(3f); writer.Write(4f); writer.Write(5f);
-                    writer.Write(6f); writer.Write(7f); writer.Write(8f);
 
-                    writer.Write(1); // Component type script
-                    byte[] stringData = Encoding.UTF8.GetBytes(tag);
-                    int scriptComponentSize = stringData.Length;
-                    writer.Write(scriptComponentSize);
-                    writer.Write(stringData);
-                }
+                writer.Write(0); // Component type transform
+                int transformComponentSize = sizeof(float) * 9;
+                writer.Write(transformComponentSize);
+                writer.Write(0f); writer.Write(1f); writer.Write(2f);
+                writer.Write(3f); writer.Write(4f); writer.Write(5f);
+                writer.Write(6f); writer.Write(7f); writer.Write(8f);
+
+                writer.Write(1); // Component type script
+                byte[] stringData = Encoding.UTF8.GetBytes(tag);
+                int scriptComponentSize = stringData.Length;
+                writer.Write(scriptComponentSize);
+                writer.Write(stringData);
             }
         }
 

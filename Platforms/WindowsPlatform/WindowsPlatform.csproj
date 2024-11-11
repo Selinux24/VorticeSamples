@@ -3,6 +3,7 @@
   <PropertyGroup>
     <TargetFrameworks>net8.0-windows</TargetFrameworks>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Configurations>Debug;Release;ReleaseEditor;DebugEditor</Configurations>
   </PropertyGroup>
   
   <ItemGroup>
