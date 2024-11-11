@@ -5,7 +5,7 @@ using static WindowsPlatform.Native.User32;
 
 namespace WindowsPlatform
 {
-    public class Win32Window(nint hwnd, string title) : Window()
+    public class Win32Window(nint hwnd) : Window()
     {
         private readonly IntPtr hwnd = hwnd;
 
@@ -17,8 +17,6 @@ namespace WindowsPlatform
                 return hwnd;
             }
         }
-        /// <inheritdoc />
-        public override string Title { get; set; } = title;
         /// <inheritdoc />
         public override SizeF ClientSize
         {

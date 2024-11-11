@@ -37,7 +37,7 @@ namespace WindowsPlatform
             RegisterWindow();
 
             nint hwnd = CreateWindow(WINDOWTITLE, WINDOWSIZE);
-            mainWindow = new Win32Window(hwnd, WINDOWTITLE);
+            mainWindow = new Win32Window(hwnd);
             windows.Add(mainWindow.Handle, mainWindow);
         }
 

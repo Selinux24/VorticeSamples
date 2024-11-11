@@ -1,13 +1,24 @@
 ﻿using Engine.Components;
 using Engine.Content;
+using Engine.Graphics;
+using Engine.Platform;
 
 namespace Engine.Core
 {
     public static class Engine
     {
-        public static bool EngineInitialize(string path)
+        public static RenderSurface GameWindow { get; private set; }
+
+        public static bool EngineInitialize(string path, Window window)
         {
-            return ContentLoader.LoadGame(path);
+            if (!ContentLoader.LoadGame(path)) return false;
+
+            GameWindow = new RenderSurface
+            {
+                Window = window,
+            };
+
+            return true;
         }
 
         public static void EngineUpdate(float dt)

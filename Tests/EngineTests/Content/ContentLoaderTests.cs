@@ -48,7 +48,7 @@ namespace EngineTests.Content
         [Test()]
         public void LoadContentTest()
         {
-            bool result = Engine.Core.Engine.EngineInitialize(path);
+            bool result = Engine.Core.Engine.EngineInitialize(path, null);
 
             Assert.That(result);
         }

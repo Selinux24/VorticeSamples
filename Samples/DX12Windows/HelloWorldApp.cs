@@ -17,7 +17,7 @@ namespace DX12Windows
         {
             base.Initialize();
 
-            Engine.Core.Engine.EngineInitialize("Content/Game.bin");
+            Engine.Core.Engine.EngineInitialize("Content/Game.bin", MainWindow);
         }
         protected override void Update(Time time)
         {
