@@ -4,13 +4,15 @@ using Engine.Platform;
 
 namespace DX12Windows
 {
-    class HelloWorldApp(IPlatformFactory platformFactory, IGraphicsFactory graphicsFactory) : Application(platformFactory, graphicsFactory)
+    class HelloWorldApp(IPlatformFactory platformFactory, PlatformWindowInfo windowInfo, IGraphicsFactory graphicsFactory) : Application(platformFactory, windowInfo, graphicsFactory)
     {
-        public static HelloWorldApp Start<TPlatform, TGraphics>()
+        public static HelloWorldApp Start<TPlatform, TGraphics>(PlatformWindowInfo windowInfo)
             where TPlatform : IPlatformFactory, new()
             where TGraphics : IGraphicsFactory, new()
         {
-            return new HelloWorldApp(new TPlatform(), new TGraphics());
+            var app = new HelloWorldApp(new TPlatform(), windowInfo, new TGraphics());
+
+            return app;
         }
 
         protected override void Initialize()

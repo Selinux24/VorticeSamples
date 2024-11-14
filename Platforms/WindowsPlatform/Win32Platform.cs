@@ -32,11 +32,11 @@ namespace WindowsPlatform
             }
         }
 
-        public Win32Platform() : base()
+        public Win32Platform(PlatformWindowInfo info) : base(info)
         {
             RegisterWindow();
 
-            nint hwnd = CreateWindow(WINDOWTITLE, WINDOWSIZE);
+            nint hwnd = CreateWindow(info);
             mainWindow = new Win32Window(hwnd);
             windows.Add(mainWindow.Handle, mainWindow);
         }
@@ -69,30 +69,34 @@ namespace WindowsPlatform
                 throw new InvalidOperationException(errorMessage);
             }
         }
-        public nint CreateWindow(string title, Size size)
+        public nint CreateWindow(PlatformWindowInfo info)
         {
+            var title = info.Title;
+            var clientArea = info.ClientArea;
+
             RECT rect = new()
             {
-                Right = size.Width,
-                Bottom = size.Height
+                Left = clientArea.X,
+                Top = clientArea.Y,
+                Right = clientArea.X + clientArea.Width,
+                Bottom = clientArea.Y + clientArea.Height
             };
 
-            var style = WindowStyles.WS_OVERLAPPEDWINDOW;
+            var style = WindowStyles.WS_VISIBLE;
             var styleEx = WindowStylesEx.WS_EX_APPWINDOW;
 
-            AdjustWindowRectEx(
+            AdjustWindowRect(
                 ref rect,
                 style,
-                false,
-                styleEx);
+                false);
 
             nint hwnd = CreateWindowExW(
                 styleEx,
                 WINDOWCLASSNAME,
                 title,
                 style,
-                0,
-                0,
+                rect.Left,
+                rect.Top,
                 rect.GetWidth(),
                 rect.GetHeight(),
                 IntPtr.Zero,

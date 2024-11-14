@@ -3,6 +3,6 @@ namespace Engine.Platform
 {
     public interface IPlatformFactory
     {
-        PlatformBase CreatePlatform();
+        PlatformBase CreatePlatform(PlatformWindowInfo info);
     }
 }

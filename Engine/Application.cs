@@ -32,9 +32,9 @@ namespace Engine
             }
         }
 
-        protected Application(IPlatformFactory platformFactory, IGraphicsFactory graphicsFactory)
+        protected Application(IPlatformFactory platformFactory, PlatformWindowInfo info, IGraphicsFactory graphicsFactory)
         {
-            platform = platformFactory.CreatePlatform();
+            platform = platformFactory.CreatePlatform(info);
             graphics = graphicsFactory.CreateGraphics();
 
             Current = this;

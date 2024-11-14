@@ -1,4 +1,5 @@
 ﻿using Direct3D12;
+using Engine.Platform;
 using WindowsPlatform;
 
 namespace DX12Windows
@@ -7,8 +8,15 @@ namespace DX12Windows
     {
         static void Main()
         {
+            PlatformWindowInfo windowInfo = new()
+            {
+                Title = "DX12 for Windows",
+                ClientArea = new System.Drawing.Rectangle(0, 0, 1280, 720),
+                IsFullScreen = true,
+            };
+
             HelloWorldApp
-                .Start<Win32PlatformFactory, D3D12GraphicsFactory>()
+                .Start<Win32PlatformFactory, D3D12GraphicsFactory>(windowInfo)
                 .Run();
         }
     }

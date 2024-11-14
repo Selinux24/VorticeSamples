@@ -17,6 +17,13 @@ namespace WindowsPlatform.Native
 
         [LibraryImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
+        public static partial bool AdjustWindowRect(
+            ref RECT lpRect,
+            WindowStyles dwStyle,
+            [MarshalAs(UnmanagedType.Bool)] bool bMenu);
+
+        [LibraryImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
         public static partial bool AdjustWindowRectEx(
             ref RECT lpRect,
             WindowStyles dwStyle,
@@ -62,25 +69,46 @@ namespace WindowsPlatform.Native
 
         [DllImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
-        public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+        public static extern bool ShowWindow(
+            IntPtr hWnd,
+            ShowWindowCommands nCmdShow);
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool UpdateWindow(IntPtr hWnd);
 
         [DllImport("user32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool DestroyWindow(IntPtr hWnd);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool MoveWindow(IntPtr hWnd, int X, int Y, int nWidth, int nHeight, bool bRepaint);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool SetWindowTextW(
+            IntPtr hWnd,
+            [MarshalAs(UnmanagedType.LPWStr)] string lpString);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        public static extern IntPtr SetWindowLongPtrW(
+            IntPtr hWnd,
+            WindowLongIndex nIndex,
+            IntPtr dwNewLong);
 
         [StructLayout(LayoutKind.Sequential)]
         public partial struct NativeMessage
         {
-            //[NativeTypeName("HWND")]
             public nint hwnd;
             public uint msg;
-            //[NativeTypeName("WPARAM")]
             public nuint wParam;
-            //[NativeTypeName("LPARAM")]
             public nint lParam;
             public uint time;
             public int ptx;
             public int pty;
         }
+
         [StructLayout(LayoutKind.Sequential)]
         public struct RECT
         {
@@ -427,6 +455,35 @@ namespace WindowsPlatform.Native
             PM_QS_POSTMESSAGE = 0x00980000,
             PM_QS_PAINT = 0x00200000,
             PM_QS_SENDMESSAGE = 0x00400000,
+        }
+
+        public enum WindowLongIndex : int
+        {
+            GWL_EXSTYLE = -20,
+            GWL_HINSTANCE = -6,
+            GWL_ID = -12,
+            GWL_STYLE = -16,
+            GWL_USERDATA = -21,
+            GWL_WNDPROC = -4
+        }
+
+        public enum ShowWindowCommands : int
+        {
+            SW_HIDE = 0,
+            SW_SHOWNORMAL = 1,
+            SW_NORMAL = 1,
+            SW_SHOWMINIMIZED = 2,
+            SW_SHOWMAXIMIZED = 3,
+            SW_MAXIMIZE = 3,
+            SW_SHOWNOACTIVATE = 4,
+            SW_SHOW = 5,
+            SW_MINIMIZE = 6,
+            SW_SHOWMINNOACTIVE = 7,
+            SW_SHOWNA = 8,
+            SW_RESTORE = 9,
+            SW_SHOWDEFAULT = 10,
+            SW_FORCEMINIMIZE = 11,
+            SW_MAX = 11
         }
     }
 #pragma warning restore SYSLIB1054
