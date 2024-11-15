@@ -17,7 +17,7 @@ namespace Engine
         public bool IsRunning { get; private set; }
         public bool IsExiting { get; private set; }
 
-        public Window MainWindow
+        public PlatformWindow MainWindow
         {
             get
             {

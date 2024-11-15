@@ -71,7 +71,7 @@ namespace WindowsPlatform.Native
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool ShowWindow(
             IntPtr hWnd,
-            ShowWindowCommands nCmdShow);
+            int nCmdShow);
 
         [DllImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -91,11 +91,19 @@ namespace WindowsPlatform.Native
             IntPtr hWnd,
             [MarshalAs(UnmanagedType.LPWStr)] string lpString);
 
+        public static IntPtr SetWindowLongPtrW(IntPtr hWnd, int nIndex, IntPtr dwNewLong)
+        {
+            if (IntPtr.Size == 8)
+            {
+                return SetWindowLongPtr(hWnd, nIndex, dwNewLong);
+            }
+
+            return new IntPtr(SetWindowLong(hWnd, nIndex, dwNewLong.ToInt32()));
+        }
         [DllImport("user32.dll", SetLastError = true)]
-        public static extern IntPtr SetWindowLongPtrW(
-            IntPtr hWnd,
-            WindowLongIndex nIndex,
-            IntPtr dwNewLong);
+        private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern IntPtr SetWindowLongPtr(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
 
         [StructLayout(LayoutKind.Sequential)]
         public partial struct NativeMessage
@@ -445,7 +453,6 @@ namespace WindowsPlatform.Native
             WS_EX_WINDOWEDGE = 0x00000100
         }
 
-        [Flags]
         public enum PEEK_MESSAGE_REMOVE_TYPE : uint
         {
             PM_NOREMOVE = 0x00000000,

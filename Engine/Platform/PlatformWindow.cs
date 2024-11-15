@@ -3,28 +3,33 @@ using System.Drawing;
 
 namespace Engine.Platform
 {
-    public abstract class Window
+    public abstract class PlatformWindow
     {
-        private string title = "Engine";
+        const string DefaultTitle = "Engine";
+
+        private string title = DefaultTitle;
         private bool fullScreen = false;
-        private SizeF clientSize = new(800, 600);
+        private Rectangle clientArea = new(0, 0, 800, 600);
+
+        public event EventHandler ClientAreaChanged;
+        public event EventHandler TitleChanged;
+        public event EventHandler FullScreenChanged;
 
         public abstract nint Handle { get; }
         public int BackBufferCount { get; } = 2;
-        public abstract Rectangle Bounds { get; set; }
-        public SizeF ClientSize
+        public Rectangle ClientArea
         {
             get
             {
-                return GetSize();
+                return clientArea;
             }
             set
             {
-                if (clientSize != value)
+                if (clientArea != value)
                 {
-                    clientSize = value;
-                    SetSize(clientSize);
-                    OnSizeChanged();
+                    clientArea = value;
+                    SetClientArea(clientArea);
+                    OnClientAreaChanged();
                 }
             }
         }
@@ -32,7 +37,7 @@ namespace Engine.Platform
         {
             get
             {
-                return clientSize.Width / clientSize.Height;
+                return clientArea.Width / clientArea.Height;
             }
         }
         public string Title
@@ -68,28 +73,26 @@ namespace Engine.Platform
             }
         }
 
-
-        public event EventHandler SizeChanged;
-        public event EventHandler TitleChanged;
-        public event EventHandler FullScreenChanged;
-
-        protected void OnSizeChanged()
+        private void OnClientAreaChanged()
         {
-            SizeChanged?.Invoke(this, EventArgs.Empty);
+            ClientAreaChanged?.Invoke(this, EventArgs.Empty);
         }
-        protected void OnTitleChanged()
+        private void OnTitleChanged()
         {
             TitleChanged?.Invoke(this, EventArgs.Empty);
         }
-        protected void OnFullScreenChanged()
+        private void OnFullScreenChanged()
         {
             FullScreenChanged?.Invoke(this, EventArgs.Empty);
         }
 
-        protected abstract SizeF GetSize();
-        protected abstract void SetSize(SizeF size);
-        protected abstract void SetSize(Rectangle area);
+        protected abstract void SetClientArea(Rectangle clientArea);
         protected abstract void SetTitle(string title);
         protected abstract void SetFullScreen(bool fullScreen);
+
+        public void Resized(Rectangle clientArea)
+        {
+            this.clientArea = clientArea;
+        }
     }
 }

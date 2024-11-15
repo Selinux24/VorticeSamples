@@ -12,11 +12,14 @@ namespace WindowsPlatform
     class Win32Platform : PlatformBase
     {
         const string WINDOWCLASSNAME = nameof(Win32Window);
-        const uint WM_DESTROY = 2;
-        const uint WM_PAINT = 0x0f;
-        const uint WM_QUIT = 18U;
+        const uint WM_DESTROY = 0x0002;
+        const uint WM_SIZE = 0x0005;
+        const uint SIZE_MINIMIZED = 1;
+        const uint WM_QUIT = 0x0012;
+        const WindowStyles FULL_SCREEN_STYLE = WindowStyles.WS_OVERLAPPED;
+        const WindowStyles WINDOWED_STYLE = WindowStyles.WS_OVERLAPPEDWINDOW;
 
-        delegate IntPtr WndProcDelegate(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
+        delegate IntPtr WndProcDelegate(IntPtr hwnd, uint msg, IntPtr wParam, IntPtr lParam);
 
         private static readonly Dictionary<nint, Win32Window> windows = [];
 
@@ -24,7 +27,7 @@ namespace WindowsPlatform
         private readonly WndProcDelegate delegWndProc = WndProc;
         private readonly Win32Window mainWindow;
 
-        public override Window MainWindow
+        public override PlatformWindow MainWindow
         {
             get
             {
@@ -36,11 +39,10 @@ namespace WindowsPlatform
         {
             RegisterWindow();
 
-            nint hwnd = CreateWindow(info);
+            nint hwnd = CreateWindow();
             mainWindow = new Win32Window(hwnd);
             windows.Add(mainWindow.Handle, mainWindow);
         }
-
         private void RegisterWindow()
         {
             CoInitializeEx(IntPtr.Zero, COINIT.COINIT_APARTMENTTHREADED);
@@ -69,21 +71,22 @@ namespace WindowsPlatform
                 throw new InvalidOperationException(errorMessage);
             }
         }
-        public nint CreateWindow(PlatformWindowInfo info)
+        private nint CreateWindow()
         {
+            var info = MainWindowInfo;
+
+            bool fullScreen = info.IsFullScreen;
             var title = info.Title;
             var clientArea = info.ClientArea;
+            var style = fullScreen ? FULL_SCREEN_STYLE : WINDOWED_STYLE;
 
             RECT rect = new()
             {
                 Left = clientArea.X,
                 Top = clientArea.Y,
-                Right = clientArea.X + clientArea.Width,
-                Bottom = clientArea.Y + clientArea.Height
+                Right = clientArea.Right,
+                Bottom = clientArea.Bottom,
             };
-
-            var style = WindowStyles.WS_VISIBLE;
-            var styleEx = WindowStylesEx.WS_EX_APPWINDOW;
 
             AdjustWindowRect(
                 ref rect,
@@ -91,12 +94,12 @@ namespace WindowsPlatform
                 false);
 
             nint hwnd = CreateWindowExW(
-                styleEx,
+                WindowStylesEx.WS_EX_LEFT,
                 WINDOWCLASSNAME,
                 title,
                 style,
-                rect.Left,
-                rect.Top,
+                clientArea.Left,
+                clientArea.Top,
                 rect.GetWidth(),
                 rect.GetHeight(),
                 IntPtr.Zero,
@@ -111,13 +114,75 @@ namespace WindowsPlatform
                 throw new InvalidOperationException(errorMessage);
             }
 
+            Show(hwnd, fullScreen);
+
             return hwnd;
+        }
+
+        public static void Destroy(nint hwnd)
+        {
+            DestroyWindow(hwnd);
+        }
+
+        public static void SetWindowTitle(IntPtr hwnd, string title)
+        {
+            SetWindowTextW(hwnd, title);
+        }
+
+        public static void SetWindowBounds(IntPtr hwnd, Rectangle bounds)
+        {
+            var windowRect = new RECT
+            {
+                Left = bounds.Left,
+                Top = bounds.Top,
+                Right = bounds.Left + bounds.Width,
+                Bottom = bounds.Top + bounds.Height
+            };
+            AdjustWindowRect(
+                ref windowRect,
+                WindowStyles.WS_VISIBLE,
+                false);
+
+            MoveWindow(
+                hwnd,
+                windowRect.Left,
+                windowRect.Top,
+                windowRect.GetWidth(),
+                windowRect.GetHeight(),
+                true);
+        }
+
+        public static void Show(IntPtr hwnd, bool maximize = false)
+        {
+            var nCmdShow = maximize ? ShowWindowCommands.SW_MAXIMIZE : ShowWindowCommands.SW_SHOWNORMAL;
+            ShowWindow(hwnd, (int)nCmdShow);
+        }
+
+        public static void SetFullScreenStyle(IntPtr hwnd, bool fullScreen)
+        {
+            var style = fullScreen ? FULL_SCREEN_STYLE : WINDOWED_STYLE;
+
+            IntPtr result = SetWindowLongPtrW(hwnd, (int)WindowLongIndex.GWL_STYLE, new IntPtr((uint)style));
+
+            if (result == IntPtr.Zero)
+            {
+                string errorMessage = $"Failed to update the style. Error: {Marshal.GetLastWin32Error()}";
+
+                throw new InvalidOperationException(errorMessage);
+            }
+
+            GetWindowRect(hwnd, out var rect);
+            MoveWindow(
+                hwnd,
+                rect.Left,
+                rect.Top,
+                rect.GetWidth(),
+                rect.GetHeight(),
+                true);
         }
 
         public override void Run()
         {
-            mainWindow.Show();
-
             NativeMessage msg = default;
             while (msg.msg != WM_QUIT)
             {
@@ -133,18 +198,46 @@ namespace WindowsPlatform
 
             CoUninitialize();
         }
-        private static IntPtr WndProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam)
+        private static IntPtr WndProc(IntPtr hwnd, uint msg, IntPtr wParam, IntPtr lParam)
         {
-            if (!windows.TryGetValue(hWnd, out _))
+            if (!windows.TryGetValue(hwnd, out _))
             {
-                return DefWindowProcW(hWnd, msg, wParam, lParam);
+                return DefWindowProcW(hwnd, msg, wParam, lParam);
             }
 
             return msg switch
             {
                 WM_DESTROY => PostQuitMessage(0),
-                _ => DefWindowProcW(hWnd, msg, wParam, lParam),
+                WM_SIZE => SetResized(hwnd, wParam),
+                _ => DefWindowProcW(hwnd, msg, wParam, lParam),
             };
+        }
+        private static int SetResized(IntPtr hwnd, IntPtr wParam)
+        {
+            bool resized = wParam != SIZE_MINIMIZED;
+            if (resized)
+            {
+                GetWindowRect(hwnd, out var rect);
+                MoveWindow(
+                    hwnd,
+                    rect.Left,
+                    rect.Top,
+                    rect.GetWidth(),
+                    rect.GetHeight(),
+                    true);
+
+                GetClientRect(hwnd, out var area);
+                var clientArea = new Rectangle(
+                    area.Left,
+                    area.Top,
+                    area.GetWidth(),
+                    area.GetHeight());
+
+                windows[hwnd].Resized(clientArea);
+                windows[hwnd].Title = $"x({rect.Left}) y({rect.Top}) width({rect.GetWidth()}) height({rect.GetHeight()})";
+            }
+
+            return 0;
         }
     }
 }

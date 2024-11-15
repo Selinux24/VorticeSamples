@@ -9,7 +9,7 @@ namespace Engine.Core
     {
         public static RenderSurface GameWindow { get; private set; }
 
-        public static bool EngineInitialize(string path, Window window)
+        public static bool EngineInitialize(string path, PlatformWindow window)
         {
             if (!ContentLoader.LoadGame(path)) return false;
 

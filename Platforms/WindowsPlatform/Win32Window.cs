@@ -1,14 +1,13 @@
 ﻿using Engine.Platform;
 using System;
 using System.Drawing;
-using static WindowsPlatform.Native.User32;
 
 namespace WindowsPlatform
 {
-    public class Win32Window(nint hwnd) : Window()
+    public class Win32Window(nint hwnd) : PlatformWindow()
     {
         private readonly IntPtr hwnd = hwnd;
-        private Rectangle clientArea = new() { X = 0, Y = 0, Width = 1920, Height = 1080 };
+        private Rectangle prevClientArea = new();
 
         /// <inheritdoc />
         public override nint Handle
@@ -18,98 +17,49 @@ namespace WindowsPlatform
                 return hwnd;
             }
         }
-        /// <inheritdoc />
-        public override Rectangle Bounds
-        {
-            get
-            {
-                GetWindowRect(hwnd, out var windowRect);
-                return new Rectangle(
-                    windowRect.Left,
-                    windowRect.Top,
-                    windowRect.GetWidth(),
-                    windowRect.GetHeight());
-            }
-            set
-            {
-                SetSize(value);
-            }
-        }
 
         public void Show(bool maximize = false)
         {
-            var nCmdShow = maximize ? ShowWindowCommands.SW_MAXIMIZE : ShowWindowCommands.SW_SHOWNORMAL;
-            ShowWindow(hwnd, nCmdShow);
-            UpdateWindow(hwnd);
+            Win32Platform.Show(hwnd, maximize);
         }
         public void Destroy()
         {
-            DestroyWindow(hwnd);
+            Win32Platform.Destroy(hwnd);
         }
 
-        protected override SizeF GetSize()
+        /// <inheritdoc />
+        protected override void SetClientArea(Rectangle clientArea)
         {
-            var area = FullScreen ? new() : clientArea;
-
-            return new(area.Bottom - area.Top, area.Right - area.Left);
+            Win32Platform.SetWindowBounds(hwnd, clientArea);
         }
-        protected override void SetSize(SizeF size)
-        {
-            var area = FullScreen ? new() : clientArea;
-            area.Height = (int)size.Height;
-            area.Width = (int)size.Width;
-            SetSize(area);
-        }
-        protected override void SetSize(Rectangle area)
-        {
-            var windowRect = new RECT
-            {
-                Left = area.Left,
-                Top = area.Top,
-                Right = area.Left + area.Width,
-                Bottom = area.Top + area.Height
-            };
-            AdjustWindowRect(
-                ref windowRect,
-                WindowStyles.WS_VISIBLE,
-                false);
-
-            MoveWindow(
-                hwnd,
-                windowRect.Left,
-                windowRect.Top,
-                windowRect.GetWidth(),
-                windowRect.GetHeight(),
-                true);
-        }
-
+        /// <inheritdoc />
         protected override void SetTitle(string title)
         {
-            SetWindowTextW(hwnd, title);
+            Win32Platform.SetWindowTitle(hwnd, title);
         }
-
+        /// <inheritdoc />
         protected override void SetFullScreen(bool fullScreen)
         {
             if (fullScreen)
             {
-                GetClientRect(hwnd, out var area);
-                clientArea = new(area.Left, area.Top, area.GetWidth(), area.GetHeight());
+                //Save the current window size
+                prevClientArea = ClientArea;
 
-                SetWindowLongPtrW(
-                    hwnd,
-                    WindowLongIndex.GWL_STYLE,
-                    0);
+                //Remove all styles
+                Win32Platform.SetFullScreenStyle(hwnd, fullScreen);
 
+                //Maximize the window
                 Show(true);
             }
             else
             {
-                SetWindowLongPtrW(
-                    hwnd,
-                    WindowLongIndex.GWL_STYLE,
-                    (nint)WindowStyles.WS_VISIBLE);
+                //Restore the window styles
+                Win32Platform.SetFullScreenStyle(hwnd, fullScreen);
 
-                SetSize(clientArea);
+                //Restore the window to its previous size
+                ClientArea = prevClientArea;
+
+                //Show the window
                 Show();
             }
         }

@@ -21,9 +21,9 @@ namespace Direct3D12
             };
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static IDXGISwapChain1 CreateSwapChain(Window window, IDXGIFactory2 factory, ComObject deviceOrCommandQueue, Format colorFormat)
+        public static IDXGISwapChain1 CreateSwapChain(PlatformWindow window, IDXGIFactory2 factory, ComObject deviceOrCommandQueue, Format colorFormat)
         {
-            SizeF size = window.ClientSize;
+            var size = window.ClientArea.Size;
             Format backBufferFormat = ToSwapChainFormat(colorFormat);
 
             bool isTearingSupported = false;
@@ -37,8 +37,8 @@ namespace Direct3D12
 
             SwapChainDescription1 desc = new()
             {
-                Width = (int)size.Width,
-                Height = (int)size.Height,
+                Width = size.Width,
+                Height = size.Height,
                 Format = backBufferFormat,
                 BufferCount = window.BackBufferCount,
                 BufferUsage = Usage.RenderTargetOutput,

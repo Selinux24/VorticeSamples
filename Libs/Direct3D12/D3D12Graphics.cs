@@ -13,7 +13,7 @@ namespace Direct3D12
         }
 
         /// <inheritdoc/>
-        public override ISurface CreateSurface(Window window)
+        public override ISurface CreateSurface(PlatformWindow window)
         {
             throw new NotImplementedException();
         }

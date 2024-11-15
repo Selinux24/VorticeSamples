@@ -12,7 +12,7 @@ namespace DX12Windows
             {
                 Title = "DX12 for Windows",
                 ClientArea = new System.Drawing.Rectangle(0, 0, 1280, 720),
-                IsFullScreen = true,
+                IsFullScreen = false,
             };
 
             HelloWorldApp

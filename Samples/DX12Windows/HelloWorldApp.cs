@@ -12,6 +12,7 @@ namespace DX12Windows
         {
             var app = new HelloWorldApp(new TPlatform(), windowInfo, new TGraphics());
 
+
             return app;
         }
 
