@@ -21,7 +21,7 @@ namespace WindowsPlatform
 
         delegate IntPtr WndProcDelegate(IntPtr hwnd, uint msg, IntPtr wParam, IntPtr lParam);
 
-        private static readonly Dictionary<nint, Win32Window> windows = [];
+        private static readonly Dictionary<IntPtr, Win32Window> windows = [];
 
         private readonly IntPtr hInstance = Marshal.GetHINSTANCE(typeof(Win32Platform).Module);
         private readonly WndProcDelegate delegWndProc = WndProc;

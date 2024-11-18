@@ -1,4 +1,6 @@
-﻿using NUnit.Framework;
+﻿using Engine.Common;
+using Engine.Components;
+using NUnit.Framework;
 using System.IO;
 using System.Text;
 
@@ -21,6 +23,9 @@ namespace EngineTests.Content
                 File.Delete(path);
             }
 
+            string testScriptTag = IdDetail.StringHash<TestScript>();
+            byte[] stringData = Encoding.UTF8.GetBytes(testScriptTag);
+
             using FileStream fileStream = new(path, FileMode.CreateNew, FileAccess.Write);
             using BinaryWriter writer = new(fileStream, Encoding.UTF8, false);
 
@@ -38,7 +43,6 @@ namespace EngineTests.Content
                 writer.Write(6f); writer.Write(7f); writer.Write(8f);
 
                 writer.Write(1); // Component type script
-                byte[] stringData = Encoding.UTF8.GetBytes($"script{i}");
                 int scriptComponentSize = stringData.Length;
                 writer.Write(scriptComponentSize);
                 writer.Write(stringData);
@@ -48,6 +52,9 @@ namespace EngineTests.Content
         [Test()]
         public void LoadContentTest()
         {
+            //Register the script creator
+            GameEntity.RegisterScript<TestScript>();
+
             bool result = Engine.Core.Engine.EngineInitialize(path, null);
 
             Assert.That(result);

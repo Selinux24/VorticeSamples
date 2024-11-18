@@ -6,7 +6,7 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugEditor|AnyCPU'">
-    <DefineConstants>$(DefineConstants);EDITOR</DefineConstants>
+    <DefineConstants>$(DefineConstants);EDITOR;DEBUG</DefineConstants>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseEditor|AnyCPU'">

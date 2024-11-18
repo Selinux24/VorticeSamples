@@ -37,7 +37,8 @@ namespace Engine.Common
 
         public static string StringHash<T>()
         {
-            byte[] byteArray = SHA256.HashData(Encoding.UTF8.GetBytes($"{typeof(T)}"));
+            string typeName = typeof(T).Name;
+            byte[] byteArray = SHA256.HashData(Encoding.UTF8.GetBytes(typeName));
             string hash = Convert.ToHexString(byteArray);
 
             return hash;
