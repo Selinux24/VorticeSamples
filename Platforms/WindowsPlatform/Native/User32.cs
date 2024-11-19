@@ -52,6 +52,9 @@ namespace WindowsPlatform.Native
         [DllImport("user32.dll")]
         public static extern IntPtr DefWindowProcW(IntPtr hWnd, uint uMsg, IntPtr wParam, IntPtr lParam);
 
+        [DllImport("user32.dll", SetLastError = true)]
+        public static extern int CallWindowProcW(IntPtr lpPrevWndFunc, IntPtr hWnd, uint uMsg, IntPtr wParam, IntPtr lParam);
+
         [DllImport("user32.dll")]
         public static extern IntPtr LoadCursorW(IntPtr hInstance, int lpCursorName);
 
@@ -104,6 +107,23 @@ namespace WindowsPlatform.Native
         private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
         [DllImport("user32.dll", SetLastError = true)]
         private static extern IntPtr SetWindowLongPtr(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
+
+        public static IntPtr GetWindowLongPtrW(IntPtr hWnd, int nIndex)
+        {
+            if (IntPtr.Size == 8)
+            {
+                return GetWindowLongPtr(hWnd, nIndex);
+            }
+
+            return new IntPtr(GetWindowLong(hWnd, nIndex));
+        }
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern IntPtr GetWindowLong(IntPtr hWnd, int nIndex);
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern IntPtr GetWindowLongPtr(IntPtr hWnd, int nIndex);
+
+
+
 
         [StructLayout(LayoutKind.Sequential)]
         public partial struct NativeMessage

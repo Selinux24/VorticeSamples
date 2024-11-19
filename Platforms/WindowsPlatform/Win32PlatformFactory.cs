@@ -4,9 +4,9 @@ namespace WindowsPlatform
 {
     public sealed class Win32PlatformFactory : IPlatformFactory
     {
-        public PlatformBase CreatePlatform(PlatformWindowInfo info)
+        public PlatformBase CreatePlatform()
         {
-            return new Win32Platform(info);
+            return new Win32Platform();
         }
     }
 }

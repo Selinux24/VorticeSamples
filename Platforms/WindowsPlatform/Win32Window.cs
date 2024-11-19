@@ -22,10 +22,6 @@ namespace WindowsPlatform
         {
             Win32Platform.Show(hwnd, maximize);
         }
-        public void Destroy()
-        {
-            Win32Platform.Destroy(hwnd);
-        }
 
         /// <inheritdoc />
         protected override void SetClientArea(Rectangle clientArea)

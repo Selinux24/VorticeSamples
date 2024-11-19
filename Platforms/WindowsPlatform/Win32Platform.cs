@@ -2,7 +2,9 @@
 using Engine.Platform;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
+using System.Linq;
 using System.Runtime.InteropServices;
 using static WindowsPlatform.Native.Ole32;
 using static WindowsPlatform.Native.User32;
@@ -12,20 +14,21 @@ namespace WindowsPlatform
     class Win32Platform : PlatformBase
     {
         const string WINDOWCLASSNAME = nameof(Win32Window);
+        const uint SIZE_MINIMIZED = 1;
         const uint WM_DESTROY = 0x0002;
         const uint WM_SIZE = 0x0005;
-        const uint SIZE_MINIMIZED = 1;
+        const uint WM_CLOSE = 0x0010;
         const uint WM_QUIT = 0x0012;
+        const uint WM_SYSCOMMAND = 0x0112;
+        const uint SC_KEYMENU = 0xF100;
         const WindowStyles FULL_SCREEN_STYLE = WindowStyles.WS_OVERLAPPED;
         const WindowStyles WINDOWED_STYLE = WindowStyles.WS_OVERLAPPEDWINDOW;
 
-        delegate IntPtr WndProcDelegate(IntPtr hwnd, uint msg, IntPtr wParam, IntPtr lParam);
-
         private static readonly Dictionary<IntPtr, Win32Window> windows = [];
 
+        private readonly WndProcDelegate delegWndProc = InternalWndProc;
         private readonly IntPtr hInstance = Marshal.GetHINSTANCE(typeof(Win32Platform).Module);
-        private readonly WndProcDelegate delegWndProc = WndProc;
-        private readonly Win32Window mainWindow;
+        private Win32Window mainWindow;
 
         public override PlatformWindow MainWindow
         {
@@ -35,13 +38,9 @@ namespace WindowsPlatform
             }
         }
 
-        public Win32Platform(PlatformWindowInfo info) : base(info)
+        public Win32Platform() : base()
         {
             RegisterWindow();
-
-            nint hwnd = CreateWindow();
-            mainWindow = new Win32Window(hwnd);
-            windows.Add(mainWindow.Handle, mainWindow);
         }
         private void RegisterWindow()
         {
@@ -53,7 +52,7 @@ namespace WindowsPlatform
                 style = ClassStyles.HorizontalRedraw | ClassStyles.VerticalRedraw | ClassStyles.OwnDC,
                 lpfnWndProc = Marshal.GetFunctionPointerForDelegate(delegWndProc),
                 cbClsExtra = 0,
-                cbWndExtra = 0,
+                cbWndExtra = Marshal.SizeOf<IntPtr>(),
                 hInstance = hInstance,
                 hIcon = IntPtr.Zero,
                 hCursor = LoadCursorW(IntPtr.Zero, (int)IDC_STANDARD_CURSORS.IDC_ARROW),
@@ -71,10 +70,27 @@ namespace WindowsPlatform
                 throw new InvalidOperationException(errorMessage);
             }
         }
-        private nint CreateWindow()
-        {
-            var info = MainWindowInfo;
 
+        public override PlatformWindow CreateWindow(IPlatformWindowInfo info, bool setDefault = true)
+        {
+            if (info is not Win32WindowInfo win32Info)
+            {
+                throw new ArgumentException("Invalid window info type.");
+            }
+
+            nint hwnd = CreateWindowInternal(win32Info);
+            var wnd = new Win32Window(hwnd);
+            windows.Add(wnd.Handle, wnd);
+
+            if (mainWindow == null || setDefault)
+            {
+                mainWindow = wnd;
+            }
+
+            return wnd;
+        }
+        private nint CreateWindowInternal(Win32WindowInfo info)
+        {
             bool fullScreen = info.IsFullScreen;
             var title = info.Title;
             var clientArea = info.ClientArea;
@@ -114,21 +130,31 @@ namespace WindowsPlatform
                 throw new InvalidOperationException(errorMessage);
             }
 
+            if (info.WndProc != null)
+            {
+                IntPtr callbackPtr = Marshal.GetFunctionPointerForDelegate(info.WndProc);
+                SetWindowLongPtrW(hwnd, 0, callbackPtr);
+            }
+
             Show(hwnd, fullScreen);
 
             return hwnd;
         }
 
-        public static void Destroy(nint hwnd)
+        public override void RemoveWindow(PlatformWindow window)
         {
-            DestroyWindow(hwnd);
+            windows.Remove(window.Handle);
+            if (mainWindow == window)
+            {
+                mainWindow = windows.Count != 0 ? windows.First().Value : null;
+            }
+            DestroyWindow(window.Handle);
         }
 
         public static void SetWindowTitle(IntPtr hwnd, string title)
         {
             SetWindowTextW(hwnd, title);
         }
-
         public static void SetWindowBounds(IntPtr hwnd, Rectangle bounds)
         {
             var windowRect = new RECT
@@ -151,13 +177,11 @@ namespace WindowsPlatform
                 windowRect.GetHeight(),
                 true);
         }
-
         public static void Show(IntPtr hwnd, bool maximize = false)
         {
             var nCmdShow = maximize ? ShowWindowCommands.SW_MAXIMIZE : ShowWindowCommands.SW_SHOWNORMAL;
             ShowWindow(hwnd, (int)nCmdShow);
         }
-
         public static void SetFullScreenStyle(IntPtr hwnd, bool fullScreen)
         {
             var style = fullScreen ? FULL_SCREEN_STYLE : WINDOWED_STYLE;
@@ -184,60 +208,87 @@ namespace WindowsPlatform
         public override void Run()
         {
             NativeMessage msg = default;
-            while (msg.msg != WM_QUIT)
+            bool isRunning = true;
+            while (isRunning)
             {
-                if (PeekMessageW(out msg, IntPtr.Zero, 0, 0, (int)PEEK_MESSAGE_REMOVE_TYPE.PM_REMOVE) != 0)
+                while (PeekMessageW(out msg, IntPtr.Zero, 0, 0, (int)PEEK_MESSAGE_REMOVE_TYPE.PM_REMOVE) != 0)
                 {
                     _ = TranslateMessage(ref msg);
                     _ = DispatchMessageW(ref msg);
+
+                    isRunning = msg.msg != WM_QUIT;
                 }
+
                 Application.Current.Tick();
             }
 
-            mainWindow.Destroy();
+            var windowsToRemove = windows.Values.ToArray();
+            foreach (var wnd in windowsToRemove)
+            {
+                RemoveWindow(wnd);
+            }
+            Debug.Assert(windows.Count == 0);
 
             CoUninitialize();
         }
-        private static IntPtr WndProc(IntPtr hwnd, uint msg, IntPtr wParam, IntPtr lParam)
+        private static IntPtr InternalWndProc(IntPtr hwnd, uint msg, IntPtr wParam, IntPtr lParam)
         {
-            if (!windows.TryGetValue(hwnd, out _))
+            if (!windows.TryGetValue(hwnd, out var wnd))
             {
                 return DefWindowProcW(hwnd, msg, wParam, lParam);
             }
 
-            return msg switch
+            switch (msg)
             {
-                WM_DESTROY => PostQuitMessage(0),
-                WM_SIZE => SetResized(hwnd, wParam),
-                _ => DefWindowProcW(hwnd, msg, wParam, lParam),
-            };
-        }
-        private static int SetResized(IntPtr hwnd, IntPtr wParam)
-        {
-            bool resized = wParam != SIZE_MINIMIZED;
-            if (resized)
-            {
-                GetWindowRect(hwnd, out var rect);
-                MoveWindow(
-                    hwnd,
-                    rect.Left,
-                    rect.Top,
-                    rect.GetWidth(),
-                    rect.GetHeight(),
-                    true);
-
-                GetClientRect(hwnd, out var area);
-                var clientArea = new Rectangle(
-                    area.Left,
-                    area.Top,
-                    area.GetWidth(),
-                    area.GetHeight());
-
-                windows[hwnd].Resized(clientArea);
-                windows[hwnd].Title = $"x({rect.Left}) y({rect.Top}) width({rect.GetWidth()}) height({rect.GetHeight()})";
+                case WM_DESTROY:
+                    wnd.IsClosed = true;
+                    break;
+                case WM_SIZE:
+                    SetResized(hwnd, wParam != SIZE_MINIMIZED);
+                    break;
+                default:
+                    break;
             }
 
-            return 0;
+            if (msg == WM_SYSCOMMAND && wParam == SC_KEYMENU)
+            {
+                return 0;
+            }
+
+            var callbackPtr = GetWindowLongPtrW(hwnd, 0);
+            if (callbackPtr == IntPtr.Zero)
+            {
+                return DefWindowProcW(hwnd, msg, wParam, lParam);
+            }
+
+            var callback = Marshal.GetDelegateForFunctionPointer<WndProcDelegate>(callbackPtr);
+            return callback(hwnd, msg, wParam, lParam);
+        }
+        private static void SetResized(IntPtr hwnd, bool resized)
+        {
+            if (!resized)
+            {
+                return;
+            }
+
+            GetWindowRect(hwnd, out var rect);
+            MoveWindow(
+                hwnd,
+                rect.Left,
+                rect.Top,
+                rect.GetWidth(),
+                rect.GetHeight(),
+                true);
+
+            GetClientRect(hwnd, out var area);
+            var clientArea = new Rectangle(
+                area.Left,
+                area.Top,
+                area.GetWidth(),
+                area.GetHeight());
+
+            windows[hwnd].Resized(clientArea);
+            windows[hwnd].Title = $"x({rect.Left}) y({rect.Top}) width({rect.GetWidth()}) height({rect.GetHeight()})";
         }
     }
 }

@@ -1,6 +1,5 @@
 ﻿using Direct3D12;
 using Engine.Components;
-using Engine.Platform;
 using WindowsPlatform;
 
 namespace DX12Windows
@@ -9,18 +8,25 @@ namespace DX12Windows
     {
         static void Main()
         {
-            PlatformWindowInfo windowInfo = new()
+            Win32WindowInfo windowInfo1 = new()
             {
-                Title = "DX12 for Windows",
-                ClientArea = new System.Drawing.Rectangle(0, 0, 1280, 720),
+                Title = "DX12 for Windows 1",
+                ClientArea = new System.Drawing.Rectangle(0, 0, 400, 800),
+                IsFullScreen = false,
+            };
+            Win32WindowInfo windowInfo2 = new()
+            {
+                Title = "DX12 for Windows 2",
+                ClientArea = new System.Drawing.Rectangle(410, 0, 600, 800),
                 IsFullScreen = false,
             };
 
             GameEntity.RegisterScript<TestScript>();
 
-            HelloWorldApp
-                .Start<Win32PlatformFactory, D3D12GraphicsFactory>(windowInfo)
-                .Run();
+            var app = HelloWorldApp.Start<Win32PlatformFactory, D3D12GraphicsFactory>();
+            app.CreateWindow(windowInfo1);
+            app.CreateWindow(windowInfo2);
+            app.Run();
         }
     }
 }
