@@ -32,8 +32,8 @@ namespace ContentTools
             if (uRange == default) uRange = new Vector2(0f, 1f);
             if (vRange == default) vRange = new Vector2(0f, 1f);
 
-            int horizontalCount = (int)Math.Clamp(info.Segments[horizontalIndex], 1, 10);
-            int verticalCount = (int)Math.Clamp(info.Segments[verticalIndex], 1, 10);
+            uint horizontalCount = Math.Clamp(info.Segments[horizontalIndex], 1, 10);
+            uint verticalCount = Math.Clamp(info.Segments[verticalIndex], 1, 10);
             float horizontalStep = 1f / horizontalCount;
             float verticalStep = 1f / verticalCount;
             float uStep = (uRange.Y - uRange.X) / horizontalCount;
@@ -42,9 +42,9 @@ namespace ContentTools
             var mesh = new Mesh();
             var uvs = new List<Vector2>();
 
-            for (var j = 0; j <= verticalCount; ++j)
+            for (uint j = 0; j <= verticalCount; ++j)
             {
-                for (var i = 0; i <= horizontalCount; ++i)
+                for (uint i = 0; i <= horizontalCount; ++i)
                 {
                     var position = offset;
                     var asArray = new[] { position.X, position.Y, position.Z };
@@ -61,12 +61,12 @@ namespace ContentTools
 
             Debug.Assert(mesh.Positions.Count == (horizontalCount + 1) * (verticalCount + 1));
 
-            int rowLength = horizontalCount + 1;
-            for (int j = 0; j < verticalCount; ++j)
+            uint rowLength = horizontalCount + 1;
+            for (uint j = 0; j < verticalCount; ++j)
             {
-                for (int i = 0; i < horizontalCount; ++i)
+                for (uint i = 0; i < horizontalCount; ++i)
                 {
-                    int[] index =
+                    uint[] index =
                     [
                         i + j * rowLength,
                         i + (j + 1) * rowLength,
@@ -84,12 +84,13 @@ namespace ContentTools
                 }
             }
 
-            var numIndices = 3 * 2 * horizontalCount * verticalCount;
+            uint numIndices = 3 * 2 * horizontalCount * verticalCount;
             Debug.Assert(mesh.RawIndices.Count == numIndices);
 
-            for (var i = 0; i < numIndices; ++i)
+            for (uint i = 0; i < numIndices; ++i)
             {
-                mesh.UVSets[0].Add(uvs[mesh.RawIndices[i]]);
+                int rawIndex = (int)mesh.RawIndices[(int)i];
+                mesh.UVSets[0].Add(uvs[rawIndex]);
             }
 
             return mesh;
@@ -101,6 +102,58 @@ namespace ContentTools
 
         private static void CreateUvSphere(Scene scene, PrimitiveInitInfo info)
         {
+            var lod = new LODGroup { Name = "uv-sphere" };
+            lod.Meshes.Add(CreateUvSphere(info));
+            scene.LODGroups.Add(lod);
+        }
+        private static Mesh CreateUvSphere(PrimitiveInitInfo info)
+        {
+            uint phiCount = Math.Clamp(info.Segments[0], 3, 64);
+            uint thetaCount = Math.Clamp(info.Segments[1], 2, 64);
+            float thetaStep = MathF.PI / thetaCount;
+            float phiStep = 2 * MathF.PI / phiCount;
+            uint numIndices = 2 * 3 * phiCount + 2 * 3 * phiCount * (thetaCount - 2);
+            uint numVertices = 2 + phiCount * (thetaCount - 1);
+
+            Mesh m = new()
+            {
+                Name = "uv_sphere",
+                Positions = new(new Vector3[numVertices])
+            };
+
+            uint c = 0;
+            m.Positions[(int)c++] = new Vector3(0f, info.Size.Y, 0f);
+
+            for (uint j = 1; j <= (thetaCount - 1); ++j)
+            {
+                float theta = j * thetaStep;
+                for (uint i = 0; i < phiCount; ++i)
+                {
+                    float phi = i * phiStep;
+                    m.Positions[(int)c++] = new Vector3(
+                        info.Size.X * MathF.Sin(theta) * MathF.Cos(phi),
+                        info.Size.Y * MathF.Cos(theta),
+                        -info.Size.Z * MathF.Sin(theta) * MathF.Sin(phi));
+                }
+            }
+
+            m.Positions[(int)c++] = new Vector3(0f, -info.Size.Y, 0f);
+            Debug.Assert(c == numVertices);
+
+            c = 0;
+            m.RawIndices = new(new uint[numIndices]);
+            List<Vector2> uvs = new(new Vector2[numIndices]);
+            float invThetaCount = 1f / thetaCount;
+            float invPhiCount = 1f / phiCount;
+
+            for (uint i = 0; i < phiCount - 1; ++i)
+            {
+                uvs[(int)c] = new Vector2((2 * i + 1) * 0.5f * invPhiCount, 1f);
+                m.RawIndices[(int)c++] = 0;
+                uvs[(int)c] = new Vector2(i * invPhiCount, 1f - invThetaCount);
+            }
+
+            return m;
         }
 
         private static void CreateIcoSphere(Scene scene, PrimitiveInitInfo info)
@@ -124,16 +177,8 @@ namespace ContentTools
             Creators[(int)info.Type](scene, info);
 
             data.Settings.CalculateNormals = true;
-            ProcessScene(scene, data.Settings);
-            PackData(scene, data);
-        }
-
-        private static void ProcessScene(Scene scene, GeometryImportSettings settings)
-        {
-        }
-
-        private static void PackData(Scene scene, SceneData data)
-        {
+            Geometry.ProcessScene(scene, data.Settings);
+            Geometry.PackData(scene, data);
         }
     }
 }

@@ -11,11 +11,11 @@ namespace ContentTools
         public List<Vector4> Tangents { get; set; } = [];
         public List<List<Vector2>> UVSets { get; set; } = [];
 
-        public List<int> RawIndices { get; set; } = [];
+        public List<uint> RawIndices { get; set; } = [];
 
         // Intermediate data
         public List<Vertex> Vertices { get; set; } = [];
-        public List<int> Indices { get; set; } = [];
+        public List<uint> Indices { get; set; } = [];
 
         // Output data
         public string Name { get; set; }
