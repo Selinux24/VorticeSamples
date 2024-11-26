@@ -17,7 +17,7 @@ namespace DX12Windows
         {
             base.Initialize();
 
-            Engine.Core.Engine.EngineInitialize("Content/Game.bin", MainWindow);
+            Engine.Core.Engine.EngineInitialize("Content/Game.bin");
         }
         protected override void Update(Time time)
         {
@@ -27,6 +27,8 @@ namespace DX12Windows
         }
         protected override void Shutdown()
         {
+            base.Shutdown();
+
             Engine.Core.Engine.EngineShutdown();
         }
     }

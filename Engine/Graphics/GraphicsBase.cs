@@ -4,6 +4,7 @@ namespace Engine.Graphics
 {
     public abstract class GraphicsBase
     {
+        public abstract bool Initialize();
         public abstract void Shutdown();
 
         public abstract ISurface CreateSurface(PlatformWindow window);

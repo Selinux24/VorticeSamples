@@ -55,7 +55,7 @@ namespace EngineTests.Content
             //Register the script creator
             GameEntity.RegisterScript<TestScript>();
 
-            bool result = Engine.Core.Engine.EngineInitialize(path, null);
+            bool result = Engine.Core.Engine.EngineInitialize(path);
 
             Assert.That(result);
         }

@@ -113,7 +113,7 @@ namespace Engine
         /// </summary>
         protected virtual void Initialize()
         {
-
+            graphics.Initialize();
         }
         /// <summary>
         /// Loads content asynchronously.
@@ -200,7 +200,7 @@ namespace Engine
         /// </summary>
         protected virtual void Shutdown()
         {
-
+            graphics.Shutdown();
         }
 
         /// <summary>
