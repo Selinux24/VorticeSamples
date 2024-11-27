@@ -1,20 +1,58 @@
 ﻿using Engine.Graphics;
 using Engine.Platform;
+using SharpGen.Runtime;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
 using Vortice.Direct3D;
 using Vortice.Direct3D12;
+using Vortice.Direct3D12.Debug;
 using Vortice.DXGI;
 
 namespace Direct3D12
 {
-    public class D3D12Graphics : GraphicsBase
+    class D3D12Graphics : GraphicsBase
     {
         private const FeatureLevel MinimumFeatureLevel = FeatureLevel.Level_11_0;
         public static int FrameBufferCount { get; set; } = 3;
 
         private ID3D12Device8 mainDevice;
         private IDXGIFactory7 dxgiFactory;
+        private D3D12Command gfxCommand;
+
+        private readonly DescriptorHeap rtvDescHeap;
+        private readonly DescriptorHeap dsvDescHeap;
+        private readonly DescriptorHeap srvDescHeap;
+        private readonly DescriptorHeap uavDescHeap;
+
+        private readonly List<IUnknown>[] deferredReleases;
+        private readonly int[] deferredReleasesFlags;
+        private readonly Mutex deferredReleasesMutx;
+
+        public ID3D12Device Device { get => mainDevice; }
+
+        public D3D12Graphics()
+        {
+            rtvDescHeap = new(this, DescriptorHeapType.RenderTargetView);
+            dsvDescHeap = new(this, DescriptorHeapType.DepthStencilView);
+            srvDescHeap = new(this, DescriptorHeapType.ConstantBufferViewShaderResourceViewUnorderedAccessView);
+            uavDescHeap = new(this, DescriptorHeapType.ConstantBufferViewShaderResourceViewUnorderedAccessView);
+
+            deferredReleases = new List<IUnknown>[FrameBufferCount];
+            for (int i = 0; i < FrameBufferCount; i++)
+            {
+                deferredReleases[i] = [];
+            }
+            deferredReleasesFlags = new int[FrameBufferCount];
+            deferredReleasesMutx = new();
+        }
+
+        public int CurrentFrameIndex() => gfxCommand.FrameIndex;
+        public void SetDeferredReleasesFlag()
+        {
+            deferredReleasesFlags[CurrentFrameIndex()] = 1;
+        }
 
         /// <inheritdoc/>
         public override bool Initialize()
@@ -27,8 +65,14 @@ namespace Direct3D12
             bool dxgiFactoryFlags = false;
 #if DEBUG
             {
-                var debugInterface = D3D12.D3D12GetDebugInterface<ID3D12Debug3>();
-                debugInterface.EnableDebugLayer();
+                if (D3D12.D3D12GetDebugInterface<ID3D12Debug3>(out var debugInterface).Success)
+                {
+                    debugInterface.EnableDebugLayer();
+                }
+                else
+                {
+                    Console.WriteLine("Warning: D3D12 Debug interface is not available. Verify that Graphics Tools optional feature is installed on this system.");
+                }
                 dxgiFactoryFlags = true;
             }
 #endif
@@ -56,6 +100,12 @@ namespace Direct3D12
             }
             mainDevice.Name = "Main D3D12 Device";
 
+            gfxCommand = new D3D12Command(mainDevice, CommandListType.Direct);
+            if (gfxCommand.CommandQueue == null)
+            {
+                return FailedInit();
+            }
+
 #if DEBUG
             {
                 var infoQueue = mainDevice.QueryInterface<ID3D12InfoQueue>();
@@ -65,12 +115,54 @@ namespace Direct3D12
             }
 #endif
 
+            bool result = true;
+            result &= rtvDescHeap.Initialize(512, false);
+            result &= dsvDescHeap.Initialize(512, false);
+            result &= srvDescHeap.Initialize(4096, true);
+            result &= uavDescHeap.Initialize(512, false);
+            if (!result)
+            {
+                return FailedInit();
+            }
+
+            gfxCommand = new(mainDevice, CommandListType.Direct);
+            if (gfxCommand.CommandQueue == null)
+            {
+                return FailedInit();
+            }
+
+            mainDevice.Name = "Main D3D12 Device";
+            rtvDescHeap.Heap.Name = "RTV Descriptor Heap";
+            dsvDescHeap.Heap.Name = "DSV Descriptor Heap";
+            srvDescHeap.Heap.Name = "SRV Descriptor Heap";
+            uavDescHeap.Heap.Name = "UAV Descriptor Heap";
+
             return true;
         }
         /// <inheritdoc/>
         public override void Shutdown()
         {
+            gfxCommand.Release();
+
+            // NOTE: we don't call process_deferred_releases at the end because
+            //       some resources (such as swap chains) can't be released before
+            //       their depending resources are released.
+            for (int i = 0; i < FrameBufferCount; i++)
+            {
+                ProcessDeferredReleases(i);
+            }
+
             dxgiFactory.Release();
+
+            rtvDescHeap.Release();
+            dsvDescHeap.Release();
+            srvDescHeap.Release();
+            uavDescHeap.Release();
+
+            // NOTE: some types only use deferred release for their resources during
+            //       shutdown/reset/clear. To finally release these resources we call
+            //       process_deferred_releases once more.
+            ProcessDeferredReleases(0);
 
 #if DEBUG
             {
@@ -90,7 +182,28 @@ namespace Direct3D12
 
             mainDevice.Release();
         }
-      
+        /// <inheritdoc/>
+        public override void Render()
+        {
+            // Wait for the GPU to finish with the command allocator and
+            // reset the allocator once the GPU is done with it.
+            // This frees the memory that was used to store commands.
+            gfxCommand.BeginFrame();
+            var cmdlist = gfxCommand.CommandList;
+
+            int frameIdx = CurrentFrameIndex();
+            if (deferredReleasesFlags[frameIdx] != 0)
+            {
+                ProcessDeferredReleases(frameIdx);
+            }
+            // Record commands
+            // ...
+            // 
+            // Done recording commands. Now execute commands,
+            // signal and increment the fence value for next frame.
+            gfxCommand.EndFrame();
+        }
+
         private IDXGIAdapter4 DetermineMainAdapter()
         {
             for (int i = 0; dxgiFactory.EnumAdapterByGpuPreference(i, GpuPreference.HighPerformance, out IDXGIAdapter4 adapter).Success; i++)
@@ -123,6 +236,40 @@ namespace Direct3D12
             using var device = D3D12.D3D12CreateDevice<ID3D12Device8>(adapter, MinimumFeatureLevel);
 
             return device.CheckMaxSupportedFeatureLevel(featureLevels);
+        }
+        private void ProcessDeferredReleases(int frameIdx)
+        {
+            lock (deferredReleasesMutx)
+            {
+                // NOTE: we clear this flag in the beginning. If we'd clear it at the end
+                //       then it might overwrite some other thread that was trying to set it.
+                //       It's fine if overwriting happens before processing the items.
+                deferredReleasesFlags[frameIdx] = 0;
+
+                rtvDescHeap.ProcessDeferredFree(frameIdx);
+                dsvDescHeap.ProcessDeferredFree(frameIdx);
+                srvDescHeap.ProcessDeferredFree(frameIdx);
+                uavDescHeap.ProcessDeferredFree(frameIdx);
+
+                var resources = deferredReleases[frameIdx];
+                if (resources.Count > 0)
+                {
+                    foreach (var resource in resources)
+                    {
+                        resource?.Dispose();
+                    }
+                    resources.Clear();
+                }
+            }
+        }
+        public void DeferredRelease(IUnknown resource)
+        {
+            int frameIdx = CurrentFrameIndex();
+            lock (deferredReleasesMutx)
+            {
+                deferredReleases[frameIdx].Add(resource);
+                SetDeferredReleasesFlag();
+            }
         }
 
         /// <inheritdoc/>

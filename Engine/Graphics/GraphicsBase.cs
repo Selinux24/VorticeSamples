@@ -6,6 +6,7 @@ namespace Engine.Graphics
     {
         public abstract bool Initialize();
         public abstract void Shutdown();
+        public abstract void Render();
 
         public abstract ISurface CreateSurface(PlatformWindow window);
         public abstract void RemoveSurface(IdType id);

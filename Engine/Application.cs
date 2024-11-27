@@ -185,7 +185,7 @@ namespace Engine
         /// <param name="time">Time</param>
         protected virtual void Draw(Time time)
         {
-
+            graphics.Render();
         }
         /// <summary>
         /// Ends drawing.
