@@ -2,17 +2,17 @@
 using Engine.Platform;
 using System;
 using System.Diagnostics;
-using Vortice.Direct3D12.Debug;
+using Vortice.Direct3D;
 using Vortice.Direct3D12;
 using Vortice.DXGI;
-using Vortice.Direct3D;
 
 namespace Direct3D12
 {
     public class D3D12Graphics : GraphicsBase
     {
         private const FeatureLevel MinimumFeatureLevel = FeatureLevel.Level_11_0;
-      
+        public static int FrameBufferCount { get; set; } = 3;
+
         private ID3D12Device8 mainDevice;
         private IDXGIFactory7 dxgiFactory;
 
