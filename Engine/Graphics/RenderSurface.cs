@@ -5,6 +5,6 @@ namespace Engine.Graphics
     public struct RenderSurface
     {
         public PlatformWindow Window { get; set; }
-        public Surface Surface { get; set; }
+        public ISurface Surface { get; set; }
     }
 }

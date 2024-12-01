@@ -3,7 +3,10 @@ namespace Engine.Graphics
 {
     public interface ISurface
     {
-        uint Width { get; }
-        uint Height { get; }
+        int Width { get; }
+        int Height { get; }
+
+        void Resize(int width, int height);
+        void Render();
     }
 }

@@ -1,12 +1,182 @@
 ﻿using Engine.Graphics;
+using Engine.Platform;
+using System;
+using System.Diagnostics;
+using Vortice.Direct3D12;
+using Vortice.DXGI;
+using Vortice.Mathematics;
 
 namespace Direct3D12
 {
-    public class D3D12Surface : ISurface
+    /// <summary>
+    /// Represents a D3D12 surface.
+    /// </summary>
+    class D3D12Surface : ISurface
     {
+        private readonly D3D12Graphics graphics;
+        private IDXGISwapChain4 swapChain;
+        private readonly RenderTargetData[] renderTargetData = new RenderTargetData[D3D12Graphics.FrameBufferCount];
+        private readonly PlatformWindow window;
+        private int currentBbIndex = 0;
+        private readonly bool allowTearing = false;
+        private PresentFlags presentFlags = 0;
+        private Viewport viewport;
+        private Rect scissorRect;
+
         /// <inheritdoc/>
-        public uint Width { get; private set; }
+        public int Width { get => (int)viewport.Width; }
         /// <inheritdoc/>
-        public uint Height { get; private set; }
+        public int Height { get => (int)viewport.Height; }
+        public ID3D12Resource Backbuffer { get => renderTargetData[currentBbIndex].Resource; }
+        public CpuDescriptorHandle Rtv { get => renderTargetData[currentBbIndex].Rtv.Cpu; }
+        public Viewport Viewport { get => viewport; }
+        public Rect ScissorRect { get => scissorRect; }
+
+        /// <summary>
+        /// Creates a new instance of the <see cref="D3D12Surface"/> class.
+        /// </summary>
+        /// <param name="window">Platform window</param>
+        /// <param name="graphics">Graphics instance</param>
+        public D3D12Surface(PlatformWindow window, D3D12Graphics graphics)
+        {
+            Debug.Assert(window != null && window.Handle != 0);
+            this.window = window;
+            this.graphics = graphics;
+        }
+        /// <summary>
+        /// Finalizes an instance of the <see cref="D3D12Surface"/> class.
+        /// </summary>
+        ~D3D12Surface()
+        {
+            Release();
+        }
+
+        private static Format ToNonSrgb(Format format)
+        {
+            if (format == Format.R8G8B8A8_UNorm_SRgb)
+            {
+                return Format.R8G8B8A8_UNorm;
+            }
+
+            return format;
+        }
+
+        /// <summary>
+        /// Creates a swap chain.
+        /// </summary>
+        /// <param name="factory">Swap chain factory</param>
+        /// <param name="cmdQueue">Command queue</param>
+        /// <param name="format">Swap chain format</param>
+        public void CreateSwapChain(IDXGIFactory7 factory, ID3D12CommandQueue cmdQueue, Format format)
+        {
+            Debug.Assert(factory != null && cmdQueue != null);
+            Release();
+
+            if (factory.CheckFeatureSupport(Vortice.DXGI.Feature.PresentAllowTearing, allowTearing) && allowTearing)
+            {
+                presentFlags = PresentFlags.AllowTearing;
+            }
+
+            SwapChainDescription1 desc = new()
+            {
+                AlphaMode = AlphaMode.Unspecified,
+                BufferCount = D3D12Graphics.FrameBufferCount,
+                BufferUsage = Usage.RenderTargetOutput,
+                Flags = allowTearing ? SwapChainFlags.AllowTearing : 0,
+                Format = ToNonSrgb(format),
+                Height = window.Height,
+                Width = window.Width,
+                Scaling = Scaling.Stretch,
+                SwapEffect = SwapEffect.FlipDiscard,
+                Stereo = false
+            };
+            desc.SampleDescription.Count = 1;
+            desc.SampleDescription.Quality = 0;
+
+            IntPtr hwnd = window.Handle;
+            var sc = factory.CreateSwapChainForHwnd(cmdQueue, hwnd, desc);
+            factory.MakeWindowAssociation(hwnd, WindowAssociationFlags.IgnoreAltEnter);
+            swapChain = sc.QueryInterface<IDXGISwapChain4>();
+            sc.Release();
+
+            currentBbIndex = swapChain.CurrentBackBufferIndex;
+
+            for (int i = 0; i < D3D12Graphics.FrameBufferCount; i++)
+            {
+                renderTargetData[i].Rtv = graphics.RtvHeap.Allocate();
+            }
+
+            FinalizeSwapChainCreation();
+        }
+        /// <summary>
+        /// Finishes the swap chain creation.
+        /// </summary>
+        private void FinalizeSwapChainCreation()
+        {
+            // create RTVs for back-buffers
+            for (int i = 0; i < D3D12Graphics.FrameBufferCount; i++)
+            {
+                var data = renderTargetData[i];
+                Debug.Assert(data.Resource == null);
+                swapChain.GetBuffer(i, out data.Resource);
+                RenderTargetViewDescription rtvdesc = new()
+                {
+                    Format = D3D12Graphics.RenderTargetFormat,
+                    ViewDimension = RenderTargetViewDimension.Texture2D
+                };
+                graphics.Device.CreateRenderTargetView(data.Resource, rtvdesc, data.Rtv.Cpu);
+            }
+
+            SwapChainDescription scdesc = swapChain.Description;
+            int width = scdesc.BufferDescription.Width;
+            int height = scdesc.BufferDescription.Height;
+            Debug.Assert(window.Width == width && window.Height == height);
+
+            // set viewport and scissor rect
+            viewport.X = 0f;
+            viewport.Y = 0f;
+            viewport.Width = width;
+            viewport.Height = height;
+            viewport.MinDepth = 0f;
+            viewport.MaxDepth = 1f;
+
+            scissorRect = new(0, 0, width, height);
+        }
+
+        /// <summary>
+        /// Presents the surface.
+        /// </summary>
+        public void Present()
+        {
+            Debug.Assert(swapChain != null);
+            swapChain.Present(0, presentFlags);
+            currentBbIndex = swapChain.CurrentBackBufferIndex;
+        }
+
+        /// <inheritdoc/>
+        public void Resize(int width, int height)
+        {
+
+        }
+        /// <inheritdoc/>
+        public void Render()
+        {
+            
+        }
+
+        /// <summary>
+        /// Releases the surface.
+        /// </summary>
+        private void Release()
+        {
+            for (int i = 0; i < D3D12Graphics.FrameBufferCount; i++)
+            {
+                var data = renderTargetData[i];
+                data.Resource.Release();
+                graphics.RtvHeap.Free(ref data.Rtv);
+            }
+
+            swapChain.Release();
+        }
     }
 }

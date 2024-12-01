@@ -1,6 +1,5 @@
 ﻿using Direct3D12;
 using Engine.Components;
-using Engine.Graphics;
 using WindowsPlatform;
 
 namespace DX12Windows
@@ -38,20 +37,12 @@ namespace DX12Windows
 
             var app = HelloWorldApp.Start<Win32PlatformFactory, D3D12GraphicsFactory>();
 
-            RenderSurface[] renderSurfaces = 
-            [
-                new RenderSurface { Window = app.CreateWindow(windowInfo1) },
-                new RenderSurface { Window = app.CreateWindow(windowInfo2) },
-                new RenderSurface { Window = app.CreateWindow(windowInfo3) },
-                new RenderSurface { Window = app.CreateWindow(windowInfo4) },
-            ];
+            app.CreateWindow(windowInfo1);
+            app.CreateWindow(windowInfo2);
+            app.CreateWindow(windowInfo3);
+            app.CreateWindow(windowInfo4);
 
             app.Run();
-
-            foreach (var renderSurface in renderSurfaces)
-            {
-                app.RemoveWindow(renderSurface.Window);
-            }
         }
     }
 }

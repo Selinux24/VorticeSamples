@@ -1,7 +1,8 @@
 ﻿
 namespace Engine.Graphics
 {
-    public class Surface
+    public interface IRenderer
     {
+        
     }
 }

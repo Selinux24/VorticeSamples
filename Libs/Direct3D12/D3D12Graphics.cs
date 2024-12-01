@@ -12,9 +12,20 @@ using Vortice.DXGI;
 
 namespace Direct3D12
 {
+    /// <summary>
+    /// D3D12 graphics implementation.
+    /// </summary>
     class D3D12Graphics : GraphicsBase
     {
         private const FeatureLevel MinimumFeatureLevel = FeatureLevel.Level_11_0;
+
+        /// <summary>
+        /// Gets or sets the render target format.
+        /// </summary>
+        public static Format RenderTargetFormat { get; set; } = Format.R8G8B8A8_UNorm_SRgb;
+        /// <summary>
+        /// Gets or sets the number of frame buffers.
+        /// </summary>
         public static int FrameBufferCount { get; set; } = 3;
 
         private ID3D12Device8 mainDevice;
@@ -30,8 +41,14 @@ namespace Direct3D12
         private readonly int[] deferredReleasesFlags;
         private readonly Mutex deferredReleasesMutx;
 
+        /// <summary>
+        /// Gets the main D3D12 device.
+        /// </summary>
         public ID3D12Device Device { get => mainDevice; }
 
+        /// <summary>
+        /// Constructs a new instance of <see cref="D3D12Graphics"/>.
+        /// </summary>
         public D3D12Graphics()
         {
             rtvDescHeap = new(this, DescriptorHeapType.RenderTargetView);
@@ -48,7 +65,29 @@ namespace Direct3D12
             deferredReleasesMutx = new();
         }
 
+        /// <summary>
+        /// Gets the RTV descriptor heap.
+        /// </summary>
+        public DescriptorHeap RtvHeap { get => rtvDescHeap; }
+        /// <summary>
+        /// Gets the DSV descriptor heap.
+        /// </summary>
+        public DescriptorHeap DsvHeap { get => dsvDescHeap; }
+        /// <summary>
+        /// Gets the SRV descriptor heap.
+        /// </summary>
+        public DescriptorHeap SrvHeap { get => srvDescHeap; }
+        /// <summary>
+        /// Gets the UAV descriptor heap.
+        /// </summary>
+        public DescriptorHeap UavHeap { get => uavDescHeap; }
+        /// <summary>
+        /// Gets the current frame index.
+        /// </summary>
         public int CurrentFrameIndex() => gfxCommand.FrameIndex;
+        /// <summary>
+        /// Sets the deferred releases flag.
+        /// </summary>
         public void SetDeferredReleasesFlag()
         {
             deferredReleasesFlags[CurrentFrameIndex()] = 1;

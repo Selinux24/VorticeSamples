@@ -55,6 +55,14 @@ namespace Engine.Platform
             }
         }
         /// <summary>
+        /// Gets the width of the window.
+        /// </summary>
+        public int Width { get => clientArea.Width; }
+        /// <summary>
+        /// Gets the height of the window.
+        /// </summary>
+        public int Height { get => clientArea.Height; }
+        /// <summary>
         /// Gets the aspect ratio of the window.
         /// </summary>
         public float AspectRatio

@@ -20,6 +20,7 @@ namespace Engine
         private readonly Time time = new();
         private readonly object tickLock = new();
         private readonly List<PlatformWindow> windows = [];
+        private readonly List<RenderSurface> renderSurfaces = [];
 
         /// <summary>
         /// Gets or sets a value indicating whether vertical sync is enabled.
@@ -76,6 +77,7 @@ namespace Engine
         {
             var wnd = platform.CreateWindow(info);
             windows.Add(wnd);
+            renderSurfaces.Add(new() { Window = wnd });
             return wnd;
         }
         /// <summary>
@@ -85,6 +87,7 @@ namespace Engine
         public void RemoveWindow(PlatformWindow window)
         {
             windows.Remove(window);
+            renderSurfaces.RemoveAll(x => x.Window == window);
             platform.RemoveWindow(window);
         }
 
@@ -185,6 +188,11 @@ namespace Engine
         /// <param name="time">Time</param>
         protected virtual void Draw(Time time)
         {
+            for (int i = 0; i < renderSurfaces.Count; i++)
+            {
+                renderSurfaces[i].Surface?.Render();
+            }
+
             graphics.Render();
         }
         /// <summary>
