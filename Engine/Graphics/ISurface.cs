@@ -1,12 +1,25 @@
 ﻿
 namespace Engine.Graphics
 {
+    /// <summary>
+    /// Surface interface.
+    /// </summary>
     public interface ISurface
     {
+        /// <summary>
+        /// Width
+        /// </summary>
         int Width { get; }
+        /// <summary>
+        /// Height
+        /// </summary>
         int Height { get; }
 
+        /// <summary>
+        /// Resize the surface.
+        /// </summary>
+        /// <param name="width">New width</param>
+        /// <param name="height">New height</param>
         void Resize(int width, int height);
-        void Render();
     }
 }

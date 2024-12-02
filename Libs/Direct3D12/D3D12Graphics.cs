@@ -7,7 +7,6 @@ using System.Diagnostics;
 using System.Threading;
 using Vortice.Direct3D;
 using Vortice.Direct3D12;
-using Vortice.Direct3D12.Debug;
 using Vortice.DXGI;
 
 namespace Direct3D12
@@ -224,23 +223,10 @@ namespace Direct3D12
         /// <inheritdoc/>
         public override void Render()
         {
-            // Wait for the GPU to finish with the command allocator and
-            // reset the allocator once the GPU is done with it.
-            // This frees the memory that was used to store commands.
-            gfxCommand.BeginFrame();
-            var cmdlist = gfxCommand.CommandList;
-
-            int frameIdx = CurrentFrameIndex();
-            if (deferredReleasesFlags[frameIdx] != 0)
+            for (int i = 0; i < surfaces.Count; i++)
             {
-                ProcessDeferredReleases(frameIdx);
+                RenderSurface((uint)i, null);
             }
-            // Record commands
-            // ...
-            // 
-            // Done recording commands. Now execute commands,
-            // signal and increment the fence value for next frame.
-            gfxCommand.EndFrame();
         }
 
         private IDXGIAdapter4 DetermineMainAdapter()
@@ -311,25 +297,53 @@ namespace Direct3D12
             }
         }
 
+        private readonly List<D3D12Surface> surfaces = [];
         /// <inheritdoc/>
         public override ISurface CreateSurface(PlatformWindow window)
         {
-            throw new NotImplementedException();
+            var surface = new D3D12Surface(window, this);
+            surfaces.Add(surface);
+            surface.CreateSwapChain(dxgiFactory, gfxCommand.CommandQueue, RenderTargetFormat);
+            return surface;
         }
         /// <inheritdoc/>
         public override void RemoveSurface(uint id)
         {
-            throw new NotImplementedException();
+            gfxCommand.Flush();
+            // TODO: use proper removal of surfaces.
+            surfaces.RemoveAt((int)id);
         }
         /// <inheritdoc/>
-        public override void ResizeSurface(uint id, uint width, uint height)
+        public override void ResizeSurface(uint id, int width, int height)
         {
-            throw new NotImplementedException();
+            gfxCommand.Flush();
+            surfaces[(int)id].Resize(width, height);
         }
         /// <inheritdoc/>
         public override void RenderSurface(uint id, IFrameInfo info)
         {
-            throw new NotImplementedException();
+            // Wait for the GPU to finish with the command allocator and
+            // reset the allocator once the GPU is done with it.
+            // This frees the memory that was used to store commands.
+            gfxCommand.BeginFrame();
+            var cmdList = gfxCommand.CommandList;
+
+            int frameIdx = CurrentFrameIndex();
+            if (deferredReleasesFlags[frameIdx] != 0)
+            {
+                ProcessDeferredReleases(frameIdx);
+            }
+
+            var surface = surfaces[(int)id];
+
+            // Presenting swap chain buffers happens in lockstep with frame buffers.
+            surface.Present();
+            // Record commands
+            // ...
+            // 
+            // Done recording commands. Now execute commands,
+            // signal and increment the fence value for next frame.
+            gfxCommand.EndFrame();
         }
 
         /// <inheritdoc/>

@@ -156,12 +156,19 @@ namespace Direct3D12
         /// <inheritdoc/>
         public void Resize(int width, int height)
         {
+            Debug.Assert(swapChain != null);
+            for (int i = 0; i < D3D12Graphics.FrameBufferCount; i++)
+            {
+                renderTargetData[i].Resource?.Release();
+            }
 
-        }
-        /// <inheritdoc/>
-        public void Render()
-        {
-            
+            SwapChainFlags flags = allowTearing ? SwapChainFlags.AllowTearing : 0;
+            swapChain.ResizeBuffers(D3D12Graphics.FrameBufferCount, 0, 0, Format.Unknown, flags);
+            currentBbIndex = swapChain.CurrentBackBufferIndex;
+
+            FinalizeSwapChainCreation();
+
+            Console.WriteLine("D3D12 Surface Resized.");
         }
 
         /// <summary>
@@ -172,11 +179,11 @@ namespace Direct3D12
             for (int i = 0; i < D3D12Graphics.FrameBufferCount; i++)
             {
                 var data = renderTargetData[i];
-                data.Resource.Release();
+                data.Resource?.Release();
                 graphics.RtvHeap.Free(ref data.Rtv);
             }
 
-            swapChain.Release();
+            swapChain?.Release();
         }
     }
 }

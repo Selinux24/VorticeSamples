@@ -66,6 +66,8 @@ namespace Engine
             graphics = graphicsFactory.CreateGraphics();
 
             Current = this;
+      
+            Initialize();
         }
 
         /// <summary>
@@ -77,7 +79,8 @@ namespace Engine
         {
             var wnd = platform.CreateWindow(info);
             windows.Add(wnd);
-            renderSurfaces.Add(new() { Window = wnd });
+            var surface = graphics.CreateSurface(wnd);
+            renderSurfaces.Add(new() { Window = wnd, Surface = surface });
             return wnd;
         }
         /// <summary>
@@ -102,7 +105,6 @@ namespace Engine
             }
 
             IsRunning = true;
-            Initialize();
             LoadContentAsync();
 
             time.Update();
@@ -188,11 +190,6 @@ namespace Engine
         /// <param name="time">Time</param>
         protected virtual void Draw(Time time)
         {
-            for (int i = 0; i < renderSurfaces.Count; i++)
-            {
-                renderSurfaces[i].Surface?.Render();
-            }
-
             graphics.Render();
         }
         /// <summary>

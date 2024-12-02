@@ -10,7 +10,7 @@ namespace Engine.Graphics
 
         public abstract ISurface CreateSurface(PlatformWindow window);
         public abstract void RemoveSurface(IdType id);
-        public abstract void ResizeSurface(IdType id, uint width, uint height);
+        public abstract void ResizeSurface(IdType id, int width, int height);
         public abstract void RenderSurface(IdType id, IFrameInfo info);
 
         public abstract ICamera CreateCamera(ICameraInitInfo info);
