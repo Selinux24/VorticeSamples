@@ -66,7 +66,7 @@ namespace Engine
             graphics = graphicsFactory.CreateGraphics();
 
             Current = this;
-      
+
             Initialize();
         }
 
@@ -109,9 +109,14 @@ namespace Engine
 
             time.Update();
 
-            platform.Run();
-
-            Shutdown();
+            try
+            {
+                platform.Run();
+            }
+            finally
+            {
+                Shutdown();
+            }
         }
         /// <summary>
         /// Initializes the application.

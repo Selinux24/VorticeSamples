@@ -36,12 +36,10 @@ namespace DX12Windows
             GameEntity.RegisterScript<TestScript>();
 
             var app = HelloWorldApp.Start<Win32PlatformFactory, D3D12GraphicsFactory>();
-
             app.CreateWindow(windowInfo1);
             app.CreateWindow(windowInfo2);
             app.CreateWindow(windowInfo3);
             app.CreateWindow(windowInfo4);
-
             app.Run();
         }
     }

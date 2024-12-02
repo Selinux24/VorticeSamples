@@ -7,6 +7,9 @@ using System.Diagnostics;
 using System.Threading;
 using Vortice.Direct3D;
 using Vortice.Direct3D12;
+#if DEBUG
+using Vortice.Direct3D12.Debug;
+#endif
 using Vortice.DXGI;
 
 namespace Direct3D12
