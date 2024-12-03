@@ -216,7 +216,11 @@ namespace WindowsPlatform
                     _ = TranslateMessage(ref msg);
                     _ = DispatchMessageW(ref msg);
 
-                    isRunning = msg.msg != WM_QUIT;
+                    if (msg.msg == WM_QUIT)
+                    {
+                        isRunning = false;
+                        break;
+                    }
                 }
 
                 Application.Current.Tick();
@@ -242,6 +246,10 @@ namespace WindowsPlatform
             {
                 case WM_DESTROY:
                     wnd.IsClosed = true;
+                    if (!windows.Any(w => !w.Value.IsClosed))
+                    {
+                        return PostQuitMessage(0);
+                    }
                     break;
                 case WM_SIZE:
                     SetResized(hwnd, wParam != SIZE_MINIMIZED);

@@ -16,7 +16,7 @@ namespace Engine.Graphics
         int Height { get; }
 
         /// <summary>
-        /// Resize the surface.
+        /// Resizes the surface.
         /// </summary>
         /// <param name="width">New width</param>
         /// <param name="height">New height</param>

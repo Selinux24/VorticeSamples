@@ -109,14 +109,9 @@ namespace Engine
 
             time.Update();
 
-            try
-            {
-                platform.Run();
-            }
-            finally
-            {
-                Shutdown();
-            }
+            platform.Run();
+
+            Shutdown();
         }
         /// <summary>
         /// Initializes the application.
