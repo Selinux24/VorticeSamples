@@ -11,7 +11,6 @@ using Vortice.Direct3D12;
 using Vortice.Direct3D12.Debug;
 #endif
 using Vortice.DXGI;
-using System.Reflection;
 
 namespace Direct3D12
 {
@@ -32,7 +31,7 @@ namespace Direct3D12
         public static int FrameBufferCount { get; set; } = 3;
 
         private ID3D12Device8 mainDevice;
-        private ID3D12InfoQueue1 infoQueue;
+        private ID3D12InfoQueue infoQueue;
         private IDXGIFactory7 dxgiFactory;
         private D3D12Command gfxCommand;
 
@@ -161,8 +160,16 @@ namespace Direct3D12
 
 #if DEBUG
             {
-                infoQueue = mainDevice.QueryInterface<ID3D12InfoQueue1>();
-                infoQueue.RegisterMessageCallback(DebugCallback, MessageCallbackFlags.None);
+                var iq = mainDevice.QueryInterfaceOrNull<ID3D12InfoQueue1>();
+                if (iq != null)
+                {
+                    iq.RegisterMessageCallback(DebugCallback, MessageCallbackFlags.None);
+                    infoQueue = iq;
+                }
+                else
+                {
+                    infoQueue = mainDevice.QueryInterfaceOrNull<ID3D12InfoQueue>();
+                }
             }
 #endif
 

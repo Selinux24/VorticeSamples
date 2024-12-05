@@ -21,6 +21,15 @@ namespace Direct3D12
         private int size = 0;
         private int descriptorSize;
 
+        public DescriptorHeapType DescriptorType { get => type; }
+        public CpuDescriptorHandle CpuStart { get => cpuStart; }
+        public GpuDescriptorHandle GpuStart { get => gpuStart; }
+        public ID3D12DescriptorHeap Heap { get => heap; }
+        public int Capacity { get => capacity; }
+        public int Size { get => size; }
+        public int DescriptorSize { get => descriptorSize; }
+        public bool IsShaderVisible { get => gpuStart.Ptr != 0; }
+
         public DescriptorHeap(D3D12Graphics graphics, DescriptorHeapType type)
         {
             this.graphics = graphics;
@@ -94,13 +103,13 @@ namespace Direct3D12
             Debug.Assert(size == 0);
             graphics.DeferredRelease(heap);
         }
-        public void ProcessDeferredFree(int frame_idx)
+        public void ProcessDeferredFree(int frameIdx)
         {
             lock (mutex)
             {
-                Debug.Assert(frame_idx < D3D12Graphics.FrameBufferCount);
+                Debug.Assert(frameIdx < D3D12Graphics.FrameBufferCount);
 
-                var indices = deferredFreeIndices[frame_idx];
+                var indices = deferredFreeIndices[frameIdx];
                 if (indices.Count != 0)
                 {
                     foreach (var index in indices)
@@ -160,14 +169,5 @@ namespace Direct3D12
                 handle = new();
             }
         }
-
-        public DescriptorHeapType DescriptorType { get => type; }
-        public CpuDescriptorHandle CpuStart { get => cpuStart; }
-        public GpuDescriptorHandle GpuStart { get => gpuStart; }
-        public ID3D12DescriptorHeap Heap { get => heap; }
-        public int Capacity { get => capacity; }
-        public int Size { get => size; }
-        public int DescriptorSize { get => descriptorSize; }
-        public bool IsShaderVisible { get => gpuStart.Ptr != 0; }
     }
 }
