@@ -1,5 +1,6 @@
 ﻿using Direct3D12;
 using Engine.Components;
+using System;
 using WindowsPlatform;
 
 namespace DX12Windows
@@ -35,12 +36,21 @@ namespace DX12Windows
 
             GameEntity.RegisterScript<TestScript>();
 
-            var app = HelloWorldApp.Start<Win32PlatformFactory, D3D12GraphicsFactory>();
-            app.CreateWindow(windowInfo1);
-            app.CreateWindow(windowInfo2);
-            app.CreateWindow(windowInfo3);
-            app.CreateWindow(windowInfo4);
-            app.Run();
+            try
+            {
+                var app = HelloWorldApp.Start<Win32PlatformFactory, D3D12GraphicsFactory>();
+                app.CreateWindow(windowInfo1);
+                app.CreateWindow(windowInfo2);
+                app.CreateWindow(windowInfo3);
+                app.CreateWindow(windowInfo4);
+                app.Run();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("An error ocurred. Enter to continue.");
+                Console.WriteLine(ex.ToString());
+                Console.ReadLine();
+            }
         }
     }
 }

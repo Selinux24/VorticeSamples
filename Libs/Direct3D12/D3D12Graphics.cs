@@ -11,6 +11,7 @@ using Vortice.Direct3D12;
 using Vortice.Direct3D12.Debug;
 #endif
 using Vortice.DXGI;
+using System.Reflection;
 
 namespace Direct3D12
 {
@@ -31,6 +32,7 @@ namespace Direct3D12
         public static int FrameBufferCount { get; set; } = 3;
 
         private ID3D12Device8 mainDevice;
+        private ID3D12InfoQueue1 infoQueue;
         private IDXGIFactory7 dxgiFactory;
         private D3D12Command gfxCommand;
 
@@ -103,21 +105,31 @@ namespace Direct3D12
                 Shutdown();
             }
 
-            bool dxgiFactoryFlags = false;
+            bool debug = false;
 #if DEBUG
             {
-                if (D3D12.D3D12GetDebugInterface<ID3D12Debug3>(out var debugInterface).Success)
+                if (D3D12.D3D12GetDebugInterface<ID3D12Debug>(out var debugInterface).Success)
                 {
                     debugInterface.EnableDebugLayer();
+                    debugInterface.Dispose();
                 }
                 else
                 {
                     Console.WriteLine("Warning: D3D12 Debug interface is not available. Verify that Graphics Tools optional feature is installed on this system.");
                 }
-                dxgiFactoryFlags = true;
+                debug = true;
+
+                if (D3D12.D3D12GetDebugInterface(out ID3D12DeviceRemovedExtendedDataSettings1 dredSettings).Success)
+                {
+                    // Turn on auto-breadcrumbs and page fault reporting.
+                    dredSettings.SetAutoBreadcrumbsEnablement(DredEnablement.ForcedOn);
+                    dredSettings.SetPageFaultEnablement(DredEnablement.ForcedOn);
+                    dredSettings.SetBreadcrumbContextEnablement(DredEnablement.ForcedOn);
+                    dredSettings.Dispose();
+                }
             }
 #endif
-            if (!DXGI.CreateDXGIFactory2(dxgiFactoryFlags, out dxgiFactory).Success)
+            if (!DXGI.CreateDXGIFactory2(debug, out dxgiFactory).Success)
             {
                 return FailedInit();
             }
@@ -149,10 +161,8 @@ namespace Direct3D12
 
 #if DEBUG
             {
-                var infoQueue = mainDevice.QueryInterface<ID3D12InfoQueue>();
-                infoQueue.SetBreakOnSeverity(MessageSeverity.Corruption, true);
-                infoQueue.SetBreakOnSeverity(MessageSeverity.Warning, true);
-                infoQueue.SetBreakOnSeverity(MessageSeverity.Error, true);
+                infoQueue = mainDevice.QueryInterface<ID3D12InfoQueue1>();
+                infoQueue.RegisterMessageCallback(DebugCallback, MessageCallbackFlags.None);
             }
 #endif
 
@@ -207,10 +217,7 @@ namespace Direct3D12
 
 #if DEBUG
             {
-                var infoQueue = mainDevice.QueryInterface<ID3D12InfoQueue>();
-                infoQueue.SetBreakOnSeverity(MessageSeverity.Corruption, false);
-                infoQueue.SetBreakOnSeverity(MessageSeverity.Warning, false);
-                infoQueue.SetBreakOnSeverity(MessageSeverity.Error, false);
+                infoQueue.Dispose();
 
                 var debugDevice = mainDevice.QueryInterface<ID3D12DebugDevice2>();
                 mainDevice.Release();
@@ -218,6 +225,7 @@ namespace Direct3D12
                     ReportLiveDeviceObjectFlags.Summary |
                     ReportLiveDeviceObjectFlags.Detail |
                     ReportLiveDeviceObjectFlags.IgnoreInternal);
+                debugDevice.Dispose();
             }
 #endif
 
@@ -441,5 +449,12 @@ namespace Direct3D12
         {
             throw new NotImplementedException();
         }
+
+#if DEBUG
+        private static void DebugCallback(MessageCategory category, MessageSeverity severity, MessageId id, string description)
+        {
+            Console.WriteLine($"{category} {severity} {id} {description}");
+        }
+#endif
     }
 }
