@@ -6,12 +6,42 @@ namespace Direct3D12
 {
     class D3D12Command
     {
+        class CommandFrame
+        {
+            public ID3D12CommandAllocator CmdAllocator;
+            public ulong FenceValue;
+
+            public void Wait(AutoResetEvent fenceEvent, ID3D12Fence1 fence)
+            {
+                Debug.Assert(fenceEvent != null && fence != null);
+
+                // If the current fence value is still less than "fence_value"
+                // then we know the GPU has not finished executing the command lists
+                // since it has not reached the "_cmd_queue->Signal()" command
+                if (fence.CompletedValue < FenceValue)
+                {
+                    // We have the fence create an event wich is singaled once the fence's current value equals "fence_value"
+                    fence.SetEventOnCompletion(FenceValue, fenceEvent.SafeWaitHandle.DangerousGetHandle());
+
+                    // Wait until the fence has triggered the event that its current value has reached "fence_value"
+                    // indicating that command queue has finished executing.
+                    fenceEvent.WaitOne();
+                }
+            }
+            public void Release()
+            {
+                CmdAllocator.Release();
+                FenceValue = 0;
+            }
+        }
+
         private readonly ID3D12CommandQueue cmdQueue;
         private readonly ID3D12GraphicsCommandList6 cmdList;
         private readonly ID3D12Fence1 fence;
         private ulong fenceValue = 0;
         private AutoResetEvent fenceEvent;
 
+        private readonly int frameBufferCount;
         private readonly CommandFrame[] cmdFrames;
         private int frameIndex = 0;
 
@@ -19,8 +49,11 @@ namespace Direct3D12
         public ID3D12GraphicsCommandList6 CommandList { get => cmdList; }
         public int FrameIndex { get => frameIndex; }
 
-        public D3D12Command(ID3D12Device8 device, CommandListType type)
+        public D3D12Command(D3D12Graphics graphics, CommandListType type)
         {
+            frameBufferCount = graphics.FrameBufferCount;
+            var device = graphics.Device;
+
             var description = new CommandQueueDescription(type, CommandQueuePriority.Normal, CommandQueueFlags.None, 0);
 
             if (!device.CreateCommandQueue(description, out cmdQueue).Success)
@@ -35,13 +68,13 @@ namespace Direct3D12
                 _ => "Command Queue"
             };
 
-            cmdFrames = new CommandFrame[D3D12Graphics.FrameBufferCount];
-            for (int i = 0; i < D3D12Graphics.FrameBufferCount; i++)
+            cmdFrames = new CommandFrame[frameBufferCount];
+            for (int i = 0; i < frameBufferCount; i++)
             {
                 cmdFrames[i] = new CommandFrame();
             }
 
-            for (int i = 0; i < D3D12Graphics.FrameBufferCount; i++)
+            for (int i = 0; i < frameBufferCount; i++)
             {
                 var frame = cmdFrames[i];
 
@@ -98,11 +131,11 @@ namespace Direct3D12
             frame.FenceValue = value;
             cmdQueue.Signal(fence, value);
 
-            frameIndex = (frameIndex + 1) % D3D12Graphics.FrameBufferCount;
+            frameIndex = (frameIndex + 1) % frameBufferCount;
         }
         public void Flush()
         {
-            for (int i = 0; i < D3D12Graphics.FrameBufferCount; i++)
+            for (int i = 0; i < frameBufferCount; i++)
             {
                 cmdFrames[i].Wait(fenceEvent, fence);
             }
@@ -121,7 +154,7 @@ namespace Direct3D12
             cmdQueue.Release();
             cmdList.Release();
 
-            for (int i = 0; i < D3D12Graphics.FrameBufferCount; i++)
+            for (int i = 0; i < frameBufferCount; i++)
             {
                 cmdFrames[i].Release();
             }

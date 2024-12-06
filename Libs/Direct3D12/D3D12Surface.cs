@@ -13,9 +13,15 @@ namespace Direct3D12
     /// </summary>
     class D3D12Surface : ISurface
     {
+        struct RenderTargetData
+        {
+            public ID3D12Resource Resource;
+            public D3D12DescriptorHandle Rtv;
+        }
+
         private readonly D3D12Graphics graphics;
         private IDXGISwapChain4 swapChain;
-        private readonly RenderTargetData[] renderTargetData = new RenderTargetData[D3D12Graphics.FrameBufferCount];
+        private readonly RenderTargetData[] renderTargetData;
         private readonly PlatformWindow window;
         private int currentBbIndex = 0;
         private readonly bool allowTearing = false;
@@ -42,13 +48,32 @@ namespace Direct3D12
             Debug.Assert(window != null && window.Handle != 0);
             this.window = window;
             this.graphics = graphics;
+            renderTargetData = new RenderTargetData[graphics.FrameBufferCount];
         }
         /// <summary>
         /// Finalizes an instance of the <see cref="D3D12Surface"/> class.
         /// </summary>
         ~D3D12Surface()
         {
-            Release();
+            // Finalizer calls Dispose(false)  
+            Dispose(false);
+        }
+        /// <inheritdoc/>
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+        /// <summary>
+        /// Dispose resources
+        /// </summary>
+        /// <param name="disposing">Free managed resources</param>
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                Release();
+            }
         }
 
         private static Format ToNonSrgb(Format format)
@@ -72,6 +97,8 @@ namespace Direct3D12
             Debug.Assert(factory != null && cmdQueue != null);
             Release();
 
+            int frameBufferCount = graphics.FrameBufferCount;
+
             if (factory.CheckFeatureSupport(Vortice.DXGI.Feature.PresentAllowTearing, allowTearing) && allowTearing)
             {
                 presentFlags = PresentFlags.AllowTearing;
@@ -80,7 +107,7 @@ namespace Direct3D12
             SwapChainDescription1 desc = new()
             {
                 AlphaMode = AlphaMode.Unspecified,
-                BufferCount = D3D12Graphics.FrameBufferCount,
+                BufferCount = frameBufferCount,
                 BufferUsage = Usage.RenderTargetOutput,
                 Flags = allowTearing ? SwapChainFlags.AllowTearing : 0,
                 Format = ToNonSrgb(format),
@@ -101,7 +128,7 @@ namespace Direct3D12
 
             currentBbIndex = swapChain.CurrentBackBufferIndex;
 
-            for (int i = 0; i < D3D12Graphics.FrameBufferCount; i++)
+            for (int i = 0; i < frameBufferCount; i++)
             {
                 renderTargetData[i].Rtv = graphics.RtvHeap.Allocate();
             }
@@ -114,17 +141,16 @@ namespace Direct3D12
         private void FinalizeSwapChainCreation()
         {
             // create RTVs for back-buffers
-            for (int i = 0; i < D3D12Graphics.FrameBufferCount; i++)
+            for (int i = 0; i < graphics.FrameBufferCount; i++)
             {
-                var data = renderTargetData[i];
-                Debug.Assert(data.Resource == null);
-                swapChain.GetBuffer(i, out data.Resource);
+                Debug.Assert(renderTargetData[i].Resource == null);
+                swapChain.GetBuffer(i, out renderTargetData[i].Resource);
                 RenderTargetViewDescription rtvdesc = new()
                 {
-                    Format = D3D12Graphics.RenderTargetFormat,
+                    Format = graphics.RenderTargetFormat,
                     ViewDimension = RenderTargetViewDimension.Texture2D
                 };
-                graphics.Device.CreateRenderTargetView(data.Resource, rtvdesc, data.Rtv.Cpu);
+                graphics.Device.CreateRenderTargetView(renderTargetData[i].Resource, rtvdesc, renderTargetData[i].Rtv.Cpu);
             }
 
             SwapChainDescription scdesc = swapChain.Description;
@@ -156,31 +182,28 @@ namespace Direct3D12
         /// <inheritdoc/>
         public void Resize(int width, int height)
         {
+            int frameBufferCount = graphics.FrameBufferCount;
+
             Debug.Assert(swapChain != null);
-            for (int i = 0; i < D3D12Graphics.FrameBufferCount; i++)
+            for (int i = 0; i < frameBufferCount; i++)
             {
                 renderTargetData[i].Resource?.Release();
             }
 
             SwapChainFlags flags = allowTearing ? SwapChainFlags.AllowTearing : 0;
-            swapChain.ResizeBuffers(D3D12Graphics.FrameBufferCount, 0, 0, Format.Unknown, flags);
+            swapChain.ResizeBuffers(frameBufferCount, 0, 0, Format.Unknown, flags);
             currentBbIndex = swapChain.CurrentBackBufferIndex;
 
             FinalizeSwapChainCreation();
 
-            Console.WriteLine("D3D12 Surface Resized.");
+            Debug.WriteLine("D3D12 Surface Resized.");
         }
-
-        /// <summary>
-        /// Releases the surface.
-        /// </summary>
         private void Release()
         {
-            for (int i = 0; i < D3D12Graphics.FrameBufferCount; i++)
+            for (int i = 0; i < graphics.FrameBufferCount; i++)
             {
-                var data = renderTargetData[i];
-                data.Resource?.Release();
-                graphics.RtvHeap.Free(ref data.Rtv);
+                renderTargetData[i].Resource?.Release();
+                graphics.RtvHeap.Free(ref renderTargetData[i].Rtv);
             }
 
             swapChain?.Release();

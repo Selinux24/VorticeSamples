@@ -2,12 +2,12 @@
 
 namespace Direct3D12
 {
-    struct DescriptorHandle()
+    struct D3D12DescriptorHandle()
     {
         public CpuDescriptorHandle Cpu;
         public GpuDescriptorHandle Gpu;
-        public DescriptorHeap Container;
-        public nint Index = nint.MaxValue;
+        public D3D12DescriptorHeap Container;
+        public uint Index = uint.MaxValue;
 
         public readonly bool IsValid()
         {

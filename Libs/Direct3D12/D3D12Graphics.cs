@@ -21,33 +21,36 @@ namespace Direct3D12
     {
         private const FeatureLevel MinimumFeatureLevel = FeatureLevel.Level_11_0;
 
-        /// <summary>
-        /// Gets or sets the render target format.
-        /// </summary>
-        public static Format RenderTargetFormat { get; set; } = Format.R8G8B8A8_UNorm_SRgb;
-        /// <summary>
-        /// Gets or sets the number of frame buffers.
-        /// </summary>
-        public static int FrameBufferCount { get; set; } = 3;
-
         private ID3D12Device8 mainDevice;
         private ID3D12InfoQueue infoQueue;
         private IDXGIFactory7 dxgiFactory;
         private D3D12Command gfxCommand;
 
-        private readonly DescriptorHeap rtvDescHeap;
-        private readonly DescriptorHeap dsvDescHeap;
-        private readonly DescriptorHeap srvDescHeap;
-        private readonly DescriptorHeap uavDescHeap;
+        private readonly D3D12DescriptorHeap rtvDescHeap;
+        private readonly D3D12DescriptorHeap dsvDescHeap;
+        private readonly D3D12DescriptorHeap srvDescHeap;
+        private readonly D3D12DescriptorHeap uavDescHeap;
 
         private readonly List<IUnknown>[] deferredReleases;
         private readonly int[] deferredReleasesFlags;
         private readonly Mutex deferredReleasesMutx;
 
         /// <summary>
+        /// Gets or sets the number of frame buffers.
+        /// </summary>
+        public int FrameBufferCount { get; } = 3;
+        /// <summary>
+        /// Gets or sets the render target format.
+        /// </summary>
+        public Format RenderTargetFormat { get; } = Format.R8G8B8A8_UNorm_SRgb;
+        /// <summary>
         /// Gets the main D3D12 device.
         /// </summary>
         public ID3D12Device Device { get => mainDevice; }
+        /// <summary>
+        /// Gets the current frame index.
+        /// </summary>
+        public int CurrentFrameIndex { get => gfxCommand.FrameIndex; }
 
         /// <summary>
         /// Constructs a new instance of <see cref="D3D12Graphics"/>.
@@ -71,29 +74,25 @@ namespace Direct3D12
         /// <summary>
         /// Gets the RTV descriptor heap.
         /// </summary>
-        public DescriptorHeap RtvHeap { get => rtvDescHeap; }
+        public D3D12DescriptorHeap RtvHeap { get => rtvDescHeap; }
         /// <summary>
         /// Gets the DSV descriptor heap.
         /// </summary>
-        public DescriptorHeap DsvHeap { get => dsvDescHeap; }
+        public D3D12DescriptorHeap DsvHeap { get => dsvDescHeap; }
         /// <summary>
         /// Gets the SRV descriptor heap.
         /// </summary>
-        public DescriptorHeap SrvHeap { get => srvDescHeap; }
+        public D3D12DescriptorHeap SrvHeap { get => srvDescHeap; }
         /// <summary>
         /// Gets the UAV descriptor heap.
         /// </summary>
-        public DescriptorHeap UavHeap { get => uavDescHeap; }
-        /// <summary>
-        /// Gets the current frame index.
-        /// </summary>
-        public int CurrentFrameIndex() => gfxCommand.FrameIndex;
+        public D3D12DescriptorHeap UavHeap { get => uavDescHeap; }
         /// <summary>
         /// Sets the deferred releases flag.
         /// </summary>
         public void SetDeferredReleasesFlag()
         {
-            deferredReleasesFlags[CurrentFrameIndex()] = 1;
+            deferredReleasesFlags[CurrentFrameIndex] = 1;
         }
 
         /// <inheritdoc/>
@@ -114,7 +113,7 @@ namespace Direct3D12
                 }
                 else
                 {
-                    Console.WriteLine("Warning: D3D12 Debug interface is not available. Verify that Graphics Tools optional feature is installed on this system.");
+                    Debug.WriteLine("Warning: D3D12 Debug interface is not available. Verify that Graphics Tools optional feature is installed on this system.");
                 }
                 debug = true;
 
@@ -152,7 +151,7 @@ namespace Direct3D12
             }
             mainDevice.Name = "Main D3D12 Device";
 
-            gfxCommand = new D3D12Command(mainDevice, CommandListType.Direct);
+            gfxCommand = new D3D12Command(this, CommandListType.Direct);
             if (gfxCommand.CommandQueue == null)
             {
                 return FailedInit();
@@ -183,7 +182,7 @@ namespace Direct3D12
                 return FailedInit();
             }
 
-            gfxCommand = new(mainDevice, CommandListType.Direct);
+            gfxCommand = new(this, CommandListType.Direct);
             if (gfxCommand.CommandQueue == null)
             {
                 return FailedInit();
@@ -295,19 +294,26 @@ namespace Direct3D12
                 uavDescHeap.ProcessDeferredFree(frameIdx);
 
                 var resources = deferredReleases[frameIdx];
-                if (resources.Count > 0)
+                if (resources.Count <= 0)
                 {
-                    foreach (var resource in resources)
-                    {
-                        resource?.Dispose();
-                    }
-                    resources.Clear();
+                    return;
                 }
+
+                foreach (var resource in resources)
+                {
+                    resource?.Dispose();
+                }
+                resources.Clear();
             }
         }
         public void DeferredRelease(IUnknown resource)
         {
-            int frameIdx = CurrentFrameIndex();
+            if (resource == null)
+            {
+                return;
+            }
+
+            int frameIdx = CurrentFrameIndex;
             lock (deferredReleasesMutx)
             {
                 deferredReleases[frameIdx].Add(resource);
@@ -346,7 +352,7 @@ namespace Direct3D12
             gfxCommand.BeginFrame();
             var cmdList = gfxCommand.CommandList;
 
-            int frameIdx = CurrentFrameIndex();
+            int frameIdx = CurrentFrameIndex;
             if (deferredReleasesFlags[frameIdx] != 0)
             {
                 ProcessDeferredReleases(frameIdx);
@@ -460,7 +466,7 @@ namespace Direct3D12
 #if DEBUG
         private static void DebugCallback(MessageCategory category, MessageSeverity severity, MessageId id, string description)
         {
-            Console.WriteLine($"{category} {severity} {id} {description}");
+            Debug.WriteLine($"{category} {severity} {id} {description}");
         }
 #endif
     }

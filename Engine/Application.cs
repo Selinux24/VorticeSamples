@@ -90,7 +90,11 @@ namespace Engine
         public void RemoveWindow(PlatformWindow window)
         {
             windows.Remove(window);
-            renderSurfaces.RemoveAll(x => x.Window == window);
+
+            var surface = renderSurfaces.Find(x => x.Window == window);
+            renderSurfaces.Remove(surface);
+
+            surface.Surface.Dispose();
             platform.RemoveWindow(window);
         }
 

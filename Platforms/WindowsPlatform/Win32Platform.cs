@@ -218,6 +218,7 @@ namespace WindowsPlatform
 
                     if (msg.msg == WM_QUIT)
                     {
+                        Debug.WriteLine("WM_QUIT received.");
                         isRunning = false;
                         break;
                     }
@@ -229,7 +230,7 @@ namespace WindowsPlatform
             var windowsToRemove = windows.Values.ToArray();
             foreach (var wnd in windowsToRemove)
             {
-                RemoveWindow(wnd);
+                Application.Current.RemoveWindow(wnd);
             }
             Debug.Assert(windows.Count == 0);
 
@@ -245,6 +246,7 @@ namespace WindowsPlatform
             switch (msg)
             {
                 case WM_DESTROY:
+                    Debug.WriteLine($"Destroying window {hwnd}");
                     wnd.IsClosed = true;
                     if (!windows.Any(w => !w.Value.IsClosed))
                     {

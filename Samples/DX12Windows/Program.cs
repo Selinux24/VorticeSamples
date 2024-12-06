@@ -36,21 +36,12 @@ namespace DX12Windows
 
             GameEntity.RegisterScript<TestScript>();
 
-            try
-            {
-                var app = HelloWorldApp.Start<Win32PlatformFactory, D3D12GraphicsFactory>();
-                app.CreateWindow(windowInfo1);
-                app.CreateWindow(windowInfo2);
-                app.CreateWindow(windowInfo3);
-                app.CreateWindow(windowInfo4);
-                app.Run();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("An error ocurred. Enter to continue.");
-                Console.WriteLine(ex.ToString());
-                Console.ReadLine();
-            }
+            var app = HelloWorldApp.Start<Win32PlatformFactory, D3D12GraphicsFactory>();
+            app.CreateWindow(windowInfo1);
+            app.CreateWindow(windowInfo2);
+            app.CreateWindow(windowInfo3);
+            app.CreateWindow(windowInfo4);
+            app.Run();
         }
     }
 }

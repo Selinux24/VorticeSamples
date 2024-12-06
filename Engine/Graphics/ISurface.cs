@@ -1,10 +1,11 @@
-﻿
+﻿using System;
+
 namespace Engine.Graphics
 {
     /// <summary>
     /// Surface interface.
     /// </summary>
-    public interface ISurface
+    public interface ISurface : IDisposable
     {
         /// <summary>
         /// Width
