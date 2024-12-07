@@ -1,6 +1,7 @@
 ﻿using Engine.Graphics;
 using Engine.Platform;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Threading.Tasks;
 
 namespace Engine
@@ -19,7 +20,6 @@ namespace Engine
         private readonly GraphicsBase graphics;
         private readonly Time time = new();
         private readonly object tickLock = new();
-        private readonly List<PlatformWindow> windows = [];
         private readonly List<RenderSurface> renderSurfaces = [];
 
         /// <summary>
@@ -78,9 +78,9 @@ namespace Engine
         public PlatformWindow CreateWindow(IPlatformWindowInfo info)
         {
             var wnd = platform.CreateWindow(info);
-            windows.Add(wnd);
             var surface = graphics.CreateSurface(wnd);
             renderSurfaces.Add(new() { Window = wnd, Surface = surface });
+
             return wnd;
         }
         /// <summary>
@@ -89,13 +89,23 @@ namespace Engine
         /// <param name="window">Window to remove</param>
         public void RemoveWindow(PlatformWindow window)
         {
-            windows.Remove(window);
+            var rs = renderSurfaces.Find(x => x.Window == window);
+            renderSurfaces.Remove(rs);
+
+            rs.Surface.Dispose();
+            platform.RemoveWindow(window);
+        }
+        /// <summary>
+        /// Resizes a window.
+        /// </summary>
+        /// <param name="window">Window to resize</param>
+        /// <param name="clientArea">Client area</param>
+        public void ResizeWindow(PlatformWindow window, Rectangle clientArea)
+        {
+            window.Resized(clientArea);
 
             var surface = renderSurfaces.Find(x => x.Window == window);
-            renderSurfaces.Remove(surface);
-
-            surface.Surface.Dispose();
-            platform.RemoveWindow(window);
+            surface.Surface.Resize(clientArea.Width, clientArea.Height);
         }
 
         /// <summary>

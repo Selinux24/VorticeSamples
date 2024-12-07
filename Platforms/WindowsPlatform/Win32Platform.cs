@@ -161,8 +161,8 @@ namespace WindowsPlatform
             {
                 Left = bounds.Left,
                 Top = bounds.Top,
-                Right = bounds.Left + bounds.Width,
-                Bottom = bounds.Top + bounds.Height
+                Right = bounds.Right,
+                Bottom = bounds.Bottom
             };
             AdjustWindowRect(
                 ref windowRect,
@@ -254,7 +254,10 @@ namespace WindowsPlatform
                     }
                     break;
                 case WM_SIZE:
-                    SetResized(hwnd, wParam != SIZE_MINIMIZED);
+                    if (SetResized(hwnd, wParam != SIZE_MINIMIZED, out var clientArea))
+                    {
+                        Application.Current.ResizeWindow(wnd, clientArea);
+                    }
                     break;
                 default:
                     break;
@@ -274,11 +277,12 @@ namespace WindowsPlatform
             var callback = Marshal.GetDelegateForFunctionPointer<WndProcDelegate>(callbackPtr);
             return callback(hwnd, msg, wParam, lParam);
         }
-        private static void SetResized(IntPtr hwnd, bool resized)
+        private static bool SetResized(IntPtr hwnd, bool resized, out Rectangle clientArea)
         {
             if (!resized)
             {
-                return;
+                clientArea = default;
+                return false;
             }
 
             GetWindowRect(hwnd, out var rect);
@@ -291,14 +295,13 @@ namespace WindowsPlatform
                 true);
 
             GetClientRect(hwnd, out var area);
-            var clientArea = new Rectangle(
+            clientArea = new Rectangle(
                 area.Left,
                 area.Top,
                 area.GetWidth(),
                 area.GetHeight());
 
-            windows[hwnd].Resized(clientArea);
-            windows[hwnd].Title = $"x({rect.Left}) y({rect.Top}) width({rect.GetWidth()}) height({rect.GetHeight()})";
+            return true;
         }
     }
 }

@@ -188,6 +188,7 @@ namespace Direct3D12
             for (int i = 0; i < frameBufferCount; i++)
             {
                 renderTargetData[i].Resource?.Release();
+                renderTargetData[i].Resource = null;
             }
 
             SwapChainFlags flags = allowTearing ? SwapChainFlags.AllowTearing : 0;
