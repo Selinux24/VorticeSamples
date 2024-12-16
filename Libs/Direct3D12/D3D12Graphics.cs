@@ -7,10 +7,10 @@ using System.Diagnostics;
 using System.Threading;
 using Vortice.Direct3D;
 using Vortice.Direct3D12;
+using Vortice.DXGI;
 #if DEBUG
 using Vortice.Direct3D12.Debug;
 #endif
-using Vortice.DXGI;
 
 namespace Direct3D12
 {
@@ -22,9 +22,11 @@ namespace Direct3D12
         private const FeatureLevel MinimumFeatureLevel = FeatureLevel.Level_11_0;
 
         private ID3D12Device8 mainDevice;
-        private ID3D12InfoQueue infoQueue;
         private IDXGIFactory7 dxgiFactory;
         private D3D12Command gfxCommand;
+#if DEBUG
+        private ID3D12InfoQueue infoQueue;
+#endif
 
         private readonly D3D12DescriptorHeap rtvDescHeap;
         private readonly D3D12DescriptorHeap dsvDescHeap;
