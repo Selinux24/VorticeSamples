@@ -13,6 +13,8 @@ namespace Direct3D12
     /// </summary>
     class D3D12Surface : ISurface
     {
+        const int BufferCount = 3;
+
         struct RenderTargetData
         {
             public ID3D12Resource Resource;
@@ -21,7 +23,7 @@ namespace Direct3D12
 
         private readonly D3D12Graphics graphics;
         private IDXGISwapChain4 swapChain;
-        private readonly RenderTargetData[] renderTargetData;
+        private readonly RenderTargetData[] renderTargetData = new RenderTargetData[BufferCount];
         private readonly PlatformWindow window;
         private int currentBbIndex = 0;
         private readonly bool allowTearing = false;
@@ -29,6 +31,8 @@ namespace Direct3D12
         private Viewport viewport;
         private Rect scissorRect;
 
+        /// <inheritdoc/>
+        public uint Id { get; set; }
         /// <inheritdoc/>
         public int Width { get => (int)viewport.Width; }
         /// <inheritdoc/>
@@ -48,7 +52,6 @@ namespace Direct3D12
             Debug.Assert(window != null && window.Handle != 0);
             this.window = window;
             this.graphics = graphics;
-            renderTargetData = new RenderTargetData[graphics.FrameBufferCount];
         }
         /// <summary>
         /// Finalizes an instance of the <see cref="D3D12Surface"/> class.
@@ -97,7 +100,7 @@ namespace Direct3D12
             Debug.Assert(factory != null && cmdQueue != null);
             Release();
 
-            int frameBufferCount = graphics.FrameBufferCount;
+            int frameBufferCount = BufferCount;
 
             if (factory.CheckFeatureSupport(Vortice.DXGI.Feature.PresentAllowTearing, allowTearing) && allowTearing)
             {
@@ -141,7 +144,7 @@ namespace Direct3D12
         private void FinalizeSwapChainCreation()
         {
             // create RTVs for back-buffers
-            for (int i = 0; i < graphics.FrameBufferCount; i++)
+            for (int i = 0; i < BufferCount; i++)
             {
                 Debug.Assert(renderTargetData[i].Resource == null);
                 swapChain.GetBuffer(i, out renderTargetData[i].Resource);
@@ -182,7 +185,7 @@ namespace Direct3D12
         /// <inheritdoc/>
         public void Resize(int width, int height)
         {
-            int frameBufferCount = graphics.FrameBufferCount;
+            int frameBufferCount = BufferCount;
 
             Debug.Assert(swapChain != null);
             for (int i = 0; i < frameBufferCount; i++)
@@ -201,7 +204,7 @@ namespace Direct3D12
         }
         private void Release()
         {
-            for (int i = 0; i < graphics.FrameBufferCount; i++)
+            for (int i = 0; i < BufferCount; i++)
             {
                 renderTargetData[i].Resource?.Release();
                 graphics.RtvHeap.Free(ref renderTargetData[i].Rtv);

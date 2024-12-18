@@ -8,6 +8,10 @@ namespace Engine.Graphics
     public interface ISurface : IDisposable
     {
         /// <summary>
+        /// Surface id
+        /// </summary>
+        uint Id { get; set; }
+        /// <summary>
         /// Width
         /// </summary>
         int Width { get; }

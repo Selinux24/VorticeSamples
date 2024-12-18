@@ -204,7 +204,10 @@ namespace Engine
         /// <param name="time">Time</param>
         protected virtual void Draw(Time time)
         {
-            graphics.Render();
+            foreach (var rs in renderSurfaces)
+            {
+                graphics.RenderSurface(rs.Surface.Id, null);
+            }
         }
         /// <summary>
         /// Ends drawing.

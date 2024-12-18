@@ -8,6 +8,9 @@ using System.Threading;
 using Vortice.Direct3D;
 using Vortice.Direct3D12;
 using Vortice.DXGI;
+using Engine.Common;
+
+
 #if DEBUG
 using Vortice.Direct3D12.Debug;
 #endif
@@ -22,11 +25,12 @@ namespace Direct3D12
         private const FeatureLevel MinimumFeatureLevel = FeatureLevel.Level_11_0;
 
         private ID3D12Device8 mainDevice;
-        private IDXGIFactory7 dxgiFactory;
-        private D3D12Command gfxCommand;
 #if DEBUG
         private ID3D12InfoQueue infoQueue;
 #endif
+        private IDXGIFactory7 dxgiFactory;
+        private D3D12Command gfxCommand;
+        private readonly List<D3D12Surface> surfaces = [];
 
         private readonly D3D12DescriptorHeap rtvDescHeap;
         private readonly D3D12DescriptorHeap dsvDescHeap;
@@ -35,20 +39,36 @@ namespace Direct3D12
 
         private readonly List<IUnknown>[] deferredReleases;
         private readonly int[] deferredReleasesFlags;
-        private readonly Mutex deferredReleasesMutx;
+        private readonly Mutex deferredReleasesMutex;
 
         /// <summary>
         /// Gets or sets the number of frame buffers.
         /// </summary>
         public int FrameBufferCount { get; } = 3;
         /// <summary>
-        /// Gets or sets the render target format.
-        /// </summary>
-        public Format RenderTargetFormat { get; } = Format.R8G8B8A8_UNorm_SRgb;
-        /// <summary>
         /// Gets the main D3D12 device.
         /// </summary>
         public ID3D12Device Device { get => mainDevice; }
+        /// <summary>
+        /// Gets the RTV descriptor heap.
+        /// </summary>
+        public D3D12DescriptorHeap RtvHeap { get => rtvDescHeap; }
+        /// <summary>
+        /// Gets the DSV descriptor heap.
+        /// </summary>
+        public D3D12DescriptorHeap DsvHeap { get => dsvDescHeap; }
+        /// <summary>
+        /// Gets the SRV descriptor heap.
+        /// </summary>
+        public D3D12DescriptorHeap SrvHeap { get => srvDescHeap; }
+        /// <summary>
+        /// Gets the UAV descriptor heap.
+        /// </summary>
+        public D3D12DescriptorHeap UavHeap { get => uavDescHeap; }
+        /// <summary>
+        /// Gets or sets the render target format.
+        /// </summary>
+        public Format RenderTargetFormat { get; } = Format.R8G8B8A8_UNorm_SRgb;
         /// <summary>
         /// Gets the current frame index.
         /// </summary>
@@ -70,25 +90,9 @@ namespace Direct3D12
                 deferredReleases[i] = [];
             }
             deferredReleasesFlags = new int[FrameBufferCount];
-            deferredReleasesMutx = new();
+            deferredReleasesMutex = new();
         }
 
-        /// <summary>
-        /// Gets the RTV descriptor heap.
-        /// </summary>
-        public D3D12DescriptorHeap RtvHeap { get => rtvDescHeap; }
-        /// <summary>
-        /// Gets the DSV descriptor heap.
-        /// </summary>
-        public D3D12DescriptorHeap DsvHeap { get => dsvDescHeap; }
-        /// <summary>
-        /// Gets the SRV descriptor heap.
-        /// </summary>
-        public D3D12DescriptorHeap SrvHeap { get => srvDescHeap; }
-        /// <summary>
-        /// Gets the UAV descriptor heap.
-        /// </summary>
-        public D3D12DescriptorHeap UavHeap { get => uavDescHeap; }
         /// <summary>
         /// Sets the deferred releases flag.
         /// </summary>
@@ -239,14 +243,6 @@ namespace Direct3D12
 
             mainDevice.Release();
         }
-        /// <inheritdoc/>
-        public override void Render()
-        {
-            for (int i = 0; i < surfaces.Count; i++)
-            {
-                RenderSurface((uint)i, null);
-            }
-        }
 
         private IDXGIAdapter4 DetermineMainAdapter()
         {
@@ -283,7 +279,7 @@ namespace Direct3D12
         }
         private void ProcessDeferredReleases(int frameIdx)
         {
-            lock (deferredReleasesMutx)
+            lock (deferredReleasesMutex)
             {
                 // NOTE: we clear this flag in the beginning. If we'd clear it at the end
                 //       then it might overwrite some other thread that was trying to set it.
@@ -316,27 +312,28 @@ namespace Direct3D12
             }
 
             int frameIdx = CurrentFrameIndex;
-            lock (deferredReleasesMutx)
+            lock (deferredReleasesMutex)
             {
                 deferredReleases[frameIdx].Add(resource);
                 SetDeferredReleasesFlag();
             }
         }
 
-        private readonly List<D3D12Surface> surfaces = [];
         /// <inheritdoc/>
         public override ISurface CreateSurface(PlatformWindow window)
         {
             var surface = new D3D12Surface(window, this);
-            surfaces.Add(surface);
             surface.CreateSwapChain(dxgiFactory, gfxCommand.CommandQueue, RenderTargetFormat);
+
+            surfaces.Add(surface);
+            surface.Id = (uint)surfaces.Count - 1;
+
             return surface;
         }
         /// <inheritdoc/>
         public override void RemoveSurface(uint id)
         {
             gfxCommand.Flush();
-            // TODO: use proper removal of surfaces.
             surfaces.RemoveAt((int)id);
         }
         /// <inheritdoc/>
