@@ -8,7 +8,6 @@ using System.Threading;
 using Vortice.Direct3D;
 using Vortice.Direct3D12;
 using Vortice.DXGI;
-using Engine.Common;
 
 
 #if DEBUG
@@ -48,7 +47,7 @@ namespace Direct3D12
         /// <summary>
         /// Gets the main D3D12 device.
         /// </summary>
-        public ID3D12Device Device { get => mainDevice; }
+        public ID3D12Device8 Device { get => mainDevice; }
         /// <summary>
         /// Gets the RTV descriptor heap.
         /// </summary>
@@ -199,6 +198,10 @@ namespace Direct3D12
             dsvDescHeap.Heap.Name = "DSV Descriptor Heap";
             srvDescHeap.Heap.Name = "SRV Descriptor Heap";
             uavDescHeap.Heap.Name = "UAV Descriptor Heap";
+
+            // TODO: remove.
+            CreateRootSignature();
+            CreateRootSignature2();
 
             return true;
         }
@@ -468,5 +471,86 @@ namespace Direct3D12
             Debug.WriteLine($"{category} {severity} {id} {description}");
         }
 #endif
+
+        // NOTE: this function demonstrates how to create a root signature as en example it will be removed later.
+        private void CreateRootSignature()
+        {
+            DescriptorRange1 range = new()
+            {
+                RangeType = DescriptorRangeType.ShaderResourceView,
+                NumDescriptors = D3D12.DescriptorRangeOffsetAppend,
+                Flags = DescriptorRangeFlags.DescriptorsVolatile,
+                OffsetInDescriptorsFromTableStart = D3D12.DescriptorRangeOffsetAppend,
+                BaseShaderRegister = 0,
+                RegisterSpace = 0,
+            };
+
+            RootParameter1[] paramList =
+            [
+                // param 0: 2 constants
+                new RootParameter1(new RootConstants(0, 0, 2), ShaderVisibility.Pixel),
+                // param 1: 1 Constant Buffer View (Descriptor)
+                new RootParameter1(RootParameterType.ConstantBufferView, new RootDescriptor1(1, 0, RootDescriptorFlags.None), ShaderVisibility.Pixel),
+                // param 2: descriptor table (unbounded/bindless)
+                new RootParameter1(new RootDescriptorTable1(range), ShaderVisibility.Pixel),
+            ];
+
+            StaticSamplerDescription sampler_desc = new()
+            {
+                AddressU = TextureAddressMode.Clamp,
+                AddressV = TextureAddressMode.Clamp,
+                AddressW = TextureAddressMode.Clamp,
+                ShaderVisibility = ShaderVisibility.Pixel
+            };
+
+            RootSignatureDescription1 desc = new()
+            {
+                Flags =
+                    RootSignatureFlags.DenyHullShaderRootAccess |
+                    RootSignatureFlags.DenyDomainShaderRootAccess |
+                    RootSignatureFlags.DenyGeometryShaderRootAccess |
+                    RootSignatureFlags.DenyAmplificationShaderRootAccess |
+                    RootSignatureFlags.DenyMeshShaderRootAccess,
+                Parameters = paramList,
+                StaticSamplers = [sampler_desc]
+            };
+
+            VersionedRootSignatureDescription rsDesc = new(desc);
+
+            string errorMsg = D3D12.D3D12SerializeVersionedRootSignature(rsDesc, out var rootSigBlob);
+            if (!string.IsNullOrEmpty(errorMsg))
+            {
+                Debug.WriteLine(errorMsg);
+                return;
+            }
+
+            Debug.Assert(rootSigBlob != null);
+            if (!Device.CreateRootSignature<ID3D12RootSignature>(0, rootSigBlob.BufferPointer, rootSigBlob.BufferSize, out var rootSig).Success)
+            {
+                Debug.WriteLine(errorMsg);
+            }
+
+            rootSigBlob.Release();
+
+            // when renderer shuts down
+            rootSig.Release();
+        }
+        private void CreateRootSignature2()
+        {
+            var range = D3D12Helpers.Range(DescriptorRangeType.ShaderResourceView, D3D12.DescriptorRangeOffsetAppend, 0);
+            RootParameter1[] paramList =
+            [
+                D3D12Helpers.AsConstants(2, ShaderVisibility.Pixel, 0),
+                D3D12Helpers.AsCbv(ShaderVisibility.Pixel, 1),
+                D3D12Helpers.AsDescriptorTable(ShaderVisibility.Pixel, [range]),
+            ];
+            var rootSigDesc = D3D12Helpers.AsRootSignatureDesc(paramList, []);
+            var rootSig = D3D12Helpers.CreateRootSignature(Device, rootSigDesc);
+
+            // use root_sig
+
+            // when renderer shuts down
+            rootSig.Release();
+        }
     }
 }
