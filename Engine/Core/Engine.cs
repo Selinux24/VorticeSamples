@@ -31,5 +31,15 @@ namespace Engine.Core
         {
             ContentLoader.UnloadGame();
         }
+
+        /// <summary>
+        /// Load engine shaders
+        /// </summary>
+        /// <param name="path">Binary path</param>
+        /// <param name="shadersBlob">Shaders blob</param>
+        public static bool LoadEngineShaders(string path, out byte[] shadersBlob)
+        {
+            return ContentLoader.LoadEngineShaders(path, out shadersBlob);
+        }
     }
 }

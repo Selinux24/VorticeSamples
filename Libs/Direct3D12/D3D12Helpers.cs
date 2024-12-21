@@ -1,4 +1,6 @@
-﻿using System;
+﻿global using D3D12Device = Vortice.Direct3D12.ID3D12Device8;
+global using D3D12GraphicsCommandList = Vortice.Direct3D12.ID3D12GraphicsCommandList6;
+using System;
 using System.Diagnostics;
 using Vortice.Direct3D12;
 
@@ -110,7 +112,7 @@ namespace Direct3D12
             return new RootSignatureDescription1(flags, parameters, staticSamplers);
         }
 
-        public static ID3D12RootSignature CreateRootSignature(ID3D12Device8 device, RootSignatureDescription1 desc)
+        public static ID3D12RootSignature CreateRootSignature(D3D12Device device, RootSignatureDescription1 desc)
         {
             VersionedRootSignatureDescription versionedDesc = new(desc);
 
@@ -129,7 +131,7 @@ namespace Direct3D12
             return signature;
         }
 
-        public static ID3D12PipelineState CreatePipelineState(ID3D12Device8 device, PipelineStateStreamDescription desc)
+        public static ID3D12PipelineState CreatePipelineState(D3D12Device device, PipelineStateStreamDescription desc)
         {
             Debug.Assert(desc.SubObjectStream != 0 && desc.SizeInBytes != 0);
             if (!device.CreatePipelineState<ID3D12PipelineState>(desc, out var pso).Success)
@@ -141,7 +143,7 @@ namespace Direct3D12
             return pso;
         }
 
-        public static ID3D12PipelineState CreatePipelineState(ID3D12Device8 device, IntPtr stream, int stream_size)
+        public static ID3D12PipelineState CreatePipelineState(D3D12Device device, IntPtr stream, int stream_size)
         {
             Debug.Assert(stream != 0 && stream_size != 0);
             PipelineStateStreamDescription desc = new()
