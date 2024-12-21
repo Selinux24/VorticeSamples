@@ -105,5 +105,22 @@ namespace Engine.Content
 
             return true;
         }
+
+        public static bool LoadEngineShaders(string path, out byte[] shaders)
+        {
+            return ReadFile(path, out shaders);
+        }
+
+        private static bool ReadFile(string path, out byte[] data)
+        {
+            data = null;
+            if (!File.Exists(path))
+            {
+                return false;
+            }
+
+            data = File.ReadAllBytes(path);
+            return data.Length > 0;
+        }
     }
 }

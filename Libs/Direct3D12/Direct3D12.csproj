@@ -12,5 +12,9 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Engine\Engine.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="EngineShaders\" />
+  </ItemGroup>
   
 </Project>

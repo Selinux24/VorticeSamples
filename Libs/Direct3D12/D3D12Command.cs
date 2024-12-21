@@ -36,7 +36,7 @@ namespace Direct3D12
         }
 
         private readonly ID3D12CommandQueue cmdQueue;
-        private readonly ID3D12GraphicsCommandList6 cmdList;
+        private readonly D3D12GraphicsCommandList cmdList;
         private readonly ID3D12Fence1 fence;
         private ulong fenceValue = 0;
         private AutoResetEvent fenceEvent;
@@ -46,7 +46,7 @@ namespace Direct3D12
         private int frameIndex = 0;
 
         public ID3D12CommandQueue CommandQueue { get => cmdQueue; }
-        public ID3D12GraphicsCommandList6 CommandList { get => cmdList; }
+        public D3D12GraphicsCommandList CommandList { get => cmdList; }
         public int FrameIndex { get => frameIndex; }
 
         public D3D12Command(D3D12Graphics graphics, CommandListType type)
