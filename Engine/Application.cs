@@ -17,7 +17,6 @@ namespace Engine
         public static Application Current { get; private set; }
 
         private readonly PlatformBase platform;
-        private readonly GraphicsBase graphics;
         private readonly Time time = new();
         private readonly object tickLock = new();
         private readonly List<RenderSurface> renderSurfaces = [];
@@ -63,7 +62,8 @@ namespace Engine
         protected Application(IPlatformFactory platformFactory, IGraphicsFactory graphicsFactory)
         {
             platform = platformFactory.CreatePlatform();
-            graphics = graphicsFactory.CreateGraphics();
+
+            GraphicsCore.Initialize(graphicsFactory.CreateGraphics());
 
             Current = this;
 
@@ -78,7 +78,7 @@ namespace Engine
         public PlatformWindow CreateWindow(IPlatformWindowInfo info)
         {
             var wnd = platform.CreateWindow(info);
-            var surface = graphics.CreateSurface(wnd);
+            var surface = GraphicsCore.CreateSurface(wnd);
             renderSurfaces.Add(new() { Window = wnd, Surface = surface });
 
             return wnd;
@@ -92,6 +92,7 @@ namespace Engine
             var rs = renderSurfaces.Find(x => x.Window == window);
             renderSurfaces.Remove(rs);
 
+            GraphicsCore.RemoveSurface(rs.Surface.Id);
             rs.Surface.Dispose();
             platform.RemoveWindow(window);
         }
@@ -105,7 +106,7 @@ namespace Engine
             window.Resized(clientArea);
 
             var surface = renderSurfaces.Find(x => x.Window == window);
-            surface.Surface.Resize(clientArea.Width, clientArea.Height);
+            GraphicsCore.ResizeSurface(surface.Surface.Id, clientArea.Width, clientArea.Height);
         }
 
         /// <summary>
@@ -126,14 +127,13 @@ namespace Engine
             platform.Run();
 
             Shutdown();
+    
+            GraphicsCore.Shutdown();
         }
         /// <summary>
         /// Initializes the application.
         /// </summary>
-        protected virtual void Initialize()
-        {
-            graphics.Initialize();
-        }
+        protected abstract void Initialize();
         /// <summary>
         /// Loads content asynchronously.
         /// </summary>
@@ -187,10 +187,7 @@ namespace Engine
         /// Updates the application.
         /// </summary>
         /// <param name="time">Time</param>
-        protected virtual void Update(Time time)
-        {
-
-        }
+        protected abstract void Update(Time time);
         /// <summary>
         /// Begins drawing.
         /// </summary>
@@ -206,7 +203,7 @@ namespace Engine
         {
             foreach (var rs in renderSurfaces)
             {
-                graphics.RenderSurface(rs.Surface.Id, null);
+                GraphicsCore.RenderSurface(rs.Surface.Id);
             }
         }
         /// <summary>
@@ -220,10 +217,7 @@ namespace Engine
         /// <summary>
         /// Shuts down the application.
         /// </summary>
-        protected virtual void Shutdown()
-        {
-            graphics.Shutdown();
-        }
+        protected abstract void Shutdown();
 
         /// <summary>
         /// Exits.

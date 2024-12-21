@@ -1,4 +1,5 @@
-﻿using Engine.Common;
+﻿using Engine;
+using Engine.Common;
 using Engine.Components;
 using NUnit.Framework;
 using System.IO;
@@ -55,7 +56,7 @@ namespace EngineTests.Content
             //Register the script creator
             GameEntity.RegisterScript<TestScript>();
 
-            bool result = Engine.Core.Engine.EngineInitialize(path);
+            bool result = Core.EngineInitialize(path);
 
             Assert.That(result);
         }

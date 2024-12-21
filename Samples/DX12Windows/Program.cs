@@ -1,6 +1,5 @@
 ﻿using Direct3D12;
 using Engine.Components;
-using System;
 using WindowsPlatform;
 
 namespace DX12Windows

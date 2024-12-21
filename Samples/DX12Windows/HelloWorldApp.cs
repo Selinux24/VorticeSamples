@@ -15,21 +15,15 @@ namespace DX12Windows
 
         protected override void Initialize()
         {
-            base.Initialize();
-
-            Engine.Core.Engine.EngineInitialize("Content/Game.bin");
+            Core.EngineInitialize("Content/Game.bin");
         }
         protected override void Update(Time time)
         {
-            base.Update(time);
-
-            Engine.Core.Engine.EngineUpdate(time.DeltaTime);
+            Core.EngineUpdate(time.DeltaTime);
         }
         protected override void Shutdown()
         {
-            base.Shutdown();
-
-            Engine.Core.Engine.EngineShutdown();
+            Core.EngineShutdown();
         }
     }
 }

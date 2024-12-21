@@ -1,7 +1,7 @@
 ﻿
-namespace ShaderCompiler
+namespace Direct3D12
 {
-    enum ShaderType
+    public enum D3D12ShaderTypes
     {
         Vertex,
         Hull,

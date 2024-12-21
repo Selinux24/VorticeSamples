@@ -64,7 +64,7 @@ namespace ShaderCompiler
                 {
                     info.FileName,
                     "-E", info.Function,
-                    "-T", ProfileStrings[(int)info.Type],
+                    "-T", info.Profile,
                     "-I", shadersSourcePath,
                     Dxc.DXC_ARG_ALL_RESOURCES_BOUND,
 #if DEBUG
@@ -84,17 +84,9 @@ namespace ShaderCompiler
             }
         }
 
-        private static readonly EngineShaderInfo[] EngineShaderFiles =
-        [
-            new (EngineShader.FullscreenTriangleVs, new ShaderFileInfo("FullScreenTriangle.hlsl", "FullScreenTriangleVS", ShaderType.Vertex)),
-            new (EngineShader.FillColorPs, new ShaderFileInfo("FillColor.hlsl", "FillColorPS", ShaderType.Pixel)),
-        ];
-
-        private static readonly string[] ProfileStrings = ["vs_6_6", "hs_6_6", "ds_6_6", "gs_6_6", "ps_6_6", "cs_6_6", "as_6_6", "ms_6_6"];
-
-        public static bool CompileShaders(string shadersSourcePath)
+        public static bool CompileShaders(string shadersSourcePath, EngineShaderInfo[] engineShaderFiles, string outputFileName)
         {
-            if (CompiledShadersAreUpToDate(shadersSourcePath))
+            if (CompiledShadersAreUpToDate(shadersSourcePath, outputFileName))
             {
                 Console.WriteLine(" [ Up to Date ]");
 
@@ -103,7 +95,7 @@ namespace ShaderCompiler
 
             var shaders = new List<DxcCompiledShader>();
 
-            foreach (var file in EngineShaderFiles)
+            foreach (var file in engineShaderFiles)
             {
                 var fullPath = Path.Combine(shadersSourcePath, file.Info.FileName);
                 fullPath = Path.GetFullPath(fullPath);
@@ -121,12 +113,12 @@ namespace ShaderCompiler
                 }
             }
 
-            return SaveCompiledShaders(shaders);
+            return SaveCompiledShaders(shaders, outputFileName);
         }
 
-        private static bool CompiledShadersAreUpToDate(string shadersSourcePath)
+        private static bool CompiledShadersAreUpToDate(string shadersSourcePath, string outputFileName)
         {
-            var engineShadersPath = GetEngineShadersPath();
+            var engineShadersPath = GetEngineShadersPath(outputFileName);
             if (!File.Exists(engineShadersPath))
             {
                 return false;
@@ -144,9 +136,9 @@ namespace ShaderCompiler
 
             return true;
         }
-        private static string GetEngineShadersPath()
+        private static string GetEngineShadersPath(string outputFileName)
         {
-            return Path.GetFullPath("./OutputShaders/Shaders.bin");
+            return Path.GetFullPath(Path.Combine("./OutputShaders/", outputFileName));
         }
         private static DxcCompiledShader Compile(string shadersSourcePath, ShaderFileInfo info, string fullPath, string[] extraArgs)
         {
@@ -154,9 +146,9 @@ namespace ShaderCompiler
 
             return compiler.Compile(shadersSourcePath, info, File.ReadAllText(fullPath), extraArgs);
         }
-        private static bool SaveCompiledShaders(IEnumerable<DxcCompiledShader> shaders)
+        private static bool SaveCompiledShaders(IEnumerable<DxcCompiledShader> shaders, string outputFileName)
         {
-            var engineShadersPath = GetEngineShadersPath();
+            var engineShadersPath = GetEngineShadersPath(outputFileName);
             var engineShadersDir = Path.GetDirectoryName(engineShadersPath);
             if (!Directory.Exists(engineShadersDir))
             {

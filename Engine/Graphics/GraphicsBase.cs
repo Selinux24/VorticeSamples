@@ -1,17 +1,8 @@
-﻿using Engine.Platform;
-
+﻿
 namespace Engine.Graphics
 {
     public abstract class GraphicsBase
     {
-        public abstract bool Initialize();
-        public abstract void Shutdown();
-
-        public abstract ISurface CreateSurface(PlatformWindow window);
-        public abstract void RemoveSurface(IdType id);
-        public abstract void ResizeSurface(IdType id, int width, int height);
-        public abstract void RenderSurface(IdType id, IFrameInfo info);
-
         public abstract ICamera CreateCamera(ICameraInitInfo info);
         public abstract void RemoveCamera(IdType id);
         public abstract void SetCameraParameter<T>(IdType id, ICameraParameters parameter, T value);

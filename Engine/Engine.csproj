@@ -13,4 +13,8 @@
     <DefineConstants>$(DefineConstants);EDITOR</DefineConstants>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Folder Include="Core\" />
+  </ItemGroup>
+
 </Project>

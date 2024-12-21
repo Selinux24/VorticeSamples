@@ -1,12 +1,13 @@
 ﻿using Engine.Components;
 using Engine.Content;
+using Engine.Graphics;
 
-namespace Engine.Core
+namespace Engine
 {
     /// <summary>
-    /// Engine
+    /// Core
     /// </summary>
-    public static class Engine
+    public static class Core
     {
         /// <summary>
         /// Initializes the engine
@@ -35,10 +36,11 @@ namespace Engine.Core
         /// <summary>
         /// Load engine shaders
         /// </summary>
-        /// <param name="path">Binary path</param>
         /// <param name="shadersBlob">Shaders blob</param>
-        public static bool LoadEngineShaders(string path, out byte[] shadersBlob)
+        public static bool LoadEngineShaders(out byte[] shadersBlob)
         {
+            string path = GraphicsCore.GetEngineShaderPath();
+
             return ContentLoader.LoadEngineShaders(path, out shadersBlob);
         }
     }

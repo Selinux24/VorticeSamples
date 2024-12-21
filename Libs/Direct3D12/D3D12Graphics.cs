@@ -1,7 +1,6 @@
 ﻿using Engine.Graphics;
 using Engine.Platform;
 using SharpGen.Runtime;
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
@@ -18,10 +17,10 @@ namespace Direct3D12
     /// <summary>
     /// D3D12 graphics implementation.
     /// </summary>
-    class D3D12Graphics : GraphicsBase
+    class D3D12Graphics : IPlatform
     {
         private const FeatureLevel MinimumFeatureLevel = FeatureLevel.Level_11_0;
-        private const string EngineShaderPaths = "EngineShaders/shaders.bin";
+        private const string EngineShaderPaths = "Content/engineShaders.bin";
 
         private D3D12Device mainDevice;
 #if DEBUG
@@ -97,7 +96,7 @@ namespace Direct3D12
         }
 
         /// <inheritdoc/>
-        public override bool Initialize()
+        public bool Initialize()
         {
             if (mainDevice != null)
             {
@@ -190,7 +189,7 @@ namespace Direct3D12
             }
 
             // initialize modules
-            if (!D3D12Shaders.Initialize(EngineShaderPaths))
+            if (!D3D12Shaders.Initialize())
             {
                 return FailedInit();
             }
@@ -204,7 +203,7 @@ namespace Direct3D12
             return true;
         }
         /// <inheritdoc/>
-        public override void Shutdown()
+        public void Shutdown()
         {
             gfxCommand.Release();
 
@@ -248,6 +247,11 @@ namespace Direct3D12
 #endif
 
             mainDevice.Release();
+        }
+        /// <inheritdoc/>
+        public string GetEngineShaderPath()
+        {
+            return EngineShaderPaths;
         }
 
         private IDXGIAdapter4 DetermineMainAdapter()
@@ -326,7 +330,7 @@ namespace Direct3D12
         }
 
         /// <inheritdoc/>
-        public override ISurface CreateSurface(PlatformWindow window)
+        public ISurface CreateSurface(PlatformWindow window)
         {
             var surface = new D3D12Surface(window, this);
             surface.CreateSwapChain(dxgiFactory, gfxCommand.CommandQueue);
@@ -337,19 +341,29 @@ namespace Direct3D12
             return surface;
         }
         /// <inheritdoc/>
-        public override void RemoveSurface(uint id)
+        public void RemoveSurface(uint id)
         {
             gfxCommand.Flush();
-            surfaces.RemoveAt((int)id);
+            surfaces[(int)id] = null;
         }
         /// <inheritdoc/>
-        public override void ResizeSurface(uint id, int width, int height)
+        public void ResizeSurface(uint id, int width, int height)
         {
             gfxCommand.Flush();
             surfaces[(int)id].Resize(width, height);
         }
         /// <inheritdoc/>
-        public override void RenderSurface(uint id, IFrameInfo info)
+        public int GetSurfaceWidth(uint id)
+        {
+            return surfaces[(int)id].Width;
+        }
+        /// <inheritdoc/>
+        public int GetSurfaceHeight(uint id)
+        {
+            return surfaces[(int)id].Height;
+        }
+        /// <inheritdoc/>
+        public void RenderSurface(uint id)
         {
             // Wait for the GPU to finish with the command allocator and
             // reset the allocator once the GPU is done with it.
@@ -373,99 +387,6 @@ namespace Direct3D12
             // Done recording commands. Now execute commands,
             // signal and increment the fence value for next frame.
             gfxCommand.EndFrame();
-        }
-
-        /// <inheritdoc/>
-        public override ICamera CreateCamera(ICameraInitInfo info)
-        {
-            throw new NotImplementedException();
-        }
-        /// <inheritdoc/>
-        public override void RemoveCamera(uint id)
-        {
-            throw new NotImplementedException();
-        }
-        /// <inheritdoc/>
-        public override void SetCameraParameter<T>(uint id, ICameraParameters parameter, T value)
-        {
-            throw new NotImplementedException();
-        }
-        /// <inheritdoc/>
-        public override T GetCameraParameter<T>(uint id, ICameraParameters parameter)
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <inheritdoc/>
-        public override void CreateLightSet(ulong lightSetKey)
-        {
-            throw new NotImplementedException();
-        }
-        /// <inheritdoc/>
-        public override void RemoveLightSet(ulong lightSetKey)
-        {
-            throw new NotImplementedException();
-        }
-        /// <inheritdoc/>
-        public override ILight CreateLight(ILightInitInfo info)
-        {
-            throw new NotImplementedException();
-        }
-        /// <inheritdoc/>
-        public override void RemoveLight(uint id, ulong lightSetKey)
-        {
-            throw new NotImplementedException();
-        }
-        /// <inheritdoc/>
-        public override void SetLightParameter<T>(uint id, ulong lightSetKey, ILightParameters parameter, T value)
-        {
-            throw new NotImplementedException();
-        }
-        /// <inheritdoc/>
-        public override T GetLightParameter<T>(uint id, ulong lightSetKey, ILightParameters parameter)
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <inheritdoc/>
-        public override uint AddSubmesh(byte[] data)
-        {
-            throw new NotImplementedException();
-        }
-        /// <inheritdoc/>
-        public override void RemoveSubmesh(uint id)
-        {
-            throw new NotImplementedException();
-        }
-        /// <inheritdoc/>
-        public override uint AddTexture(byte[] data)
-        {
-            throw new NotImplementedException();
-        }
-        /// <inheritdoc/>
-        public override void RemoveTexture(uint id)
-        {
-            throw new NotImplementedException();
-        }
-        /// <inheritdoc/>
-        public override uint AddMaterial(IMaterialInfo info)
-        {
-            throw new NotImplementedException();
-        }
-        /// <inheritdoc/>
-        public override void RemoveMaterial(uint id)
-        {
-            throw new NotImplementedException();
-        }
-        /// <inheritdoc/>
-        public override uint AddRenderItem(uint entityId, uint geometryContentId, uint[] materialIds)
-        {
-            throw new NotImplementedException();
-        }
-        /// <inheritdoc/>
-        public override void RemoveRenderItem(uint id)
-        {
-            throw new NotImplementedException();
         }
 
 #if DEBUG
