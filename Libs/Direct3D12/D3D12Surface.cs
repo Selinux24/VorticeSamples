@@ -13,7 +13,7 @@ namespace Direct3D12
     /// </summary>
     class D3D12Surface : ISurface
     {
-        const Format DefaultBackBufferFormat = Format.R8G8B8A8_UNorm_SRgb;
+        public const Format DefaultBackBufferFormat = Format.R8G8B8A8_UNorm_SRgb;
         const int BufferCount = 3;
 
         struct RenderTargetData
@@ -30,7 +30,7 @@ namespace Direct3D12
         private readonly bool allowTearing = false;
         private PresentFlags presentFlags = 0;
         private Viewport viewport;
-        private Rect scissorRect;
+        private RectI scissorRect;
         private Format format = DefaultBackBufferFormat;
 
         /// <inheritdoc/>
@@ -42,7 +42,7 @@ namespace Direct3D12
         public ID3D12Resource Backbuffer { get => renderTargetData[currentBbIndex].Resource; }
         public CpuDescriptorHandle Rtv { get => renderTargetData[currentBbIndex].Rtv.Cpu; }
         public Viewport Viewport { get => viewport; }
-        public Rect ScissorRect { get => scissorRect; }
+        public RectI ScissorRect { get => scissorRect; }
 
         /// <summary>
         /// Creates a new instance of the <see cref="D3D12Surface"/> class.

@@ -8,12 +8,94 @@ namespace Direct3D12
 {
     static class D3D12Helpers
     {
-        public static readonly HeapProperties DefaultHeap = new(
-            HeapType.Default,
-            CpuPageProperty.Unknown,
-            MemoryPool.Unknown,
-            0,
-            0);
+        public readonly struct HeapPropertiesCollection()
+        {
+            public readonly HeapProperties DefaultHeap = new(
+                HeapType.Default,
+                CpuPageProperty.Unknown,
+                MemoryPool.Unknown,
+                0,
+                0);
+        }
+
+        public readonly struct RasterizerStatesCollection()
+        {
+            public readonly RasterizerDescription NoCull = new(
+                CullMode.None,
+                FillMode.Solid,
+                false,
+                0,
+                0,
+                0,
+                true,
+                true,
+                false,
+                0,
+                ConservativeRasterizationMode.Off);
+
+            public readonly RasterizerDescription BackFaceCull = new(
+                CullMode.Back,
+                FillMode.Solid,
+                false,
+                0,
+                0,
+                0,
+                true,
+                true,
+                false,
+                0,
+                ConservativeRasterizationMode.Off);
+
+            public readonly RasterizerDescription FrontFaceCull = new(
+                CullMode.Front,
+                FillMode.Solid,
+                false,
+                0,
+                0,
+                0,
+                true,
+                true,
+                false,
+                0,
+                ConservativeRasterizationMode.Off);
+
+            public readonly RasterizerDescription Wireframe = new(
+                CullMode.None,
+                FillMode.Wireframe,
+                false,
+                0,
+                0,
+                0,
+                true,
+                true,
+                false,
+                0,
+                ConservativeRasterizationMode.Off);
+        }
+
+        public readonly struct DephStatesCollection()
+        {
+            public readonly DepthStencilDescription1 Disabled = new(
+                false,
+                false,
+                ComparisonFunction.LessEqual,
+                false,
+                0,
+                0,
+                StencilOperation.Zero,
+                StencilOperation.Zero,
+                StencilOperation.Zero,
+                ComparisonFunction.None,
+                StencilOperation.Zero,
+                StencilOperation.Zero,
+                StencilOperation.Zero,
+                ComparisonFunction.None,
+                false);
+        }
+
+        public static readonly HeapPropertiesCollection HeapProperties = new();
+        public static readonly RasterizerStatesCollection RasterizerState = new();
+        public static readonly DephStatesCollection DepthState = new();
 
         public static DescriptorRange1 Range(
             DescriptorRangeType rangeType,
@@ -110,6 +192,17 @@ namespace Direct3D12
                 RootSignatureFlags.DenyMeshShaderRootAccess)
         {
             return new RootSignatureDescription1(flags, parameters, staticSamplers);
+        }
+
+        public static void TransitionResource(
+            ID3D12GraphicsCommandList cmdList,
+            ID3D12Resource resource,
+            ResourceStates before,
+            ResourceStates after,
+            ResourceBarrierFlags flags = ResourceBarrierFlags.None,
+            int subresource = D3D12.ResourceBarrierAllSubResources)
+        {
+            cmdList.ResourceBarrierTransition(resource, before, after, subresource, flags);
         }
 
         public static ID3D12RootSignature CreateRootSignature(D3D12Device device, RootSignatureDescription1 desc)

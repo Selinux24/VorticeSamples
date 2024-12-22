@@ -9,6 +9,7 @@ namespace ShaderCompiler
 
         private const uint fullScreenTriangleVs = 0;
         private const uint fillColorPs = 1;
+        private const uint postProcessPS = 2;
 
         private const uint shaderVertex = 0;
         private const uint shaderPixel = 4;
@@ -19,6 +20,7 @@ namespace ShaderCompiler
         [
             new (fullScreenTriangleVs, new ("FullScreenTriangle.hlsl", "FullScreenTriangleVS", shaderVertex, profileStrings[(int)shaderVertex])),
             new (fillColorPs, new ("FillColor.hlsl", "FillColorPS", shaderPixel, profileStrings[(int)shaderPixel])),
+            new (postProcessPS, new ("PostProcess.hlsl", "PostProcessPS", shaderPixel, profileStrings[(int)shaderPixel])),
         ];
 
         static void Main()

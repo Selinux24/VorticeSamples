@@ -147,8 +147,8 @@ namespace Direct3D12
                     handle.Gpu.Ptr = gpuStart.Ptr + offset;
                 }
 
-                handle.Container = this;
                 handle.Index = index;
+                handle.Container = this;
                 return handle;
             }
         }

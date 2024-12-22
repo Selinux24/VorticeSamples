@@ -7,6 +7,8 @@ using System.Threading;
 using Vortice.Direct3D;
 using Vortice.Direct3D12;
 using Vortice.DXGI;
+using System;
+
 
 #if DEBUG
 using Vortice.Direct3D12.Debug;
@@ -29,6 +31,7 @@ namespace Direct3D12
         private IDXGIFactory7 dxgiFactory;
         private D3D12Command gfxCommand;
         private readonly List<D3D12Surface> surfaces = [];
+        private readonly D3D12ResourceBarrier resourceBarriers = new();
 
         private readonly D3D12DescriptorHeap rtvDescHeap;
         private readonly D3D12DescriptorHeap dsvDescHeap;
@@ -189,7 +192,7 @@ namespace Direct3D12
             }
 
             // initialize modules
-            if (!D3D12Shaders.Initialize())
+            if (!D3D12Shaders.Initialize() || !D3D12GPass.Initialize(this) || !D3D12PostProcess.Initialize(this))
             {
                 return FailedInit();
             }
@@ -216,7 +219,9 @@ namespace Direct3D12
             }
 
             // shutdown modules
+            D3D12PostProcess.Shutdown();
             D3D12Shaders.Shutdown();
+            D3D12GPass.Shutdown();
 
             dxgiFactory.Release();
 
@@ -378,21 +383,75 @@ namespace Direct3D12
             }
 
             var surface = surfaces[(int)id];
+            var currentBackBuffer = surface.Backbuffer;
 
-            // Presenting swap chain buffers happens in lockstep with frame buffers.
-            surface.Present();
+            D3D12FrameInfo frameInfo = new()
+            {
+                SurfaceHeight = surface.Height,
+                SurfaceWidth = surface.Width,
+            };
+
+            D3D12GPass.SetSize(this, new(frameInfo.SurfaceWidth, frameInfo.SurfaceHeight));
+            var barriers = resourceBarriers;
+
             // Record commands
-            // ...
-            // 
+            cmdList.SetDescriptorHeaps([srvDescHeap.Heap]);
+            cmdList.RSSetViewport(surface.Viewport);
+            cmdList.RSSetScissorRect(surface.ScissorRect);
+
+            // Depth prepass
+            barriers.Add(currentBackBuffer, ResourceStates.Present, ResourceStates.RenderTarget, ResourceBarrierFlags.BeginOnly);
+            D3D12GPass.AddTransitionsForDepthPrePass(barriers);
+            barriers.Apply(cmdList);
+            D3D12GPass.SetRenderTargetsForDepthPrePass(cmdList);
+            D3D12GPass.DepthPrePass(cmdList, frameInfo);
+
+            // Geometry and lighting pass
+            D3D12GPass.AddTransitionsForGPass(barriers);
+            barriers.Apply(cmdList);
+            D3D12GPass.SetRenderTargetsForGPass(cmdList);
+            D3D12GPass.Render(cmdList, frameInfo);
+
+            // Post-process
+            barriers.Add(currentBackBuffer, ResourceStates.Present, ResourceStates.RenderTarget, ResourceBarrierFlags.EndOnly);
+            D3D12GPass.AddTransitionsForPostProcess(barriers);
+            barriers.Apply(cmdList);
+            
+            // Will write to the current back buffer, so back buffer is a render target
+            D3D12PostProcess.PostProcess(this, cmdList, surface.Rtv);
+
+            // after post process
+            D3D12Helpers.TransitionResource(cmdList, currentBackBuffer, ResourceStates.RenderTarget, ResourceStates.Present);
+
             // Done recording commands. Now execute commands,
             // signal and increment the fence value for next frame.
-            gfxCommand.EndFrame();
+            gfxCommand.EndFrame(surface);
         }
 
 #if DEBUG
         private static void DebugCallback(MessageCategory category, MessageSeverity severity, MessageId id, string description)
         {
             Debug.WriteLine($"{category} {severity} {id} {description}");
+        }
+
+        public string GetDebugMessage()
+        {
+            if (infoQueue == null)
+            {
+                return string.Empty;
+            }
+
+            string message = string.Empty;
+
+            ulong numMessages = infoQueue.NumStoredMessages;
+            for (ulong i = 0; i < numMessages; i++)
+            {
+                var messageInfo = infoQueue.GetMessage(i);
+
+                message += $"{messageInfo.Description}{Environment.NewLine}";
+            }
+
+            return message;
         }
 #endif
     }

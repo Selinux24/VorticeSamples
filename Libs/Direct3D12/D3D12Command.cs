@@ -120,10 +120,12 @@ namespace Direct3D12
             frame.CmdAllocator.Reset();
             cmdList.Reset(frame.CmdAllocator, null);
         }
-        public void EndFrame()
+        public void EndFrame(D3D12Surface surface)
         {
             cmdList.Close();
             cmdQueue.ExecuteCommandLists([cmdList]);
+
+            surface.Present();
 
             ulong value = fenceValue;
             ++value;

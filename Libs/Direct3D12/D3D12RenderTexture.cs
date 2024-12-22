@@ -41,7 +41,7 @@ namespace Direct3D12
             {
                 rtv[i] = rtvHeap.Allocate();
                 device.CreateRenderTargetView(Resource, desc, rtv[i].Cpu);
-                ++desc.Texture2D.MipSlice;
+                desc.Texture2D.MipSlice++;
             }
         }
         public D3D12RenderTexture(D3D12RenderTexture o)

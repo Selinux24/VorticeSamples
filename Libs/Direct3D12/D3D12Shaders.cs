@@ -12,8 +12,12 @@ namespace Direct3D12
         [StructLayout(LayoutKind.Sequential)]
         struct CompiledShader
         {
-            public int Size;
-            public IntPtr ByteCode;
+            public byte[] ByteCode;
+
+            public readonly bool IsValid()
+            {
+                return ByteCode?.Length > 0;
+            }
         }
 
         private static readonly CompiledShader?[] engineShaders = new CompiledShader?[Enum.GetValues(typeof(EngineShaders)).Length];
@@ -43,8 +47,7 @@ namespace Direct3D12
 
                 engineShaders[i] = new()
                 {
-                    Size = size,
-                    ByteCode = pt
+                    ByteCode = data
                 };
             }
 
@@ -63,17 +66,14 @@ namespace Direct3D12
             shadersBlob = null;
         }
 
-        public static D3D12ShaderBytecode GetEngineShader(EngineShaders id)
+        public static byte[] GetEngineShader(EngineShaders id)
         {
             int egCount = Enum.GetValues(typeof(EngineShaders)).Length;
             Debug.Assert((int)id < egCount);
             CompiledShader? shader = engineShaders[(int)id];
-            Debug.Assert(shader.HasValue && shader.Value.Size > 0);
-            return new D3D12ShaderBytecode
-            {
-                ByteCodeLength = shader.Value.Size,
-                ByteCode = shader.Value.ByteCode,
-            };
+            Debug.Assert(shader.HasValue && shader.Value.IsValid());
+
+            return shader.Value.ByteCode;
         }
     }
 }

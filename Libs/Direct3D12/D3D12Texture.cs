@@ -53,15 +53,24 @@ namespace Direct3D12
             {
                 Debug.Assert(info.Heap == null && info.Resource == null);
 
-                if (!device.CreateCommittedResource(
-                    D3D12Helpers.DefaultHeap,
+                var r = device.CreateCommittedResource(
+                    D3D12Helpers.HeapProperties.DefaultHeap,
                     HeapFlags.None,
                     info.Desc,
                     info.InitialState,
                     clearValue,
-                    out resource).Success)
+                    out resource);
+                if (!r.Success)
                 {
-                    Debug.WriteLine("Failed to create committed resource");
+                    var rr = graphics.Device.DeviceRemovedReason;
+
+#if DEBUG
+                    var db = graphics.GetDebugMessage();
+
+                    Debug.WriteLine($"Failed to create committed resource. {r.Description} - {rr.Description} - {db}");
+#else
+                    Debug.WriteLine($"Failed to create committed resource. {r.Description} - {rr.Description}");
+#endif
                 }
             }
 
