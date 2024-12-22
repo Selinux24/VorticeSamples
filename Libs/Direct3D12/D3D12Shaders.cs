@@ -1,4 +1,4 @@
-﻿using Engine;
+﻿using PrimalLike;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -26,7 +26,7 @@ namespace Direct3D12
         private static bool LoadEngineShaders()
         {
             Debug.Assert(shadersBlob == null);
-            bool result = Core.LoadEngineShaders(out shadersBlob);
+            bool result = Engine.LoadEngineShaders(out shadersBlob);
             Debug.Assert(shadersBlob != null && shadersBlob.Length > 0);
 
             int egCount = Enum.GetValues(typeof(EngineShaders)).Length;

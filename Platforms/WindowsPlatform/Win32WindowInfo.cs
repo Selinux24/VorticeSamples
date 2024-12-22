@@ -1,4 +1,4 @@
-﻿using Engine.Platform;
+﻿using PrimalLike.Platform;
 using System.Drawing;
 
 namespace WindowsPlatform

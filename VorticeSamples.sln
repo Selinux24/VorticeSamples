@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.11.35222.181
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Engine", "Engine\Engine.csproj", "{95D737F7-5E7A-4272-92B1-9A37580ABC18}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PrimalLike", "PrimalLike\PrimalLike.csproj", "{95D737F7-5E7A-4272-92B1-9A37580ABC18}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WindowsPlatform", "Platforms\WindowsPlatform\WindowsPlatform.csproj", "{4240C07D-E053-43CB-8BD3-3B7E620A6315}"
 EndProject
@@ -19,9 +19,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DX12Windows", "Samples\DX12
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{EFF65604-E5ED-48D6-8895-3CAAFBD72457}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EngineTests", "Tests\EngineTests\EngineTests.csproj", "{182604A7-B9A1-4F8D-B188-90A2A144C1A6}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PrimalLikeTests", "Tests\PrimalLikeTests\PrimalLikeTests.csproj", "{182604A7-B9A1-4F8D-B188-90A2A144C1A6}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EngineDLL", "EngineDLL\EngineDLL.csproj", "{B3B46339-FE8E-4FA8-B7EF-A61237BF21B1}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PrimalLikeDLL", "PrimalLikeDLL\PrimalLikeDLL.csproj", "{B3B46339-FE8E-4FA8-B7EF-A61237BF21B1}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tools", "Tools", "{80B26C20-E545-4CE3-973C-F002D616E3B9}"
 EndProject

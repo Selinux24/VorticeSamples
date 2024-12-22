@@ -1,5 +1,5 @@
-﻿using Engine.Graphics;
-using Engine.Platform;
+﻿using PrimalLike.Graphics;
+using PrimalLike.Platform;
 using SharpGen.Runtime;
 using System.Collections.Generic;
 using System.Diagnostics;

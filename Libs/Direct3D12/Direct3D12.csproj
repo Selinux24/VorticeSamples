@@ -10,7 +10,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Engine\Engine.csproj" />
+    <ProjectReference Include="..\..\PrimalLike\PrimalLike.csproj" />
   </ItemGroup>
   
 </Project>

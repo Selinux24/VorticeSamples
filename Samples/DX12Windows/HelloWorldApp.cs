@@ -1,6 +1,6 @@
-﻿using Engine;
-using Engine.Graphics;
-using Engine.Platform;
+﻿using PrimalLike;
+using PrimalLike.Graphics;
+using PrimalLike.Platform;
 
 namespace DX12Windows
 {
@@ -15,15 +15,15 @@ namespace DX12Windows
 
         protected override void Initialize()
         {
-            Core.EngineInitialize("Content/Game.bin");
+            Engine.EngineInitialize("Content/Game.bin");
         }
         protected override void Update(Time time)
         {
-            Core.EngineUpdate(time.DeltaTime);
+            Engine.EngineUpdate(time.DeltaTime);
         }
         protected override void Shutdown()
         {
-            Core.EngineShutdown();
+            Engine.EngineShutdown();
         }
     }
 }

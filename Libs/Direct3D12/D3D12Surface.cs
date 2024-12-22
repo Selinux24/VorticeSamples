@@ -1,5 +1,5 @@
-﻿using Engine.Graphics;
-using Engine.Platform;
+﻿using PrimalLike.Graphics;
+using PrimalLike.Platform;
 using System;
 using System.Diagnostics;
 using Vortice.Direct3D12;
