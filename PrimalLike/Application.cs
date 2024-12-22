@@ -12,11 +12,26 @@ namespace PrimalLike
     public abstract class Application
     {
         /// <summary>
+        /// Render surface structure.
+        /// </summary>
+        struct RenderSurface
+        {
+            /// <summary>
+            /// Window
+            /// </summary>
+            public PlatformWindow Window { get; set; }
+            /// <summary>
+            /// Surface
+            /// </summary>
+            public ISurface Surface { get; set; }
+        }
+
+        /// <summary>
         /// Gets the current application.
         /// </summary>
         public static Application Current { get; private set; }
 
-        private readonly PlatformBase platform;
+        private readonly IPlatform platform;
         private readonly Time time = new();
         private readonly object tickLock = new();
         private readonly List<RenderSurface> renderSurfaces = [];
@@ -59,11 +74,11 @@ namespace PrimalLike
         /// </summary>
         /// <param name="platformFactory">Platform factory</param>
         /// <param name="graphicsFactory">Graphics factory</param>
-        protected Application(IPlatformFactory platformFactory, IGraphicsFactory graphicsFactory)
+        protected Application(IPlatformFactory platformFactory, IGraphicsPlatformFactory graphicsFactory)
         {
             platform = platformFactory.CreatePlatform();
 
-            GraphicsCore.Initialize(graphicsFactory.CreateGraphics());
+            Renderer.Initialize(graphicsFactory.CreateGraphicsPlatform());
 
             Current = this;
 
@@ -78,7 +93,7 @@ namespace PrimalLike
         public PlatformWindow CreateWindow(IPlatformWindowInfo info)
         {
             var wnd = platform.CreateWindow(info);
-            var surface = GraphicsCore.CreateSurface(wnd);
+            var surface = Renderer.CreateSurface(wnd);
             renderSurfaces.Add(new() { Window = wnd, Surface = surface });
 
             return wnd;
@@ -92,7 +107,7 @@ namespace PrimalLike
             var rs = renderSurfaces.Find(x => x.Window == window);
             renderSurfaces.Remove(rs);
 
-            GraphicsCore.RemoveSurface(rs.Surface.Id);
+            Renderer.RemoveSurface(rs.Surface.Id);
             rs.Surface.Dispose();
             platform.RemoveWindow(window);
         }
@@ -106,7 +121,7 @@ namespace PrimalLike
             window.Resized(clientArea);
 
             var surface = renderSurfaces.Find(x => x.Window == window);
-            GraphicsCore.ResizeSurface(surface.Surface.Id, clientArea.Width, clientArea.Height);
+            Renderer.ResizeSurface(surface.Surface.Id, clientArea.Width, clientArea.Height);
         }
 
         /// <summary>
@@ -128,7 +143,7 @@ namespace PrimalLike
 
             Shutdown();
     
-            GraphicsCore.Shutdown();
+            Renderer.Shutdown();
         }
         /// <summary>
         /// Initializes the application.
@@ -203,7 +218,7 @@ namespace PrimalLike
         {
             foreach (var rs in renderSurfaces)
             {
-                GraphicsCore.RenderSurface(rs.Surface.Id);
+                Renderer.RenderSurface(rs.Surface.Id);
             }
         }
         /// <summary>

@@ -3,16 +3,16 @@ using PrimalLike.Platform;
 
 namespace PrimalLike.Graphics
 {
-    static class GraphicsCore
+    static class Renderer
     {
-        private static IPlatform gfx;
+        private static IGraphicsPlatform gfx;
 
-        private static void SetPlatformInterface(IPlatform platform)
+        private static void SetPlatformInterface(IGraphicsPlatform platform)
         {
             gfx = platform;
         }
 
-        public static bool Initialize(IPlatform platform)
+        public static bool Initialize(IGraphicsPlatform platform)
         {
             SetPlatformInterface(platform);
 

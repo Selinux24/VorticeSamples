@@ -39,7 +39,7 @@ namespace PrimalLike
         /// <param name="shadersBlob">Shaders blob</param>
         public static bool LoadEngineShaders(out byte[] shadersBlob)
         {
-            string path = GraphicsCore.GetEngineShaderPath();
+            string path = Renderer.GetEngineShaderPath();
 
             return ContentLoader.LoadEngineShaders(path, out shadersBlob);
         }

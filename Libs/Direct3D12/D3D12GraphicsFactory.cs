@@ -2,10 +2,10 @@
 
 namespace Direct3D12
 {
-    public class D3D12GraphicsFactory : IGraphicsFactory
+    public class D3D12GraphicsFactory : IGraphicsPlatformFactory
     {
         /// <inheritdoc/>
-        public IPlatform CreateGraphics()
+        public IGraphicsPlatform CreateGraphicsPlatform()
         {
             return new D3D12Graphics();
         }

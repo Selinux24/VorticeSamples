@@ -17,7 +17,7 @@ namespace Direct3D12
     /// <summary>
     /// D3D12 graphics implementation.
     /// </summary>
-    class D3D12Graphics : IPlatform
+    class D3D12Graphics : IGraphicsPlatform
     {
         private const FeatureLevel MinimumFeatureLevel = FeatureLevel.Level_11_0;
         private const string EngineShaderPaths = "Content/engineShaders.bin";

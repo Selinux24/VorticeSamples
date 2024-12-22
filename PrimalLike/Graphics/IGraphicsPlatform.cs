@@ -2,7 +2,7 @@
 
 namespace PrimalLike.Graphics
 {
-    public interface IPlatform
+    public interface IGraphicsPlatform
     {
         bool Initialize();
         void Shutdown();

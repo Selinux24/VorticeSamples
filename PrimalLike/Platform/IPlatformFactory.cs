@@ -10,6 +10,6 @@ namespace PrimalLike.Platform
         /// Create a platform.
         /// </summary>
         /// <returns>Returns the create platform</returns>
-        PlatformBase CreatePlatform();
+        IPlatform CreatePlatform();
     }
 }

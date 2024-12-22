@@ -11,7 +11,7 @@ using static WindowsPlatform.Native.User32;
 
 namespace WindowsPlatform
 {
-    class Win32Platform : PlatformBase
+    class Win32Platform : IPlatform
     {
         const string WINDOWCLASSNAME = nameof(Win32Window);
         const uint SIZE_MINIMIZED = 1;
@@ -30,7 +30,7 @@ namespace WindowsPlatform
         private readonly IntPtr hInstance = Marshal.GetHINSTANCE(typeof(Win32Platform).Module);
         private Win32Window mainWindow;
 
-        public override PlatformWindow MainWindow
+        public PlatformWindow MainWindow
         {
             get
             {
@@ -71,7 +71,7 @@ namespace WindowsPlatform
             }
         }
 
-        public override PlatformWindow CreateWindow(IPlatformWindowInfo info, bool setDefault = true)
+        public PlatformWindow CreateWindow(IPlatformWindowInfo info, bool setDefault = true)
         {
             if (info is not Win32WindowInfo win32Info)
             {
@@ -141,7 +141,7 @@ namespace WindowsPlatform
             return hwnd;
         }
 
-        public override void RemoveWindow(PlatformWindow window)
+        public void RemoveWindow(PlatformWindow window)
         {
             windows.Remove(window.Handle);
             if (mainWindow == window)
@@ -205,7 +205,7 @@ namespace WindowsPlatform
                 true);
         }
 
-        public override void Run()
+        public void Run()
         {
             NativeMessage msg = default;
             bool isRunning = true;
