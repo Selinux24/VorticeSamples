@@ -7,22 +7,18 @@ namespace Direct3D12
     {
         public const int MaxMips = 14;
 
-        private readonly D3D12Graphics graphics;
         private ID3D12Resource resource;
         private D3D12DescriptorHandle srv;
 
         public ID3D12Resource Resource { get => resource; }
         public D3D12DescriptorHandle Srv { get => srv; }
 
-        public D3D12Texture(D3D12Graphics graphics)
+        public D3D12Texture()
         {
-            this.graphics = graphics;
         }
-        public D3D12Texture(D3D12Graphics graphics, D3D12TextureInitInfo info)
+        public D3D12Texture(D3D12TextureInitInfo info)
         {
-            this.graphics = graphics;
-
-            var device = graphics.Device;
+            var device = D3D12Graphics.Device;
             Debug.Assert(device != null);
 
             ClearValue clearValue = (info.Desc.Flags.HasFlag(ResourceFlags.AllowRenderTarget) || info.Desc.Flags.HasFlag(ResourceFlags.AllowDepthStencil)) ?
@@ -38,13 +34,13 @@ namespace Direct3D12
             {
                 Debug.Assert(info.Resource == null);
 
-                if (!device.CreatePlacedResource(
+                if (!D3D12Helpers.DxCall(device.CreatePlacedResource(
                     info.Heap,
                     info.AllocationInfo.Offset,
                     info.Desc,
                     info.InitialState,
                     clearValue,
-                    out resource).Success)
+                    out resource)))
                 {
                     Debug.WriteLine("Failed to create placed resource");
                 }
@@ -53,35 +49,25 @@ namespace Direct3D12
             {
                 Debug.Assert(info.Heap == null && info.Resource == null);
 
-                var r = device.CreateCommittedResource(
+                if (!D3D12Helpers.DxCall(device.CreateCommittedResource(
                     D3D12Helpers.HeapProperties.DefaultHeap,
                     HeapFlags.None,
                     info.Desc,
                     info.InitialState,
                     clearValue,
-                    out resource);
-                if (!r.Success)
+                    out resource)))
                 {
-                    var rr = graphics.Device.DeviceRemovedReason;
-
-#if DEBUG
-                    var db = graphics.GetDebugMessage();
-
-                    Debug.WriteLine($"Failed to create committed resource. {r.Description} - {rr.Description} - {db}");
-#else
-                    Debug.WriteLine($"Failed to create committed resource. {r.Description} - {rr.Description}");
-#endif
+                    Debug.WriteLine("Failed to create committed resource.");
                 }
             }
 
             Debug.Assert(resource != null);
-            srv = graphics.SrvHeap.Allocate();
+            srv = D3D12Graphics.SrvHeap.Allocate();
 
             device.CreateShaderResourceView(resource, info.SrvDesc, srv.Cpu);
         }
         public D3D12Texture(D3D12Texture o)
         {
-            graphics = o.graphics;
             resource = o.Resource;
             srv = o.Srv;
 
@@ -94,8 +80,8 @@ namespace Direct3D12
 
         public void Release()
         {
-            graphics.SrvHeap.Free(ref srv);
-            graphics.DeferredRelease(resource);
+            D3D12Graphics.SrvHeap.Free(ref srv);
+            D3D12Graphics.DeferredRelease(resource);
         }
 
         private void Reset()

@@ -5,7 +5,6 @@ namespace Direct3D12
 {
     class D3D12RenderTexture
     {
-        private readonly D3D12Graphics graphics;
         private readonly D3D12Texture texture;
         private readonly D3D12DescriptorHandle[] rtv = new D3D12DescriptorHandle[D3D12Texture.MaxMips];
 
@@ -13,20 +12,17 @@ namespace Direct3D12
         public D3D12DescriptorHandle Srv { get => texture.Srv; }
         public ID3D12Resource Resource { get => texture.Resource; }
 
-        public D3D12RenderTexture(D3D12Graphics graphics)
+        public D3D12RenderTexture()
         {
-            this.graphics = graphics;
         }
-        public D3D12RenderTexture(D3D12Graphics graphics, D3D12TextureInitInfo info)
+        public D3D12RenderTexture(D3D12TextureInitInfo info)
         {
-            this.graphics = graphics;
-
-            texture = new D3D12Texture(graphics, info);
+            texture = new D3D12Texture(info);
 
             MipCount = Resource.Description.MipLevels;
             Debug.Assert(MipCount != 0 && MipCount <= D3D12Texture.MaxMips);
 
-            D3D12DescriptorHeap rtvHeap = graphics.RtvHeap;
+            D3D12DescriptorHeap rtvHeap = D3D12Graphics.RtvHeap;
             RenderTargetViewDescription desc = new()
             {
                 Format = info.Desc.Format,
@@ -34,7 +30,7 @@ namespace Direct3D12
             };
             desc.Texture2D.MipSlice = 0;
 
-            var device = graphics.Device;
+            var device = D3D12Graphics.Device;
             Debug.Assert(device != null);
 
             for (uint i = 0; i < MipCount; i++)
@@ -46,7 +42,6 @@ namespace Direct3D12
         }
         public D3D12RenderTexture(D3D12RenderTexture o)
         {
-            graphics = o.graphics;
             texture = o.texture;
             MipCount = o.MipCount;
 
@@ -66,7 +61,7 @@ namespace Direct3D12
         {
             for (uint i = 0; i < MipCount; i++)
             {
-                graphics.RtvHeap.Free(ref rtv[i]);
+                D3D12Graphics.RtvHeap.Free(ref rtv[i]);
             }
             texture.Release();
             MipCount = 0;

@@ -8,7 +8,6 @@ namespace Direct3D12
 {
     class D3D12DescriptorHeap : IResource
     {
-        private readonly D3D12Graphics graphics;
         private readonly DescriptorHeapType type;
         private readonly Mutex mutex;
         private readonly List<uint>[] deferredFreeIndices;
@@ -30,15 +29,14 @@ namespace Direct3D12
         public int DescriptorSize { get => (int)descriptorSize; }
         public bool IsShaderVisible { get => gpuStart.Ptr != 0; }
 
-        public D3D12DescriptorHeap(D3D12Graphics graphics, DescriptorHeapType type)
+        public D3D12DescriptorHeap(DescriptorHeapType type)
         {
-            this.graphics = graphics;
             this.type = type;
 
             mutex = new();
 
-            deferredFreeIndices = new List<uint>[graphics.FrameBufferCount];
-            for (int i = 0; i < graphics.FrameBufferCount; i++)
+            deferredFreeIndices = new List<uint>[D3D12Graphics.FrameBufferCount];
+            for (int i = 0; i < D3D12Graphics.FrameBufferCount; i++)
             {
                 deferredFreeIndices[i] = [];
             }
@@ -59,7 +57,7 @@ namespace Direct3D12
 
                 Release();
 
-                ID3D12Device device = graphics.Device;
+                ID3D12Device device = D3D12Graphics.Device;
                 Debug.Assert(device != null);
 
                 DescriptorHeapDescription desc;
@@ -70,7 +68,7 @@ namespace Direct3D12
                 desc.Type = type;
                 desc.NodeMask = 0;
 
-                if (!device.CreateDescriptorHeap(desc, out heap).Success)
+                if (!D3D12Helpers.DxCall(device.CreateDescriptorHeap(desc, out heap)))
                 {
                     return false;
                 }
@@ -84,7 +82,7 @@ namespace Direct3D12
                     freeHandles[i] = i;
                 }
 
-                for (int i = 0; i < graphics.FrameBufferCount; i++)
+                for (int i = 0; i < D3D12Graphics.FrameBufferCount; i++)
                 {
                     Debug.Assert(deferredFreeIndices[i].Count == 0);
                 }
@@ -106,14 +104,14 @@ namespace Direct3D12
             }
 
             Debug.Assert(size == 0);
-            graphics.DeferredRelease(heap);
+            D3D12Graphics.DeferredRelease(heap);
             heap = null;
         }
         public void ProcessDeferredFree(int frameIdx)
         {
             lock (mutex)
             {
-                Debug.Assert(frameIdx < graphics.FrameBufferCount);
+                Debug.Assert(frameIdx < D3D12Graphics.FrameBufferCount);
 
                 var indices = deferredFreeIndices[frameIdx];
                 if (indices.Count <= 0)
@@ -169,9 +167,9 @@ namespace Direct3D12
                 var index = (uint)((handle.Cpu.Ptr - cpuStart.Ptr) / descriptorSize);
                 Debug.Assert(handle.Index == index);
 
-                int frameIdx = graphics.CurrentFrameIndex;
+                int frameIdx = D3D12Graphics.CurrentFrameIndex;
                 deferredFreeIndices[frameIdx].Add(index);
-                graphics.SetDeferredReleasesFlag();
+                D3D12Graphics.SetDeferredReleasesFlag();
                 handle = new();
             }
         }

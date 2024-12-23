@@ -6,8 +6,12 @@ using Vortice.Direct3D12;
 
 namespace Direct3D12
 {
+    using HResult = SharpGen.Runtime.Result;
+
     static class D3D12Helpers
     {
+        #region Structured Collections
+
         public readonly struct HeapPropertiesCollection()
         {
             public readonly HeapProperties DefaultHeap = new(
@@ -17,7 +21,6 @@ namespace Direct3D12
                 0,
                 0);
         }
-
         public readonly struct RasterizerStatesCollection()
         {
             public readonly RasterizerDescription NoCull = new(
@@ -72,7 +75,6 @@ namespace Direct3D12
                 0,
                 ConservativeRasterizationMode.Off);
         }
-
         public readonly struct DephStatesCollection()
         {
             public readonly DepthStencilDescription1 Disabled = new(
@@ -93,9 +95,48 @@ namespace Direct3D12
                 false);
         }
 
+        #endregion
+
+        /// <summary>
+        /// Default heap properties.
+        /// </summary>
         public static readonly HeapPropertiesCollection HeapProperties = new();
+        /// <summary>
+        /// Rasterizer states.
+        /// </summary>
         public static readonly RasterizerStatesCollection RasterizerState = new();
+        /// <summary>
+        /// Depth states.
+        /// </summary>
         public static readonly DephStatesCollection DepthState = new();
+
+        public static bool DxCall(HResult result)
+        {
+            if (result.Success)
+            {
+                return true;
+            }
+
+            Debug.WriteLine($"DirectX call failed: {result.Description}");
+
+            var removedReason = D3D12Graphics.Device.DeviceRemovedReason;
+            if (!removedReason.Success)
+            {
+                Debug.WriteLine($"Device removed: {removedReason.Description}");
+            }
+
+#if DEBUG
+            var db = D3D12Graphics.GetDebugMessage();
+            if (!string.IsNullOrEmpty(db))
+            {
+                Debug.WriteLine(db);
+            }
+
+            Debugger.Break();
+#endif
+
+            return false;
+        }
 
         public static DescriptorRange1 Range(
             DescriptorRangeType rangeType,
@@ -216,7 +257,7 @@ namespace Direct3D12
                 return null;
             }
 
-            if (!device.CreateRootSignature<ID3D12RootSignature>(0, signature_blob.BufferPointer, signature_blob.BufferSize, out var signature).Success)
+            if (!DxCall(device.CreateRootSignature<ID3D12RootSignature>(0, signature_blob.BufferPointer, signature_blob.BufferSize, out var signature)))
             {
                 signature.Release();
             }
@@ -227,7 +268,7 @@ namespace Direct3D12
         public static ID3D12PipelineState CreatePipelineState(D3D12Device device, PipelineStateStreamDescription desc)
         {
             Debug.Assert(desc.SubObjectStream != 0 && desc.SizeInBytes != 0);
-            if (!device.CreatePipelineState<ID3D12PipelineState>(desc, out var pso).Success)
+            if (!DxCall(device.CreatePipelineState<ID3D12PipelineState>(desc, out var pso)))
             {
                 Debug.WriteLine("Error creating the pipeline state.");
             }

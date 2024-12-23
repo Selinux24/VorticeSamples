@@ -6,21 +6,17 @@ namespace Direct3D12
 {
     class D3D12DepthBuffer
     {
-        private readonly D3D12Graphics graphics;
         private readonly D3D12Texture texture;
         private D3D12DescriptorHandle dsv;
 
         public D3D12DescriptorHandle Dsv { get => dsv; }
         public ID3D12Resource Resource { get => texture.Resource; }
 
-        public D3D12DepthBuffer(D3D12Graphics graphics)
+        public D3D12DepthBuffer()
         {
-            this.graphics = graphics;
         }
-        public D3D12DepthBuffer(D3D12Graphics graphics, D3D12TextureInitInfo info)
+        public D3D12DepthBuffer(D3D12TextureInitInfo info)
         {
-            this.graphics = graphics;
-
             Format dsvFormat = info.Desc.Format;
 
             ShaderResourceViewDescription srvDesc = new();
@@ -39,19 +35,19 @@ namespace Direct3D12
 
             Debug.Assert(info.Resource == null);
             info.SrvDesc = srvDesc;
-            texture = new D3D12Texture(graphics, info);
+            texture = new D3D12Texture(info);
 
             DepthStencilViewDescription dsvDesc = new()
             {
                 ViewDimension = DepthStencilViewDimension.Texture2D,
                 Flags = DepthStencilViewFlags.None,
-                Format = dsvFormat
+                Format = dsvFormat,
             };
             dsvDesc.Texture2D.MipSlice = 0;
 
-            dsv = graphics.DsvHeap.Allocate();
+            dsv = D3D12Graphics.DsvHeap.Allocate();
 
-            var device = graphics.Device;
+            var device = D3D12Graphics.Device;
             Debug.Assert(device != null);
             device.CreateDepthStencilView(Resource, dsvDesc, dsv.Cpu);
         }
@@ -68,7 +64,7 @@ namespace Direct3D12
 
         public void Release()
         {
-            graphics.DsvHeap.Free(ref dsv);
+            D3D12Graphics.DsvHeap.Free(ref dsv);
             texture.Release();
         }
     }

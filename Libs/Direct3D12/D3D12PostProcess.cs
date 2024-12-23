@@ -26,28 +26,30 @@ namespace Direct3D12
         private static ID3D12RootSignature fxRootSig = null;
         private static ID3D12PipelineState fxPso = null;
 
-        private static bool CreateFxPsoAndRootSignature(D3D12Graphics graphics)
+        public static bool Initialize()
+        {
+            return CreateFxPsoAndRootSignature();
+        }
+        private static bool CreateFxPsoAndRootSignature()
         {
             Debug.Assert(fxRootSig == null && fxPso == null);
             // Create FX root signature
-            DescriptorRange1 range = new()
-            {
-                RangeType = DescriptorRangeType.ShaderResourceView,
-                OffsetInDescriptorsFromTableStart = D3D12.DescriptorRangeOffsetAppend,
-                NumDescriptors = 0,
-                RegisterSpace = 0,
-                BaseShaderRegister = 0,
-                Flags = DescriptorRangeFlags.DescriptorsVolatile,
-            };
+            var range = D3D12Helpers.Range(
+                DescriptorRangeType.ShaderResourceView,
+                0,
+                0,
+                0,
+                DescriptorRangeFlags.DescriptorsVolatile);
 
             //Get the number of items in the FxRootParamIndices enum
-            int numRootParams = Enum.GetValues(typeof(FxRootParamIndices)).Length;
-            RootParameter1[] parameters = new RootParameter1[numRootParams];
-            parameters[(int)FxRootParamIndices.RootConstants] = D3D12Helpers.AsConstants(1, ShaderVisibility.Pixel, 1);
-            parameters[(int)FxRootParamIndices.DescriptorTable] = D3D12Helpers.AsDescriptorTable(ShaderVisibility.Pixel, [range]);
+            RootParameter1[] parameters =
+            [
+                D3D12Helpers.AsConstants(1, ShaderVisibility.Pixel, 1),
+                D3D12Helpers.AsDescriptorTable(ShaderVisibility.Pixel, [range]),
+            ];
 
-            RootSignatureDescription1 rootSignature = new() { Parameters = parameters };
-            fxRootSig = D3D12Helpers.CreateRootSignature(graphics.Device, rootSignature);
+            var rootSignature = D3D12Helpers.AsRootSignatureDesc(parameters);
+            fxRootSig = D3D12Helpers.CreateRootSignature(D3D12Graphics.Device, rootSignature);
             Debug.Assert(fxRootSig != null);
             fxRootSig.Name = "Post-process FX Root Signature";
 
@@ -66,15 +68,10 @@ namespace Direct3D12
             Marshal.StructureToPtr(data, stream, false);
             int streamSize = Marshal.SizeOf(data);
 
-            fxPso = D3D12Helpers.CreatePipelineState(graphics.Device, stream, streamSize);
+            fxPso = D3D12Helpers.CreatePipelineState(D3D12Graphics.Device, stream, streamSize);
             fxPso.Name = "Post-process FX Pipeline State Object";
 
             return fxRootSig != null && fxPso != null;
-        }
-
-        public static bool Initialize(D3D12Graphics graphics)
-        {
-            return CreateFxPsoAndRootSignature(graphics);
         }
 
         public static void Shutdown()
@@ -83,13 +80,13 @@ namespace Direct3D12
             fxPso?.Release();
         }
 
-        public static void PostProcess(D3D12Graphics graphics, ID3D12GraphicsCommandList cmdList, CpuDescriptorHandle targetRtv)
+        public static void PostProcess(ID3D12GraphicsCommandList cmdList, CpuDescriptorHandle targetRtv)
         {
             cmdList.SetGraphicsRootSignature(fxRootSig);
             cmdList.SetPipelineState(fxPso);
 
             cmdList.SetGraphicsRoot32BitConstant((int)FxRootParamIndices.RootConstants, D3D12GPass.MainBuffer.Srv.Index, 0);
-            cmdList.SetGraphicsRootDescriptorTable((int)FxRootParamIndices.DescriptorTable, graphics.SrvHeap.GpuStart);
+            cmdList.SetGraphicsRootDescriptorTable((int)FxRootParamIndices.DescriptorTable, D3D12Graphics.SrvHeap.GpuStart);
             cmdList.IASetPrimitiveTopology(PrimitiveTopology.TriangleList);
             // NOTE: we don't need to clear the render target, because each pixel will 
             //       be overwritten by pixels from gpass main buffer.

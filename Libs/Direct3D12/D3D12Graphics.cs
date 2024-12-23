@@ -7,7 +7,8 @@ using System.Threading;
 using Vortice.Direct3D;
 using Vortice.Direct3D12;
 using Vortice.DXGI;
-using System;
+using System.Text;
+
 
 
 #if DEBUG
@@ -19,97 +20,83 @@ namespace Direct3D12
     /// <summary>
     /// D3D12 graphics implementation.
     /// </summary>
-    class D3D12Graphics : IGraphicsPlatform
+    static class D3D12Graphics
     {
-        private const FeatureLevel MinimumFeatureLevel = FeatureLevel.Level_11_0;
-        private const string EngineShaderPaths = "Content/engineShaders.bin";
-
-        private D3D12Device mainDevice;
-#if DEBUG
-        private ID3D12InfoQueue infoQueue;
-#endif
-        private IDXGIFactory7 dxgiFactory;
-        private D3D12Command gfxCommand;
-        private readonly List<D3D12Surface> surfaces = [];
-        private readonly D3D12ResourceBarrier resourceBarriers = new();
-
-        private readonly D3D12DescriptorHeap rtvDescHeap;
-        private readonly D3D12DescriptorHeap dsvDescHeap;
-        private readonly D3D12DescriptorHeap srvDescHeap;
-        private readonly D3D12DescriptorHeap uavDescHeap;
-
-        private readonly List<IUnknown>[] deferredReleases;
-        private readonly int[] deferredReleasesFlags;
-        private readonly Mutex deferredReleasesMutex;
-
         /// <summary>
         /// Gets or sets the number of frame buffers.
         /// </summary>
-        public int FrameBufferCount { get; } = 3;
+        public const int FrameBufferCount = 3;
+        private const FeatureLevel MinimumFeatureLevel = FeatureLevel.Level_11_0;
+        private const string EngineShaderPaths = "Content/engineShaders.bin";
+
+        private static D3D12Device mainDevice;
+#if DEBUG
+        private static ID3D12InfoQueue infoQueue;
+#endif
+        private static IDXGIFactory7 dxgiFactory;
+        private static D3D12Command gfxCommand;
+        private static readonly List<D3D12Surface> surfaces = [];
+        private static readonly D3D12ResourceBarrier resourceBarriers = new();
+
+        private static readonly D3D12DescriptorHeap rtvDescHeap = new(DescriptorHeapType.RenderTargetView);
+        private static readonly D3D12DescriptorHeap dsvDescHeap = new(DescriptorHeapType.DepthStencilView);
+        private static readonly D3D12DescriptorHeap srvDescHeap = new(DescriptorHeapType.ConstantBufferViewShaderResourceViewUnorderedAccessView);
+        private static readonly D3D12DescriptorHeap uavDescHeap = new(DescriptorHeapType.ConstantBufferViewShaderResourceViewUnorderedAccessView);
+
+        private static readonly List<IUnknown>[] deferredReleases = new List<IUnknown>[FrameBufferCount];
+        private static readonly int[] deferredReleasesFlags = new int[FrameBufferCount];
+        private static readonly Mutex deferredReleasesMutex = new();
+
         /// <summary>
         /// Gets the main D3D12 device.
         /// </summary>
-        public D3D12Device Device { get => mainDevice; }
+        public static D3D12Device Device { get => mainDevice; }
         /// <summary>
         /// Gets the RTV descriptor heap.
         /// </summary>
-        public D3D12DescriptorHeap RtvHeap { get => rtvDescHeap; }
+        public static D3D12DescriptorHeap RtvHeap { get => rtvDescHeap; }
         /// <summary>
         /// Gets the DSV descriptor heap.
         /// </summary>
-        public D3D12DescriptorHeap DsvHeap { get => dsvDescHeap; }
+        public static D3D12DescriptorHeap DsvHeap { get => dsvDescHeap; }
         /// <summary>
         /// Gets the SRV descriptor heap.
         /// </summary>
-        public D3D12DescriptorHeap SrvHeap { get => srvDescHeap; }
+        public static D3D12DescriptorHeap SrvHeap { get => srvDescHeap; }
         /// <summary>
         /// Gets the UAV descriptor heap.
         /// </summary>
-        public D3D12DescriptorHeap UavHeap { get => uavDescHeap; }
+        public static D3D12DescriptorHeap UavHeap { get => uavDescHeap; }
         /// <summary>
         /// Gets the current frame index.
         /// </summary>
-        public int CurrentFrameIndex { get => gfxCommand.FrameIndex; }
-
-        /// <summary>
-        /// Constructs a new instance of <see cref="D3D12Graphics"/>.
-        /// </summary>
-        public D3D12Graphics()
-        {
-            rtvDescHeap = new(this, DescriptorHeapType.RenderTargetView);
-            dsvDescHeap = new(this, DescriptorHeapType.DepthStencilView);
-            srvDescHeap = new(this, DescriptorHeapType.ConstantBufferViewShaderResourceViewUnorderedAccessView);
-            uavDescHeap = new(this, DescriptorHeapType.ConstantBufferViewShaderResourceViewUnorderedAccessView);
-
-            deferredReleases = new List<IUnknown>[FrameBufferCount];
-            for (int i = 0; i < FrameBufferCount; i++)
-            {
-                deferredReleases[i] = [];
-            }
-            deferredReleasesFlags = new int[FrameBufferCount];
-            deferredReleasesMutex = new();
-        }
+        public static int CurrentFrameIndex { get => gfxCommand.FrameIndex; }
 
         /// <summary>
         /// Sets the deferred releases flag.
         /// </summary>
-        public void SetDeferredReleasesFlag()
+        public static void SetDeferredReleasesFlag()
         {
             deferredReleasesFlags[CurrentFrameIndex] = 1;
         }
 
         /// <inheritdoc/>
-        public bool Initialize()
+        public static bool Initialize()
         {
             if (mainDevice != null)
             {
                 Shutdown();
             }
 
+            for (int i = 0; i < FrameBufferCount; i++)
+            {
+                deferredReleases[i] = [];
+            }
+
             bool debug = false;
 #if DEBUG
             {
-                if (D3D12.D3D12GetDebugInterface<ID3D12Debug>(out var debugInterface).Success)
+                if (D3D12Helpers.DxCall(D3D12.D3D12GetDebugInterface<ID3D12Debug>(out var debugInterface)))
                 {
                     debugInterface.EnableDebugLayer();
                     debugInterface.Dispose();
@@ -120,7 +107,7 @@ namespace Direct3D12
                 }
                 debug = true;
 
-                if (D3D12.D3D12GetDebugInterface(out ID3D12DeviceRemovedExtendedDataSettings1 dredSettings).Success)
+                if (D3D12Helpers.DxCall(D3D12.D3D12GetDebugInterface(out ID3D12DeviceRemovedExtendedDataSettings1 dredSettings)))
                 {
                     // Turn on auto-breadcrumbs and page fault reporting.
                     dredSettings.SetAutoBreadcrumbsEnablement(DredEnablement.ForcedOn);
@@ -130,7 +117,7 @@ namespace Direct3D12
                 }
             }
 #endif
-            if (!DXGI.CreateDXGIFactory2(debug, out dxgiFactory).Success)
+            if (!D3D12Helpers.DxCall(DXGI.CreateDXGIFactory2(debug, out dxgiFactory)))
             {
                 return FailedInit();
             }
@@ -148,13 +135,13 @@ namespace Direct3D12
                 return FailedInit();
             }
 
-            if (!D3D12.D3D12CreateDevice(mainAdapter, maxFeatureLevel, out mainDevice).Success)
+            if (!D3D12Helpers.DxCall(D3D12.D3D12CreateDevice(mainAdapter, maxFeatureLevel, out mainDevice)))
             {
                 return FailedInit();
             }
             mainDevice.Name = "Main D3D12 Device";
 
-            gfxCommand = new D3D12Command(this, CommandListType.Direct);
+            gfxCommand = new D3D12Command(CommandListType.Direct);
             if (gfxCommand.CommandQueue == null)
             {
                 return FailedInit();
@@ -185,14 +172,14 @@ namespace Direct3D12
                 return FailedInit();
             }
 
-            gfxCommand = new(this, CommandListType.Direct);
+            gfxCommand = new(CommandListType.Direct);
             if (gfxCommand.CommandQueue == null)
             {
                 return FailedInit();
             }
 
             // initialize modules
-            if (!D3D12Shaders.Initialize() || !D3D12GPass.Initialize(this) || !D3D12PostProcess.Initialize(this))
+            if (!D3D12Shaders.Initialize() || !D3D12GPass.Initialize() || !D3D12PostProcess.Initialize())
             {
                 return FailedInit();
             }
@@ -206,7 +193,7 @@ namespace Direct3D12
             return true;
         }
         /// <inheritdoc/>
-        public void Shutdown()
+        public static void Shutdown()
         {
             gfxCommand.Release();
 
@@ -254,16 +241,16 @@ namespace Direct3D12
             mainDevice.Release();
         }
         /// <inheritdoc/>
-        public string GetEngineShaderPath()
+        public static string GetEngineShaderPath()
         {
             return EngineShaderPaths;
         }
 
-        private IDXGIAdapter4 DetermineMainAdapter()
+        private static IDXGIAdapter4 DetermineMainAdapter()
         {
-            for (int i = 0; dxgiFactory.EnumAdapterByGpuPreference(i, GpuPreference.HighPerformance, out IDXGIAdapter4 adapter).Success; i++)
+            for (int i = 0; D3D12Helpers.DxCall(dxgiFactory.EnumAdapterByGpuPreference(i, GpuPreference.HighPerformance, out IDXGIAdapter4 adapter)); i++)
             {
-                if (D3D12.D3D12CreateDevice<D3D12Device>(adapter, MinimumFeatureLevel, out _).Success)
+                if (D3D12Helpers.DxCall(D3D12.D3D12CreateDevice<D3D12Device>(adapter, MinimumFeatureLevel, out _)))
                 {
                     return adapter;
                 }
@@ -273,7 +260,7 @@ namespace Direct3D12
 
             return null;
         }
-        private bool FailedInit()
+        private static bool FailedInit()
         {
             Shutdown();
             return false;
@@ -292,7 +279,7 @@ namespace Direct3D12
 
             return device.CheckMaxSupportedFeatureLevel(featureLevels);
         }
-        private void ProcessDeferredReleases(int frameIdx)
+        private static void ProcessDeferredReleases(int frameIdx)
         {
             lock (deferredReleasesMutex)
             {
@@ -319,7 +306,7 @@ namespace Direct3D12
                 resources.Clear();
             }
         }
-        public void DeferredRelease(IUnknown resource)
+        public static void DeferredRelease(IUnknown resource)
         {
             if (resource == null)
             {
@@ -335,9 +322,9 @@ namespace Direct3D12
         }
 
         /// <inheritdoc/>
-        public ISurface CreateSurface(PlatformWindow window)
+        public static ISurface CreateSurface(PlatformWindow window)
         {
-            var surface = new D3D12Surface(window, this);
+            var surface = new D3D12Surface(window);
             surface.CreateSwapChain(dxgiFactory, gfxCommand.CommandQueue);
 
             surfaces.Add(surface);
@@ -346,29 +333,29 @@ namespace Direct3D12
             return surface;
         }
         /// <inheritdoc/>
-        public void RemoveSurface(uint id)
+        public static void RemoveSurface(uint id)
         {
             gfxCommand.Flush();
             surfaces[(int)id] = null;
         }
         /// <inheritdoc/>
-        public void ResizeSurface(uint id, int width, int height)
+        public static void ResizeSurface(uint id, int width, int height)
         {
             gfxCommand.Flush();
             surfaces[(int)id].Resize(width, height);
         }
         /// <inheritdoc/>
-        public int GetSurfaceWidth(uint id)
+        public static int GetSurfaceWidth(uint id)
         {
             return surfaces[(int)id].Width;
         }
         /// <inheritdoc/>
-        public int GetSurfaceHeight(uint id)
+        public static int GetSurfaceHeight(uint id)
         {
             return surfaces[(int)id].Height;
         }
         /// <inheritdoc/>
-        public void RenderSurface(uint id)
+        public static void RenderSurface(uint id)
         {
             // Wait for the GPU to finish with the command allocator and
             // reset the allocator once the GPU is done with it.
@@ -391,7 +378,7 @@ namespace Direct3D12
                 SurfaceWidth = surface.Width,
             };
 
-            D3D12GPass.SetSize(this, new(frameInfo.SurfaceWidth, frameInfo.SurfaceHeight));
+            D3D12GPass.SetSize(new(frameInfo.SurfaceWidth, frameInfo.SurfaceHeight));
             var barriers = resourceBarriers;
 
             // Record commands
@@ -416,9 +403,9 @@ namespace Direct3D12
             barriers.Add(currentBackBuffer, ResourceStates.Present, ResourceStates.RenderTarget, ResourceBarrierFlags.EndOnly);
             D3D12GPass.AddTransitionsForPostProcess(barriers);
             barriers.Apply(cmdList);
-            
+
             // Will write to the current back buffer, so back buffer is a render target
-            D3D12PostProcess.PostProcess(this, cmdList, surface.Rtv);
+            D3D12PostProcess.PostProcess(cmdList, surface.Rtv);
 
             // after post process
             D3D12Helpers.TransitionResource(cmdList, currentBackBuffer, ResourceStates.RenderTarget, ResourceStates.Present);
@@ -434,24 +421,33 @@ namespace Direct3D12
             Debug.WriteLine($"{category} {severity} {id} {description}");
         }
 
-        public string GetDebugMessage()
+        public static string GetDebugMessage()
         {
             if (infoQueue == null)
             {
                 return string.Empty;
             }
 
-            string message = string.Empty;
-
             ulong numMessages = infoQueue.NumStoredMessages;
+            if(numMessages == 0)
+            {
+                return string.Empty;
+            }
+
+            StringBuilder message = new();
+
             for (ulong i = 0; i < numMessages; i++)
             {
                 var messageInfo = infoQueue.GetMessage(i);
 
-                message += $"{messageInfo.Description}{Environment.NewLine}";
+                string msgDescription = messageInfo.Description.Replace('\0', ' ');
+
+                message.AppendLine(msgDescription);
             }
 
-            return message;
+            infoQueue.ClearStoredMessages();
+
+            return message.ToString();
         }
 #endif
     }

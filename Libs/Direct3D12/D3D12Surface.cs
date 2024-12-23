@@ -22,7 +22,6 @@ namespace Direct3D12
             public D3D12DescriptorHandle Rtv;
         }
 
-        private readonly D3D12Graphics graphics;
         private IDXGISwapChain4 swapChain;
         private readonly RenderTargetData[] renderTargetData = new RenderTargetData[BufferCount];
         private readonly PlatformWindow window;
@@ -49,11 +48,10 @@ namespace Direct3D12
         /// </summary>
         /// <param name="window">Platform window</param>
         /// <param name="graphics">Graphics instance</param>
-        public D3D12Surface(PlatformWindow window, D3D12Graphics graphics)
+        public D3D12Surface(PlatformWindow window)
         {
             Debug.Assert(window != null && window.Handle != 0);
             this.window = window;
-            this.graphics = graphics;
         }
         /// <summary>
         /// Finalizes an instance of the <see cref="D3D12Surface"/> class.
@@ -137,7 +135,7 @@ namespace Direct3D12
 
             for (int i = 0; i < frameBufferCount; i++)
             {
-                renderTargetData[i].Rtv = graphics.RtvHeap.Allocate();
+                renderTargetData[i].Rtv = D3D12Graphics.RtvHeap.Allocate();
             }
 
             FinalizeSwapChainCreation();
@@ -157,7 +155,7 @@ namespace Direct3D12
                     Format = format,
                     ViewDimension = RenderTargetViewDimension.Texture2D
                 };
-                graphics.Device.CreateRenderTargetView(renderTargetData[i].Resource, rtvdesc, renderTargetData[i].Rtv.Cpu);
+                D3D12Graphics.Device.CreateRenderTargetView(renderTargetData[i].Resource, rtvdesc, renderTargetData[i].Rtv.Cpu);
             }
 
             SwapChainDescription scdesc = swapChain.Description;
@@ -211,7 +209,7 @@ namespace Direct3D12
             for (int i = 0; i < BufferCount; i++)
             {
                 renderTargetData[i].Resource?.Release();
-                graphics.RtvHeap.Free(ref renderTargetData[i].Rtv);
+                D3D12Graphics.RtvHeap.Free(ref renderTargetData[i].Rtv);
             }
 
             swapChain?.Release();

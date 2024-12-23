@@ -47,13 +47,13 @@ namespace Direct3D12
         public static D3D12RenderTexture MainBuffer { get => gpassMainBuffer; }
         public static D3D12DepthBuffer DepthBuffer { get => gpassDepthBuffer; }
 
-        public static bool Initialize(D3D12Graphics graphics)
+        public static bool Initialize()
         {
             return
-                CreateBuffers(graphics, initialDimensions) &&
-                CreateGPassPsoAndRootSignature(graphics);
+                CreateBuffers(initialDimensions) &&
+                CreateGPassPsoAndRootSignature();
         }
-        private static bool CreateBuffers(D3D12Graphics graphics, SizeI size)
+        private static bool CreateBuffers(SizeI size)
         {
             Debug.Assert(size.Width > 0 && size.Height > 0);
             gpassMainBuffer?.Release();
@@ -86,7 +86,7 @@ namespace Direct3D12
                     }
                 };
 
-                gpassMainBuffer = new D3D12RenderTexture(graphics, info);
+                gpassMainBuffer = new D3D12RenderTexture(info);
             }
 
             // Create the depth buffer
@@ -117,7 +117,7 @@ namespace Direct3D12
                     }
                 };
 
-                gpassDepthBuffer = new D3D12DepthBuffer(graphics, info);
+                gpassDepthBuffer = new D3D12DepthBuffer(info);
             }
 
             gpassMainBuffer.Resource.Name = "GPass Main Buffer";
@@ -127,7 +127,7 @@ namespace Direct3D12
 
             return gpassMainBuffer.Resource != null && gpassDepthBuffer.Resource != null;
         }
-        private static bool CreateGPassPsoAndRootSignature(D3D12Graphics graphics)
+        private static bool CreateGPassPsoAndRootSignature()
         {
             Debug.Assert(gpassRootSig == null && gpassPso == null);
 
@@ -138,8 +138,8 @@ namespace Direct3D12
                 D3D12Helpers.AsConstants(3, ShaderVisibility.Pixel, numRootParams)
             ];
 
-            RootSignatureDescription1 rootSignature = new() { Parameters = parameters };
-            gpassRootSig = D3D12Helpers.CreateRootSignature(graphics.Device, rootSignature);
+            var rootSignature = D3D12Helpers.AsRootSignatureDesc(parameters);
+            gpassRootSig = D3D12Helpers.CreateRootSignature(D3D12Graphics.Device, rootSignature);
             Debug.Assert(gpassRootSig != null);
             gpassRootSig.Name = "GPass Root Signature";
 
@@ -162,7 +162,7 @@ namespace Direct3D12
             Marshal.StructureToPtr(pipelineState, stream, false);
             int streamSize = Marshal.SizeOf(pipelineState);
 
-            gpassPso = D3D12Helpers.CreatePipelineState(graphics.Device, stream, streamSize);
+            gpassPso = D3D12Helpers.CreatePipelineState(D3D12Graphics.Device, stream, streamSize);
             gpassPso.Name = "GPass Pipeline State Object";
 
             return gpassRootSig != null && gpassPso != null;
@@ -178,7 +178,7 @@ namespace Direct3D12
             gpassPso.Release();
         }
 
-        public static void SetSize(D3D12Graphics graphics, SizeI size)
+        public static void SetSize(SizeI size)
         {
             var d = dimensions;
             if (size.Width <= d.Width && size.Height <= d.Height)
@@ -192,7 +192,7 @@ namespace Direct3D12
                 Height = Math.Max(size.Height, d.Height)
             };
 
-            CreateBuffers(graphics, d);
+            CreateBuffers(d);
         }
 
         public static void DepthPrePass(ID3D12GraphicsCommandList cmdList, D3D12FrameInfo info)

@@ -49,14 +49,14 @@ namespace Direct3D12
         public D3D12GraphicsCommandList CommandList { get => cmdList; }
         public int FrameIndex { get => frameIndex; }
 
-        public D3D12Command(D3D12Graphics graphics, CommandListType type)
+        public D3D12Command(CommandListType type)
         {
-            frameBufferCount = graphics.FrameBufferCount;
-            var device = graphics.Device;
+            frameBufferCount = D3D12Graphics.FrameBufferCount;
+            var device = D3D12Graphics.Device;
 
             var description = new CommandQueueDescription(type, CommandQueuePriority.Normal, CommandQueueFlags.None, 0);
 
-            if (!device.CreateCommandQueue(description, out cmdQueue).Success)
+            if (!D3D12Helpers.DxCall(device.CreateCommandQueue(description, out cmdQueue)))
             {
                 Release();
                 return;
@@ -78,7 +78,7 @@ namespace Direct3D12
             {
                 var frame = cmdFrames[i];
 
-                if (!device.CreateCommandAllocator(type, out frame.CmdAllocator).Success)
+                if (!D3D12Helpers.DxCall(device.CreateCommandAllocator(type, out frame.CmdAllocator)))
                 {
                     Release();
                     return;
@@ -91,7 +91,7 @@ namespace Direct3D12
                 };
             }
 
-            if (!device.CreateCommandList(0, type, cmdFrames[0].CmdAllocator, null, out cmdList).Success)
+            if (!D3D12Helpers.DxCall(device.CreateCommandList(0, type, cmdFrames[0].CmdAllocator, null, out cmdList)))
             {
                 Release();
             }
@@ -103,7 +103,7 @@ namespace Direct3D12
                 _ => "Command List"
             };
 
-            if (!device.CreateFence(0, FenceFlags.None, out fence).Success)
+            if (!D3D12Helpers.DxCall(device.CreateFence(0, FenceFlags.None, out fence)))
             {
                 Release();
             }
