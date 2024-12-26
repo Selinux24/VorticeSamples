@@ -14,7 +14,7 @@ namespace ShaderCompiler
         private const uint shaderVertex = 0;
         private const uint shaderPixel = 4;
 
-        private static readonly string[] profileStrings = ["vs_6_6", "hs_6_6", "ds_6_6", "gs_6_6", "ps_6_6", "cs_6_6", "as_6_6", "ms_6_6"];
+        private static readonly string[] profileStrings = ["vs_6_5", "hs_6_5", "ds_6_5", "gs_6_5", "ps_6_5", "cs_6_5", "as_6_5", "ms_6_5"];
 
         private static readonly EngineShaderInfo[] engineShaderFiles =
         [

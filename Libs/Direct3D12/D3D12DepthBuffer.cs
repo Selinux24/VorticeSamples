@@ -17,17 +17,25 @@ namespace Direct3D12
         }
         public D3D12DepthBuffer(D3D12TextureInitInfo info)
         {
-            Format dsvFormat = info.Desc.Format;
+            Debug.Assert(info.Desc != null);
+            var desc = info.Desc.Value;
 
-            ShaderResourceViewDescription srvDesc = new();
-            if (info.Desc.Format == Format.D32_Float)
+            Format srvFormat = desc.Format;
+            Format dsvFormat = desc.Format;
+
+            if (desc.Format == Format.D32_Float)
             {
-                info.Desc.Format = Format.R32_Typeless;
-                srvDesc.Format = Format.R32_Float;
+                desc.Format = Format.R32_Typeless;
+                srvFormat = Format.R32_Float;
             }
+            info.Desc = desc;
 
-            srvDesc.Shader4ComponentMapping = ShaderComponentMapping.Default;
-            srvDesc.ViewDimension = ShaderResourceViewDimension.Texture2D;
+            ShaderResourceViewDescription srvDesc = new()
+            {
+                Shader4ComponentMapping = ShaderComponentMapping.Default,
+                Format = srvFormat,
+                ViewDimension = ShaderResourceViewDimension.Texture2D,
+            };
             srvDesc.Texture2D.MipLevels = 1;
             srvDesc.Texture2D.MostDetailedMip = 0;
             srvDesc.Texture2D.PlaneSlice = 0;

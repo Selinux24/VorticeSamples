@@ -6,8 +6,8 @@ namespace Direct3D12
     {
         public ID3D12Heap1 Heap = null;
         public ID3D12Resource Resource = null;
-        public ShaderResourceViewDescription SrvDesc = default;
-        public ResourceDescription Desc = default;
+        public ShaderResourceViewDescription? SrvDesc = null;
+        public ResourceDescription? Desc = null;
         public ResourceAllocationInfo1 AllocationInfo = default;
         public ResourceStates InitialState = ResourceStates.None;
         public ClearValue ClearValue = default;

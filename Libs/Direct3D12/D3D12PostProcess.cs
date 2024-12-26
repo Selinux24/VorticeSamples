@@ -1,6 +1,4 @@
-﻿using System;
-using System.Diagnostics;
-using System.Runtime.InteropServices;
+﻿using System.Diagnostics;
 using Vortice.Direct3D;
 using Vortice.Direct3D12;
 
@@ -33,10 +31,11 @@ namespace Direct3D12
         private static bool CreateFxPsoAndRootSignature()
         {
             Debug.Assert(fxRootSig == null && fxPso == null);
+
             // Create FX root signature
             var range = D3D12Helpers.Range(
                 DescriptorRangeType.ShaderResourceView,
-                0,
+                D3D12.DescriptorRangeOffsetAppend,
                 0,
                 0,
                 DescriptorRangeFlags.DescriptorsVolatile);
@@ -61,14 +60,10 @@ namespace Direct3D12
                 Ps = new(D3D12Shaders.GetEngineShader(EngineShaders.PostProcessPs)),
                 PrimitiveTopology = new(PrimitiveTopologyType.Triangle),
                 RenderTargetFormats = new([D3D12Surface.DefaultBackBufferFormat]),
-                Rasterizer = new(D3D12Helpers.RasterizerState.NoCull),
+                Rasterizer = new(D3D12Helpers.RasterizerStatesCollection.NoCull),
             };
 
-            IntPtr stream = IntPtr.Zero;
-            Marshal.StructureToPtr(data, stream, false);
-            int streamSize = Marshal.SizeOf(data);
-
-            fxPso = D3D12Helpers.CreatePipelineState(D3D12Graphics.Device, stream, streamSize);
+            fxPso = D3D12Helpers.CreatePipelineState(D3D12Graphics.Device, data);
             fxPso.Name = "Post-process FX Pipeline State Object";
 
             return fxRootSig != null && fxPso != null;

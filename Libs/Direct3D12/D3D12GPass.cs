@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
 using Vortice.Direct3D;
 using Vortice.Direct3D12;
 using Vortice.DXGI;
@@ -13,6 +12,12 @@ namespace Direct3D12
         enum GPassRootParamIndices : uint
         {
             RootConstants = 0
+        }
+        struct FrameConstants
+        {
+            public float Width;
+            public float Height;
+            public int Frame;
         }
         struct PipelineStateStream
         {
@@ -29,6 +34,7 @@ namespace Direct3D12
         const Format mainBufferFormat = Format.R16G16B16A16_Float;
         const Format depthBufferFormat = Format.D32_Float;
         static readonly SizeI initialDimensions = new() { Width = 100, Height = 100 };
+        static int frame = 0;
 
         static D3D12RenderTexture gpassMainBuffer;
         static D3D12DepthBuffer gpassDepthBuffer;
@@ -79,11 +85,7 @@ namespace Direct3D12
                 {
                     Desc = desc,
                     InitialState = ResourceStates.PixelShaderResource,
-                    ClearValue = new()
-                    {
-                        Format = desc.Format,
-                        Color = clearValue,
-                    }
+                    ClearValue = new(desc.Format, clearValue),
                 };
 
                 gpassMainBuffer = new D3D12RenderTexture(info);
@@ -91,30 +93,19 @@ namespace Direct3D12
 
             // Create the depth buffer
             {
-                ResourceDescription desc = new()
-                {
-                    Alignment = 0, // NOTE: 0 is the same as 64KB (or 4MB for MSAA)
-                    DepthOrArraySize = 1,
-                    Dimension = ResourceDimension.Texture2D,
-                    Flags = ResourceFlags.AllowDepthStencil,
-                    Format = depthBufferFormat,
-                    Height = size.Height,
-                    Layout = TextureLayout.Unknown,
-                    MipLevels = 1,
-                    SampleDescription = new(1, 0),
-                    Width = (ulong)size.Width
-                };
+                var desc = ResourceDescription.Texture2D(
+                    depthBufferFormat,
+                    (uint)size.Width,
+                    (uint)size.Height,
+                    1,
+                    1,
+                    flags: ResourceFlags.AllowDepthStencil);
 
                 D3D12TextureInitInfo info = new()
                 {
                     Desc = desc,
                     InitialState = ResourceStates.DepthRead | ResourceStates.PixelShaderResource | ResourceStates.NonPixelShaderResource,
-                    ClearValue = new()
-                    {
-                        Format = desc.Format,
-                        Color = clearValue,
-                        DepthStencil = new(0f, 0),
-                    }
+                    ClearValue = new(desc.Format, 0f, 0),
                 };
 
                 gpassDepthBuffer = new D3D12DepthBuffer(info);
@@ -143,8 +134,6 @@ namespace Direct3D12
             Debug.Assert(gpassRootSig != null);
             gpassRootSig.Name = "GPass Root Signature";
 
-            Format[] formats = [mainBufferFormat];
-
             // Create GPass PSO
             PipelineStateStream pipelineState = new();
             {
@@ -152,17 +141,13 @@ namespace Direct3D12
                 pipelineState.Vs = new(D3D12Shaders.GetEngineShader(EngineShaders.FullScreenTriangleVs));
                 pipelineState.Ps = new(D3D12Shaders.GetEngineShader(EngineShaders.FillColorPs));
                 pipelineState.PrimitiveTopology = new(PrimitiveTopologyType.Triangle);
-                pipelineState.RenderTargetFormats = new(formats);
+                pipelineState.RenderTargetFormats = new([mainBufferFormat]);
                 pipelineState.DepthStencilFormat = new(depthBufferFormat);
-                pipelineState.Rasterizer = new(D3D12Helpers.RasterizerState.NoCull);
-                pipelineState.Depth = new(D3D12Helpers.DepthState.Disabled);
+                pipelineState.Rasterizer = new(D3D12Helpers.RasterizerStatesCollection.NoCull);
+                pipelineState.Depth = new(D3D12Helpers.DepthStatesCollection.Disabled);
             }
 
-            IntPtr stream = IntPtr.Zero;
-            Marshal.StructureToPtr(pipelineState, stream, false);
-            int streamSize = Marshal.SizeOf(pipelineState);
-
-            gpassPso = D3D12Helpers.CreatePipelineState(D3D12Graphics.Device, stream, streamSize);
+            gpassPso = D3D12Helpers.CreatePipelineState(D3D12Graphics.Device, pipelineState);
             gpassPso.Name = "GPass Pipeline State Object";
 
             return gpassRootSig != null && gpassPso != null;
@@ -200,19 +185,11 @@ namespace Direct3D12
 
         }
 
-        struct FrameConstants
-        {
-            public float Width;
-            public float Height;
-            public int Frame;
-        }
-
         public static void Render(ID3D12GraphicsCommandList cmdList, D3D12FrameInfo info)
         {
             cmdList.SetGraphicsRootSignature(gpassRootSig);
             cmdList.SetPipelineState(gpassPso);
 
-            int frame = 0;
             FrameConstants constants = new()
             {
                 Width = info.SurfaceWidth,

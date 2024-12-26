@@ -2,6 +2,7 @@
 global using D3D12GraphicsCommandList = Vortice.Direct3D12.ID3D12GraphicsCommandList6;
 using System;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using Vortice.Direct3D12;
 
 namespace Direct3D12
@@ -14,16 +15,18 @@ namespace Direct3D12
 
         public readonly struct HeapPropertiesCollection()
         {
-            public readonly HeapProperties DefaultHeap = new(
+            private static readonly HeapProperties defaultHeap = new(
                 HeapType.Default,
                 CpuPageProperty.Unknown,
                 MemoryPool.Unknown,
                 0,
                 0);
+
+            public static HeapProperties DefaultHeap { get => defaultHeap; }
         }
         public readonly struct RasterizerStatesCollection()
         {
-            public readonly RasterizerDescription NoCull = new(
+            private static readonly RasterizerDescription noCull = new(
                 CullMode.None,
                 FillMode.Solid,
                 false,
@@ -36,7 +39,7 @@ namespace Direct3D12
                 0,
                 ConservativeRasterizationMode.Off);
 
-            public readonly RasterizerDescription BackFaceCull = new(
+            private static readonly RasterizerDescription backFaceCull = new(
                 CullMode.Back,
                 FillMode.Solid,
                 false,
@@ -49,7 +52,7 @@ namespace Direct3D12
                 0,
                 ConservativeRasterizationMode.Off);
 
-            public readonly RasterizerDescription FrontFaceCull = new(
+            private static readonly RasterizerDescription frontFaceCull = new(
                 CullMode.Front,
                 FillMode.Solid,
                 false,
@@ -62,7 +65,7 @@ namespace Direct3D12
                 0,
                 ConservativeRasterizationMode.Off);
 
-            public readonly RasterizerDescription Wireframe = new(
+            private static readonly RasterizerDescription wireframe = new(
                 CullMode.None,
                 FillMode.Wireframe,
                 false,
@@ -74,10 +77,15 @@ namespace Direct3D12
                 false,
                 0,
                 ConservativeRasterizationMode.Off);
+
+            public static RasterizerDescription NoCull { get => noCull; }
+            public static RasterizerDescription BackFaceCull { get => backFaceCull; }
+            public static RasterizerDescription FrontFaceCull { get => frontFaceCull; }
+            public static RasterizerDescription Wireframe { get => wireframe; }
         }
-        public readonly struct DephStatesCollection()
+        public readonly struct DepthStatesCollection()
         {
-            public readonly DepthStencilDescription1 Disabled = new(
+            private static readonly DepthStencilDescription1 disabled = new(
                 false,
                 false,
                 ComparisonFunction.LessEqual,
@@ -93,22 +101,11 @@ namespace Direct3D12
                 StencilOperation.Zero,
                 ComparisonFunction.None,
                 false);
+
+            public static DepthStencilDescription1 Disabled { get => disabled; }
         }
 
         #endregion
-
-        /// <summary>
-        /// Default heap properties.
-        /// </summary>
-        public static readonly HeapPropertiesCollection HeapProperties = new();
-        /// <summary>
-        /// Rasterizer states.
-        /// </summary>
-        public static readonly RasterizerStatesCollection RasterizerState = new();
-        /// <summary>
-        /// Depth states.
-        /// </summary>
-        public static readonly DephStatesCollection DepthState = new();
 
         public static bool DxCall(HResult result)
         {
@@ -277,13 +274,14 @@ namespace Direct3D12
             return pso;
         }
 
-        public static ID3D12PipelineState CreatePipelineState(D3D12Device device, IntPtr stream, int stream_size)
+        public static ID3D12PipelineState CreatePipelineState<T>(D3D12Device device, T data) where T : unmanaged
         {
-            Debug.Assert(stream != 0 && stream_size != 0);
+            GCHandle handle = GCHandle.Alloc(data, GCHandleType.Pinned);
+
             PipelineStateStreamDescription desc = new()
             {
-                SizeInBytes = stream_size,
-                SubObjectStream = stream
+                SizeInBytes = Marshal.SizeOf(data),
+                SubObjectStream = handle.AddrOfPinnedObject(),
             };
             return CreatePipelineState(device, desc);
         }

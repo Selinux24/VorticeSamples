@@ -21,7 +21,9 @@ namespace Direct3D12
             var device = D3D12Graphics.Device;
             Debug.Assert(device != null);
 
-            ClearValue clearValue = (info.Desc.Flags.HasFlag(ResourceFlags.AllowRenderTarget) || info.Desc.Flags.HasFlag(ResourceFlags.AllowDepthStencil)) ?
+            Debug.Assert(info.Desc != null);
+            var desc = info.Desc.Value;
+            ClearValue clearValue = (desc.Flags.HasFlag(ResourceFlags.AllowRenderTarget) || desc.Flags.HasFlag(ResourceFlags.AllowDepthStencil)) ?
                 info.ClearValue :
                 default;
 
@@ -37,7 +39,7 @@ namespace Direct3D12
                 if (!D3D12Helpers.DxCall(device.CreatePlacedResource(
                     info.Heap,
                     info.AllocationInfo.Offset,
-                    info.Desc,
+                    desc,
                     info.InitialState,
                     clearValue,
                     out resource)))
@@ -50,9 +52,9 @@ namespace Direct3D12
                 Debug.Assert(info.Heap == null && info.Resource == null);
 
                 if (!D3D12Helpers.DxCall(device.CreateCommittedResource(
-                    D3D12Helpers.HeapProperties.DefaultHeap,
+                    D3D12Helpers.HeapPropertiesCollection.DefaultHeap,
                     HeapFlags.None,
-                    info.Desc,
+                    desc,
                     info.InitialState,
                     clearValue,
                     out resource)))

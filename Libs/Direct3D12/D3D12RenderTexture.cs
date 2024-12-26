@@ -22,10 +22,11 @@ namespace Direct3D12
             MipCount = Resource.Description.MipLevels;
             Debug.Assert(MipCount != 0 && MipCount <= D3D12Texture.MaxMips);
 
+            Debug.Assert(info.Desc != null);
             D3D12DescriptorHeap rtvHeap = D3D12Graphics.RtvHeap;
             RenderTargetViewDescription desc = new()
             {
-                Format = info.Desc.Format,
+                Format = info.Desc.Value.Format,
                 ViewDimension = RenderTargetViewDimension.Texture2D
             };
             desc.Texture2D.MipSlice = 0;
