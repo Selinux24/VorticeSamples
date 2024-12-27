@@ -9,8 +9,6 @@ using Vortice.Direct3D12;
 using Vortice.DXGI;
 using System.Text;
 
-
-
 #if DEBUG
 using Vortice.Direct3D12.Debug;
 #endif
@@ -139,13 +137,6 @@ namespace Direct3D12
             {
                 return FailedInit();
             }
-            mainDevice.Name = "Main D3D12 Device";
-
-            gfxCommand = new D3D12Command(CommandListType.Direct);
-            if (gfxCommand.CommandQueue == null)
-            {
-                return FailedInit();
-            }
 
 #if DEBUG
             {
@@ -184,11 +175,11 @@ namespace Direct3D12
                 return FailedInit();
             }
 
-            mainDevice.Name = "Main D3D12 Device";
-            rtvDescHeap.Heap.Name = "RTV Descriptor Heap";
-            dsvDescHeap.Heap.Name = "DSV Descriptor Heap";
-            srvDescHeap.Heap.Name = "SRV Descriptor Heap";
-            uavDescHeap.Heap.Name = "UAV Descriptor Heap";
+            D3D12Helpers.NameD3D12Object(mainDevice, "Main D3D12 Device");
+            D3D12Helpers.NameD3D12Object(rtvDescHeap.Heap, "RTV Descriptor Heap");
+            D3D12Helpers.NameD3D12Object(dsvDescHeap.Heap, "DSV Descriptor Heap");
+            D3D12Helpers.NameD3D12Object(srvDescHeap.Heap, "SRV Descriptor Heap");
+            D3D12Helpers.NameD3D12Object(uavDescHeap.Heap, "UAV Descriptor Heap");
 
             return true;
         }
@@ -379,7 +370,6 @@ namespace Direct3D12
             };
 
             D3D12GPass.SetSize(new(frameInfo.SurfaceWidth, frameInfo.SurfaceHeight));
-            var barriers = resourceBarriers;
 
             // Record commands
             cmdList.SetDescriptorHeaps([srvDescHeap.Heap]);
@@ -387,28 +377,31 @@ namespace Direct3D12
             cmdList.RSSetScissorRect(surface.ScissorRect);
 
             // Depth prepass
-            barriers.Add(currentBackBuffer, ResourceStates.Present, ResourceStates.RenderTarget, ResourceBarrierFlags.BeginOnly);
-            D3D12GPass.AddTransitionsForDepthPrePass(barriers);
-            barriers.Apply(cmdList);
+            resourceBarriers.Add(currentBackBuffer, ResourceStates.Present, ResourceStates.RenderTarget, ResourceBarrierFlags.BeginOnly);
+            D3D12GPass.AddTransitionsForDepthPrePass(resourceBarriers);
+            resourceBarriers.Apply(cmdList);
             D3D12GPass.SetRenderTargetsForDepthPrePass(cmdList);
             D3D12GPass.DepthPrePass(cmdList, frameInfo);
 
             // Geometry and lighting pass
-            D3D12GPass.AddTransitionsForGPass(barriers);
-            barriers.Apply(cmdList);
+            D3D12GPass.AddTransitionsForGPass(resourceBarriers);
+            resourceBarriers.Apply(cmdList);
             D3D12GPass.SetRenderTargetsForGPass(cmdList);
             D3D12GPass.Render(cmdList, frameInfo);
 
             // Post-process
-            barriers.Add(currentBackBuffer, ResourceStates.Present, ResourceStates.RenderTarget, ResourceBarrierFlags.EndOnly);
-            D3D12GPass.AddTransitionsForPostProcess(barriers);
-            barriers.Apply(cmdList);
+            resourceBarriers.Add(currentBackBuffer, ResourceStates.Present, ResourceStates.RenderTarget, ResourceBarrierFlags.EndOnly);
+            D3D12GPass.AddTransitionsForPostProcess(resourceBarriers);
+            resourceBarriers.Apply(cmdList);
 
             // Will write to the current back buffer, so back buffer is a render target
             D3D12PostProcess.PostProcess(cmdList, surface.Rtv);
 
             // after post process
-            D3D12Helpers.TransitionResource(cmdList, currentBackBuffer, ResourceStates.RenderTarget, ResourceStates.Present);
+            cmdList.ResourceBarrierTransition(
+                currentBackBuffer,
+                ResourceStates.RenderTarget,
+                ResourceStates.Present);
 
             // Done recording commands. Now execute commands,
             // signal and increment the fence value for next frame.
@@ -429,7 +422,7 @@ namespace Direct3D12
             }
 
             ulong numMessages = infoQueue.NumStoredMessages;
-            if(numMessages == 0)
+            if (numMessages == 0)
             {
                 return string.Empty;
             }

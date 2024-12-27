@@ -111,8 +111,8 @@ namespace Direct3D12
                 gpassDepthBuffer = new D3D12DepthBuffer(info);
             }
 
-            gpassMainBuffer.Resource.Name = "GPass Main Buffer";
-            gpassDepthBuffer.Resource.Name = "GPass Depth Buffer";
+            D3D12Helpers.NameD3D12Object(gpassMainBuffer.Resource, "GPass Main Buffer");
+            D3D12Helpers.NameD3D12Object(gpassDepthBuffer.Resource, "GPass Depth Buffer");
 
             flags = ResourceBarrierFlags.None;
 
@@ -132,7 +132,7 @@ namespace Direct3D12
             var rootSignature = D3D12Helpers.AsRootSignatureDesc(parameters);
             gpassRootSig = D3D12Helpers.CreateRootSignature(D3D12Graphics.Device, rootSignature);
             Debug.Assert(gpassRootSig != null);
-            gpassRootSig.Name = "GPass Root Signature";
+            D3D12Helpers.NameD3D12Object(gpassRootSig, "GPass Root Signature");
 
             // Create GPass PSO
             PipelineStateStream pipelineState = new();
@@ -147,8 +147,8 @@ namespace Direct3D12
                 pipelineState.Depth = new(D3D12Helpers.DepthStatesCollection.Disabled);
             }
 
-            gpassPso = D3D12Helpers.CreatePipelineState(D3D12Graphics.Device, pipelineState);
-            gpassPso.Name = "GPass Pipeline State Object";
+            gpassPso = D3D12Graphics.Device.CreatePipelineState(pipelineState);
+            D3D12Helpers.NameD3D12Object(gpassPso, "GPass Pipeline State Object");
 
             return gpassRootSig != null && gpassPso != null;
         }
@@ -165,19 +165,15 @@ namespace Direct3D12
 
         public static void SetSize(SizeI size)
         {
-            var d = dimensions;
-            if (size.Width <= d.Width && size.Height <= d.Height)
+            if (size.Width <= dimensions.Width && size.Height <= dimensions.Height)
             {
                 return;
             }
 
-            d = new()
-            {
-                Width = Math.Max(size.Width, d.Width),
-                Height = Math.Max(size.Height, d.Height)
-            };
+            dimensions.Width = Math.Max(size.Width, dimensions.Width);
+            dimensions.Height = Math.Max(size.Height, dimensions.Height);
 
-            CreateBuffers(d);
+            CreateBuffers(dimensions);
         }
 
         public static void DepthPrePass(ID3D12GraphicsCommandList cmdList, D3D12FrameInfo info)

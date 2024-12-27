@@ -11,7 +11,7 @@ namespace Direct3D12
             RootConstants,
             DescriptorTable,
         }
-        struct FxPsoData
+        struct PipelineStateStream
         {
             public PipelineStateSubObjectTypeRootSignature RootSignature;
             public PipelineStateSubObjectTypeVertexShader Vs;
@@ -50,10 +50,10 @@ namespace Direct3D12
             var rootSignature = D3D12Helpers.AsRootSignatureDesc(parameters);
             fxRootSig = D3D12Helpers.CreateRootSignature(D3D12Graphics.Device, rootSignature);
             Debug.Assert(fxRootSig != null);
-            fxRootSig.Name = "Post-process FX Root Signature";
+            D3D12Helpers.NameD3D12Object(fxRootSig, "Post-process FX Root Signature");
 
             // Create FX PSO
-            FxPsoData data = new()
+            PipelineStateStream data = new()
             {
                 RootSignature = new PipelineStateSubObjectTypeRootSignature(fxRootSig),
                 Vs = new(D3D12Shaders.GetEngineShader(EngineShaders.FullScreenTriangleVs)),
@@ -63,8 +63,8 @@ namespace Direct3D12
                 Rasterizer = new(D3D12Helpers.RasterizerStatesCollection.NoCull),
             };
 
-            fxPso = D3D12Helpers.CreatePipelineState(D3D12Graphics.Device, data);
-            fxPso.Name = "Post-process FX Pipeline State Object";
+            fxPso = D3D12Graphics.Device.CreatePipelineState(data);
+            D3D12Helpers.NameD3D12Object(fxPso, "Post-process FX Pipeline State Object");
 
             return fxRootSig != null && fxPso != null;
         }

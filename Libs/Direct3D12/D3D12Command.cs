@@ -61,12 +61,13 @@ namespace Direct3D12
                 Release();
                 return;
             }
-            cmdQueue.Name = type switch
+            string cmdQueueName = type switch
             {
                 CommandListType.Direct => "GFX Command Queue",
                 CommandListType.Compute => "Compute Command Queue",
                 _ => "Command Queue"
             };
+            D3D12Helpers.NameD3D12Object(cmdQueue, cmdQueueName);
 
             cmdFrames = new CommandFrame[frameBufferCount];
             for (int i = 0; i < frameBufferCount; i++)
@@ -83,12 +84,13 @@ namespace Direct3D12
                     Release();
                     return;
                 }
-                frame.CmdAllocator.Name = type switch
+                string cmdAllocatorName = type switch
                 {
-                    CommandListType.Direct => $"GFX Command Allocator [{i}]",
-                    CommandListType.Compute => $"Compute Command Allocator [{i}]",
-                    _ => $"Command Allocator [{i}]"
+                    CommandListType.Direct => "GFX Command Allocator",
+                    CommandListType.Compute => "Compute Command Allocator",
+                    _ => "Command Allocator"
                 };
+                D3D12Helpers.NameD3D12Object(frame.CmdAllocator, i, cmdAllocatorName);
             }
 
             if (!D3D12Helpers.DxCall(device.CreateCommandList(0, type, cmdFrames[0].CmdAllocator, null, out cmdList)))
@@ -96,18 +98,19 @@ namespace Direct3D12
                 Release();
             }
             cmdList.Close();
-            cmdList.Name = type switch
+            string cmdListName = type switch
             {
                 CommandListType.Direct => "GFX Command List",
                 CommandListType.Compute => "Compute Command List",
                 _ => "Command List"
             };
+            D3D12Helpers.NameD3D12Object(cmdList, cmdListName);
 
             if (!D3D12Helpers.DxCall(device.CreateFence(0, FenceFlags.None, out fence)))
             {
                 Release();
             }
-            fence.Name = "D3D12 Fence";
+            D3D12Helpers.NameD3D12Object(fence, "D3D12 Fence");
 
             fenceEvent = new AutoResetEvent(false);
             Debug.Assert(fenceEvent != null);

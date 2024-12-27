@@ -1,8 +1,6 @@
 ﻿global using D3D12Device = Vortice.Direct3D12.ID3D12Device8;
 global using D3D12GraphicsCommandList = Vortice.Direct3D12.ID3D12GraphicsCommandList6;
-using System;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
 using Vortice.Direct3D12;
 
 namespace Direct3D12
@@ -135,6 +133,18 @@ namespace Direct3D12
             return false;
         }
 
+        public static void NameD3D12Object(ID3D12Object obj, string name)
+        {
+            obj.Name = name;
+            Debug.WriteLine($"D3D12 Object Created: {name}");
+        }
+        public static void NameD3D12Object(ID3D12Object obj, int index, string name)
+        {
+            string fullName = $"{name}[{index}]";
+            obj.Name = fullName;
+            Debug.WriteLine($"D3D12 Object Created: {fullName}");
+        }
+
         public static DescriptorRange1 Range(
             DescriptorRangeType rangeType,
             int descriptorCount,
@@ -232,17 +242,6 @@ namespace Direct3D12
             return new RootSignatureDescription1(flags, parameters, staticSamplers);
         }
 
-        public static void TransitionResource(
-            ID3D12GraphicsCommandList cmdList,
-            ID3D12Resource resource,
-            ResourceStates before,
-            ResourceStates after,
-            ResourceBarrierFlags flags = ResourceBarrierFlags.None,
-            int subresource = D3D12.ResourceBarrierAllSubResources)
-        {
-            cmdList.ResourceBarrierTransition(resource, before, after, subresource, flags);
-        }
-
         public static ID3D12RootSignature CreateRootSignature(D3D12Device device, RootSignatureDescription1 desc)
         {
             VersionedRootSignatureDescription versionedDesc = new(desc);
@@ -260,30 +259,6 @@ namespace Direct3D12
             }
 
             return signature;
-        }
-
-        public static ID3D12PipelineState CreatePipelineState(D3D12Device device, PipelineStateStreamDescription desc)
-        {
-            Debug.Assert(desc.SubObjectStream != 0 && desc.SizeInBytes != 0);
-            if (!DxCall(device.CreatePipelineState<ID3D12PipelineState>(desc, out var pso)))
-            {
-                Debug.WriteLine("Error creating the pipeline state.");
-            }
-
-            Debug.Assert(pso != null);
-            return pso;
-        }
-
-        public static ID3D12PipelineState CreatePipelineState<T>(D3D12Device device, T data) where T : unmanaged
-        {
-            GCHandle handle = GCHandle.Alloc(data, GCHandleType.Pinned);
-
-            PipelineStateStreamDescription desc = new()
-            {
-                SizeInBytes = Marshal.SizeOf(data),
-                SubObjectStream = handle.AddrOfPinnedObject(),
-            };
-            return CreatePipelineState(device, desc);
         }
     }
 }
