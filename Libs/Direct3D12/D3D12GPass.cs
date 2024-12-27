@@ -9,10 +9,9 @@ namespace Direct3D12
 {
     static class D3D12GPass
     {
-        enum GPassRootParamIndices : uint
-        {
-            RootConstants = 0
-        }
+        private const int RP_Count = 1;
+        private const int RP_RootConstants = 0;
+
         struct FrameConstants
         {
             public float Width;
@@ -34,7 +33,6 @@ namespace Direct3D12
         const Format mainBufferFormat = Format.R16G16B16A16_Float;
         const Format depthBufferFormat = Format.D32_Float;
         static readonly SizeI initialDimensions = new() { Width = 100, Height = 100 };
-        static int frame = 0;
 
         static D3D12RenderTexture gpassMainBuffer;
         static D3D12DepthBuffer gpassDepthBuffer;
@@ -49,6 +47,8 @@ namespace Direct3D12
 #else
         static readonly Color clearValue = new(0.0f);
 #endif
+
+        static FrameConstants frameConstants = new();
 
         public static D3D12RenderTexture MainBuffer { get => gpassMainBuffer; }
         public static D3D12DepthBuffer DepthBuffer { get => gpassDepthBuffer; }
@@ -123,11 +123,8 @@ namespace Direct3D12
             Debug.Assert(gpassRootSig == null && gpassPso == null);
 
             // Create GPass root signature
-            int numRootParams = Enum.GetValues(typeof(GPassRootParamIndices)).Length;
-            RootParameter1[] parameters =
-            [
-                D3D12Helpers.AsConstants(3, ShaderVisibility.Pixel, numRootParams)
-            ];
+            var parameters = new RootParameter1[RP_Count];
+            parameters[RP_RootConstants] = D3D12Helpers.AsConstants(3, ShaderVisibility.Pixel, 1);
 
             var rootSignature = D3D12Helpers.AsRootSignatureDesc(parameters);
             gpassRootSig = D3D12Helpers.CreateRootSignature(D3D12Graphics.Device, rootSignature);
@@ -190,13 +187,10 @@ namespace Direct3D12
             cmdList.SetGraphicsRootSignature(gpassRootSig);
             cmdList.SetPipelineState(gpassPso);
 
-            FrameConstants constants = new()
-            {
-                Width = info.SurfaceWidth,
-                Height = info.SurfaceHeight,
-                Frame = ++frame,
-            };
-            cmdList.SetGraphicsRoot32BitConstants((int)GPassRootParamIndices.RootConstants, constants, 0);
+            frameConstants.Width = info.SurfaceWidth;
+            frameConstants.Height = info.SurfaceHeight;
+            frameConstants.Frame++;
+            cmdList.SetGraphicsRoot32BitConstants(RP_RootConstants, frameConstants, 0);
 
             cmdList.IASetPrimitiveTopology(PrimitiveTopology.TriangleList);
             cmdList.DrawInstanced(3, 1, 0, 0);

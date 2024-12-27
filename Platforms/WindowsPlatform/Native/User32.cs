@@ -68,6 +68,9 @@ namespace WindowsPlatform.Native
         public static extern int TranslateMessage(ref NativeMessage lpMsg);
 
         [DllImport("user32.dll")]
+        public static extern int PostMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
+
+        [DllImport("user32.dll")]
         public static extern int PostQuitMessage(int nExitCode);
 
         [DllImport("user32.dll")]

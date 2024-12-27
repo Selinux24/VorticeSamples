@@ -121,12 +121,6 @@ namespace Direct3D12
             }
 
 #if DEBUG
-            var db = D3D12Graphics.GetDebugMessage();
-            if (!string.IsNullOrEmpty(db))
-            {
-                Debug.WriteLine(db);
-            }
-
             Debugger.Break();
 #endif
 

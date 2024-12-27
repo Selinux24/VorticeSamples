@@ -45,6 +45,8 @@ namespace Direct3D12
         private static readonly int[] deferredReleasesFlags = new int[FrameBufferCount];
         private static readonly Mutex deferredReleasesMutex = new();
 
+        private static D3D12FrameInfo frameInfo = new();
+
         /// <summary>
         /// Gets the main D3D12 device.
         /// </summary>
@@ -375,11 +377,8 @@ namespace Direct3D12
             var surface = surfaces[(int)id];
             var currentBackBuffer = surface.Backbuffer;
 
-            D3D12FrameInfo frameInfo = new()
-            {
-                SurfaceHeight = surface.Height,
-                SurfaceWidth = surface.Width,
-            };
+            frameInfo.SurfaceHeight = surface.Height;
+            frameInfo.SurfaceWidth = surface.Width;
 
             D3D12GPass.SetSize(new(frameInfo.SurfaceWidth, frameInfo.SurfaceHeight));
 
@@ -389,7 +388,11 @@ namespace Direct3D12
             cmdList.RSSetScissorRect(surface.ScissorRect);
 
             // Depth prepass
-            resourceBarriers.Add(currentBackBuffer, ResourceStates.Present, ResourceStates.RenderTarget, ResourceBarrierFlags.BeginOnly);
+            resourceBarriers.Add(
+                currentBackBuffer,
+                ResourceStates.Present,
+                ResourceStates.RenderTarget,
+                ResourceBarrierFlags.BeginOnly);
             D3D12GPass.AddTransitionsForDepthPrePass(resourceBarriers);
             resourceBarriers.Apply(cmdList);
             D3D12GPass.SetRenderTargetsForDepthPrePass(cmdList);
@@ -402,7 +405,11 @@ namespace Direct3D12
             D3D12GPass.Render(cmdList, frameInfo);
 
             // Post-process
-            resourceBarriers.Add(currentBackBuffer, ResourceStates.Present, ResourceStates.RenderTarget, ResourceBarrierFlags.EndOnly);
+            resourceBarriers.Add(
+                currentBackBuffer,
+                ResourceStates.Present,
+                ResourceStates.RenderTarget,
+                ResourceBarrierFlags.EndOnly);
             D3D12GPass.AddTransitionsForPostProcess(resourceBarriers);
             resourceBarriers.Apply(cmdList);
 
@@ -418,6 +425,10 @@ namespace Direct3D12
             // Done recording commands. Now execute commands,
             // signal and increment the fence value for next frame.
             gfxCommand.EndFrame(surface);
+
+#if DEBUG
+            PrintDebugMessage();
+#endif
         }
 
 #if DEBUG
@@ -426,17 +437,17 @@ namespace Direct3D12
             Debug.WriteLine($"{category} {severity} {id} {description}");
         }
 
-        public static string GetDebugMessage()
+        private static void PrintDebugMessage()
         {
             if (infoQueue == null)
             {
-                return string.Empty;
+                return;
             }
 
             ulong numMessages = infoQueue.NumStoredMessages;
             if (numMessages == 0)
             {
-                return string.Empty;
+                return;
             }
 
             StringBuilder message = new();
@@ -452,7 +463,7 @@ namespace Direct3D12
 
             infoQueue.ClearStoredMessages();
 
-            return message.ToString();
+            Debug.Write(message.ToString());
         }
 #endif
     }

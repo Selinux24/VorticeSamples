@@ -2,7 +2,6 @@
 using PrimalLike.Platform;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace PrimalLike
@@ -20,11 +19,11 @@ namespace PrimalLike
             /// <summary>
             /// Window
             /// </summary>
-            public PlatformWindow Window { get; set; }
+            public PlatformWindow Window;
             /// <summary>
             /// Surface
             /// </summary>
-            public ISurface Surface { get; set; }
+            public ISurface Surface;
         }
 
         /// <summary>
@@ -38,10 +37,6 @@ namespace PrimalLike
         private readonly List<RenderSurface> renderSurfaces = [];
 
         /// <summary>
-        /// Gets or sets a value indicating whether vertical sync is enabled.
-        /// </summary>
-        public bool VerticalSync { get; set; } = true;
-        /// <summary>
         /// Gets whether the application is running.
         /// </summary>
         public bool IsRunning { get; private set; }
@@ -49,26 +44,6 @@ namespace PrimalLike
         /// Gets whether the application is exiting.
         /// </summary>
         public bool IsExiting { get; private set; }
-        /// <summary>
-        /// Gets the main window.
-        /// </summary>
-        public PlatformWindow MainWindow
-        {
-            get
-            {
-                return platform.MainWindow;
-            }
-        }
-        /// <summary>
-        /// Gets the aspect ratio of the main window.
-        /// </summary>
-        public float AspectRatio
-        {
-            get
-            {
-                return MainWindow.AspectRatio;
-            }
-        }
 
         /// <summary>
         /// Creates a new application.
@@ -79,7 +54,7 @@ namespace PrimalLike
         {
             platform = platformFactory.CreatePlatform();
 
-            Renderer.Initialize(graphicsFactory.CreateGraphicsPlatform());
+            Renderer.Initialize(graphicsFactory);
 
             Current = this;
 
@@ -218,7 +193,6 @@ namespace PrimalLike
         protected virtual void Draw(Time time)
         {
             FpsTimer.Begin();
-            Thread.Sleep(10);
             foreach (var rs in renderSurfaces)
             {
                 Renderer.RenderSurface(rs.Surface.Id);

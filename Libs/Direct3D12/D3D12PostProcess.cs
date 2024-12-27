@@ -6,11 +6,10 @@ namespace Direct3D12
 {
     static class D3D12PostProcess
     {
-        enum FxRootParamIndices
-        {
-            RootConstants,
-            DescriptorTable,
-        }
+        private const int RP_Count = 2;
+        private const int RP_RootConstants = 0;
+        private const int RP_DescriptorTable = 1;
+
         struct PipelineStateStream
         {
             public PipelineStateSubObjectTypeRootSignature RootSignature;
@@ -40,12 +39,9 @@ namespace Direct3D12
                 0,
                 DescriptorRangeFlags.DescriptorsVolatile);
 
-            //Get the number of items in the FxRootParamIndices enum
-            RootParameter1[] parameters =
-            [
-                D3D12Helpers.AsConstants(1, ShaderVisibility.Pixel, 1),
-                D3D12Helpers.AsDescriptorTable(ShaderVisibility.Pixel, [range]),
-            ];
+            var parameters = new RootParameter1[RP_Count];
+            parameters[RP_RootConstants] = D3D12Helpers.AsConstants(1, ShaderVisibility.Pixel, 1);
+            parameters[RP_DescriptorTable] = D3D12Helpers.AsDescriptorTable(ShaderVisibility.Pixel, [range]);
 
             var rootSignature = D3D12Helpers.AsRootSignatureDesc(parameters);
             fxRootSig = D3D12Helpers.CreateRootSignature(D3D12Graphics.Device, rootSignature);
@@ -82,8 +78,8 @@ namespace Direct3D12
             cmdList.SetGraphicsRootSignature(fxRootSig);
             cmdList.SetPipelineState(fxPso);
 
-            cmdList.SetGraphicsRoot32BitConstant((int)FxRootParamIndices.RootConstants, D3D12GPass.MainBuffer.Srv.Index, 0);
-            cmdList.SetGraphicsRootDescriptorTable((int)FxRootParamIndices.DescriptorTable, D3D12Graphics.SrvHeap.GpuStart);
+            cmdList.SetGraphicsRoot32BitConstant(RP_RootConstants, D3D12GPass.MainBuffer.Srv.Index, 0);
+            cmdList.SetGraphicsRootDescriptorTable(RP_DescriptorTable, D3D12Graphics.SrvHeap.GpuStart);
             cmdList.IASetPrimitiveTopology(PrimitiveTopology.TriangleList);
             // NOTE: we don't need to clear the render target, because each pixel will 
             //       be overwritten by pixels from gpass main buffer.

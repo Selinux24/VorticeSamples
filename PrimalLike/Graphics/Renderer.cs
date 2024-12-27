@@ -7,14 +7,14 @@ namespace PrimalLike.Graphics
     {
         private static IGraphicsPlatform gfx;
 
-        private static void SetPlatformInterface(IGraphicsPlatform platform)
+        private static void SetPlatformInterface(IGraphicsPlatformFactory graphicsFactory)
         {
-            gfx = platform;
+            gfx = graphicsFactory.CreateGraphicsPlatform();
         }
 
-        public static bool Initialize(IGraphicsPlatform platform)
+        public static bool Initialize(IGraphicsPlatformFactory graphicsFactory)
         {
-            SetPlatformInterface(platform);
+            SetPlatformInterface(graphicsFactory);
 
             return gfx.Initialize();
         }

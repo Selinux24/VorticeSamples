@@ -19,7 +19,12 @@ namespace WindowsPlatform
         const uint WM_SIZE = 0x0005;
         const uint WM_CLOSE = 0x0010;
         const uint WM_QUIT = 0x0012;
+        const uint WM_KEYDOWN = 0x0100;
+        const uint WM_SYSCHAR = 0x0106;
         const uint WM_SYSCOMMAND = 0x0112;
+        const uint VK_RETURN = 0x0D;
+        const uint VK_ESCAPE = 0x1B;
+        const uint KF_ALTDOWN = 0x2000;
         const uint SC_KEYMENU = 0xF100;
         const WindowStyles FULL_SCREEN_STYLE = WindowStyles.WS_OVERLAPPED;
         const WindowStyles WINDOWED_STYLE = WindowStyles.WS_OVERLAPPEDWINDOW;
@@ -244,6 +249,7 @@ namespace WindowsPlatform
                 return DefWindowProcW(hwnd, msg, wParam, lParam);
             }
 
+            bool toggleFullscreen = false;
             switch (msg)
             {
                 case WM_DESTROY:
@@ -260,8 +266,22 @@ namespace WindowsPlatform
                         Application.Current.ResizeWindow(wnd, clientArea);
                     }
                     break;
+                case WM_SYSCHAR:
+                    toggleFullscreen = wParam == VK_RETURN && (HIWORD(lParam) & KF_ALTDOWN) != 0;
+                    break;
+                case WM_KEYDOWN:
+                    if (wParam == VK_ESCAPE)
+                    {
+                        return PostMessage(hwnd, WM_CLOSE, 0, 0);
+                    }
+                    break;
                 default:
                     break;
+            }
+
+            if (toggleFullscreen)
+            {
+                wnd.FullScreen = !wnd.FullScreen;
             }
 
             if (msg == WM_SYSCOMMAND && wParam == SC_KEYMENU)
@@ -277,6 +297,10 @@ namespace WindowsPlatform
 
             var callback = Marshal.GetDelegateForFunctionPointer<WndProcDelegate>(callbackPtr);
             return callback(hwnd, msg, wParam, lParam);
+        }
+        private static IntPtr HIWORD(IntPtr l)
+        {
+            return (ushort)((l >> 16) & 0xffff);
         }
         private static bool SetResized(IntPtr hwnd, bool resized, out Rectangle clientArea)
         {

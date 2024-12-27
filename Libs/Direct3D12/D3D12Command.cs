@@ -5,11 +5,23 @@ using Vortice.Direct3D12;
 
 namespace Direct3D12
 {
+    /// <summary>
+    /// D3D12 command.
+    /// </summary>
     class D3D12Command : IDisposable
     {
+        /// <summary>
+        /// Command frame.
+        /// </summary>
         class CommandFrame : IDisposable
         {
+            /// <summary>
+            /// Command allocator.
+            /// </summary>
             public ID3D12CommandAllocator CmdAllocator;
+            /// <summary>
+            /// Fence value.
+            /// </summary>
             public ulong FenceValue;
 
             public CommandFrame()
@@ -38,6 +50,11 @@ namespace Direct3D12
                 FenceValue = 0;
             }
 
+            /// <summary>
+            /// Wait for the fence event.
+            /// </summary>
+            /// <param name="fenceEvent">Fence event</param>
+            /// <param name="fence">Fence</param>
             public void Wait(AutoResetEvent fenceEvent, ID3D12Fence1 fence)
             {
                 Debug.Assert(fenceEvent != null && fence != null);
@@ -179,7 +196,7 @@ namespace Direct3D12
 
         public void BeginFrame()
         {
-            CommandFrame frame = cmdFrames[frameIndex];
+            var frame = cmdFrames[frameIndex];
             frame.Wait(fenceEvent, fence);
             frame.CmdAllocator.Reset();
             cmdList.Reset(frame.CmdAllocator, null);
@@ -191,11 +208,9 @@ namespace Direct3D12
 
             surface.Present();
 
-            ulong value = fenceValue;
-            ++value;
-            CommandFrame frame = cmdFrames[frameIndex];
-            frame.FenceValue = value;
-            cmdQueue.Signal(fence, value);
+            var frame = cmdFrames[frameIndex];
+            frame.FenceValue = ++fenceValue;
+            cmdQueue.Signal(fence, fenceValue);
 
             frameIndex = (frameIndex + 1) % frameBufferCount;
         }
