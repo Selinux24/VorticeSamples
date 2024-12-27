@@ -1,10 +1,11 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using Vortice.Direct3D12;
 using Vortice.DXGI;
 
 namespace Direct3D12
 {
-    class D3D12DepthBuffer
+    class D3D12DepthBuffer : IDisposable
     {
         private readonly D3D12Texture texture;
         private D3D12DescriptorHandle dsv;
@@ -69,11 +70,23 @@ namespace Direct3D12
         {
             Release();
         }
-
-        public void Release()
+        /// <inheritdoc/>
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+        private void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                Release();
+            }
+        }
+        private void Release()
         {
             D3D12Graphics.DsvHeap.Free(ref dsv);
-            texture.Release();
+            texture.Dispose();
         }
     }
 }

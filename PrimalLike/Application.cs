@@ -2,6 +2,7 @@
 using PrimalLike.Platform;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace PrimalLike
@@ -142,7 +143,7 @@ namespace PrimalLike
             platform.Run();
 
             Shutdown();
-    
+
             Renderer.Shutdown();
         }
         /// <summary>
@@ -216,10 +217,13 @@ namespace PrimalLike
         /// <param name="time">Time</param>
         protected virtual void Draw(Time time)
         {
+            FpsTimer.Begin();
+            Thread.Sleep(10);
             foreach (var rs in renderSurfaces)
             {
                 Renderer.RenderSurface(rs.Surface.Id);
             }
+            FpsTimer.End();
         }
         /// <summary>
         /// Ends drawing.

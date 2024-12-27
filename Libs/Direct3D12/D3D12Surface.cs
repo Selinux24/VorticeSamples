@@ -47,7 +47,6 @@ namespace Direct3D12
         /// Creates a new instance of the <see cref="D3D12Surface"/> class.
         /// </summary>
         /// <param name="window">Platform window</param>
-        /// <param name="graphics">Graphics instance</param>
         public D3D12Surface(PlatformWindow window)
         {
             Debug.Assert(window != null && window.Handle != 0);
@@ -58,7 +57,6 @@ namespace Direct3D12
         /// </summary>
         ~D3D12Surface()
         {
-            // Finalizer calls Dispose(false)  
             Dispose(false);
         }
         /// <inheritdoc/>
@@ -67,16 +65,25 @@ namespace Direct3D12
             Dispose(true);
             GC.SuppressFinalize(this);
         }
-        /// <summary>
-        /// Dispose resources
-        /// </summary>
-        /// <param name="disposing">Free managed resources</param>
-        protected virtual void Dispose(bool disposing)
+        private void Dispose(bool disposing)
         {
             if (disposing)
             {
                 Release();
             }
+        }
+        private void Release()
+        {
+            for (int i = 0; i < BufferCount; i++)
+            {
+                renderTargetData[i].Resource?.Dispose();
+                renderTargetData[i].Resource = null;
+
+                D3D12Graphics.RtvHeap.Free(ref renderTargetData[i].Rtv);
+            }
+
+            swapChain?.Dispose();
+            swapChain = null;
         }
 
         private static Format ToNonSrgb(Format format)
@@ -129,7 +136,7 @@ namespace Direct3D12
             var sc = factory.CreateSwapChainForHwnd(cmdQueue, hwnd, desc);
             factory.MakeWindowAssociation(hwnd, WindowAssociationFlags.IgnoreAltEnter);
             swapChain = sc.QueryInterface<IDXGISwapChain4>();
-            sc.Release();
+            sc.Dispose();
 
             currentBbIndex = swapChain.CurrentBackBufferIndex;
 
@@ -192,7 +199,7 @@ namespace Direct3D12
             Debug.Assert(swapChain != null);
             for (int i = 0; i < frameBufferCount; i++)
             {
-                renderTargetData[i].Resource?.Release();
+                renderTargetData[i].Resource?.Dispose();
                 renderTargetData[i].Resource = null;
             }
 
@@ -203,16 +210,6 @@ namespace Direct3D12
             FinalizeSwapChainCreation();
 
             Debug.WriteLine("D3D12 Surface Resized.");
-        }
-        private void Release()
-        {
-            for (int i = 0; i < BufferCount; i++)
-            {
-                renderTargetData[i].Resource?.Release();
-                D3D12Graphics.RtvHeap.Free(ref renderTargetData[i].Rtv);
-            }
-
-            swapChain?.Release();
         }
     }
 }

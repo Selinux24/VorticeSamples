@@ -2,6 +2,9 @@
 
 namespace Direct3D12
 {
+    /// <summary>
+    /// Represents a D3D12 descriptor handle.
+    /// </summary>
     struct D3D12DescriptorHandle()
     {
         public CpuDescriptorHandle Cpu;

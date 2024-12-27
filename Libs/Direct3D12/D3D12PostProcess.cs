@@ -71,8 +71,10 @@ namespace Direct3D12
 
         public static void Shutdown()
         {
-            fxRootSig?.Release();
-            fxPso?.Release();
+            fxRootSig?.Dispose();
+            fxRootSig = null;
+            fxPso?.Dispose();
+            fxPso = null;
         }
 
         public static void PostProcess(ID3D12GraphicsCommandList cmdList, CpuDescriptorHandle targetRtv)

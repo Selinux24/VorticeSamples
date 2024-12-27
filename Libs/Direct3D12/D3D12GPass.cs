@@ -62,8 +62,8 @@ namespace Direct3D12
         private static bool CreateBuffers(SizeI size)
         {
             Debug.Assert(size.Width > 0 && size.Height > 0);
-            gpassMainBuffer?.Release();
-            gpassDepthBuffer?.Release();
+            gpassMainBuffer?.Dispose();
+            gpassDepthBuffer?.Dispose();
 
             // Create the main buffer
             {
@@ -155,12 +155,16 @@ namespace Direct3D12
 
         public static void Shutdown()
         {
-            gpassMainBuffer.Release();
-            gpassDepthBuffer.Release();
+            gpassMainBuffer.Dispose();
+            gpassMainBuffer = null;
+            gpassDepthBuffer.Dispose();
+            gpassDepthBuffer = null;
             dimensions = initialDimensions;
 
-            gpassRootSig.Release();
-            gpassPso.Release();
+            gpassRootSig.Dispose();
+            gpassRootSig = null;
+            gpassPso.Dispose();
+            gpassPso = null;
         }
 
         public static void SetSize(SizeI size)

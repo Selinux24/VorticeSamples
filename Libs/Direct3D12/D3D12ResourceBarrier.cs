@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using Vortice.Direct3D12;
 
 namespace Direct3D12
@@ -6,12 +7,41 @@ namespace Direct3D12
     /// <summary>
     /// Resource barrier helper class.
     /// </summary>
-    public class D3D12ResourceBarrier
+    public class D3D12ResourceBarrier : IDisposable
     {
         const int MaxResourceBarriers = 32;
 
-        private readonly ResourceBarrier[] barriers = new ResourceBarrier[MaxResourceBarriers];
-        private int offset = 0;
+        private readonly ResourceBarrier[] barriers;
+        private int offset;
+
+        public D3D12ResourceBarrier()
+        {
+            barriers = new ResourceBarrier[MaxResourceBarriers];
+            offset = 0;
+        }
+        ~D3D12ResourceBarrier()
+        {
+            Dispose(false);
+        }
+        /// <inheritdoc/>
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+        private void Dispose(bool disposing)
+        {
+            if (!disposing)
+            {
+                return;
+            }
+
+            offset = 0;
+            for (int i = 0; i < barriers.Length; i++)
+            {
+                barriers[i] = default;
+            }
+        }
 
         /// <summary>
         /// Adds a transition barrier to the list of barriers.
@@ -34,9 +64,7 @@ namespace Direct3D12
         /// <summary>
         /// Adds a UAV barrier to the list of barriers.
         /// </summary>
-        public void Add(
-            ID3D12Resource resource,
-            ResourceBarrierFlags flags = ResourceBarrierFlags.None)
+        public void Add(ID3D12Resource resource)
         {
             Debug.Assert(resource != null);
             Debug.Assert(offset < MaxResourceBarriers);
@@ -46,10 +74,7 @@ namespace Direct3D12
             barriers[offset++] = new(uav);
         }
 
-        public void Add(
-            ID3D12Resource resourceBefore,
-            ID3D12Resource resourceAfter,
-            ResourceBarrierFlags flags = ResourceBarrierFlags.None)
+        public void Add(ID3D12Resource resourceBefore, ID3D12Resource resourceAfter)
         {
             Debug.Assert(resourceBefore != null && resourceAfter != null);
             Debug.Assert(offset < MaxResourceBarriers);

@@ -1,4 +1,4 @@
-﻿using PrimalLike.Graphics;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
@@ -6,7 +6,7 @@ using Vortice.Direct3D12;
 
 namespace Direct3D12
 {
-    class D3D12DescriptorHeap : IResource
+    class D3D12DescriptorHeap : IDisposable
     {
         private readonly DescriptorHeapType type;
         private readonly Mutex mutex;
@@ -40,6 +40,34 @@ namespace Direct3D12
             {
                 deferredFreeIndices[i] = [];
             }
+        }
+        ~D3D12DescriptorHeap()
+        {
+            Dispose(false);
+        }
+        /// <inheritdoc/>
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+        private void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                Release();
+            }
+        }
+        private void Release()
+        {
+            if (heap == null)
+            {
+                return;
+            }
+
+            Debug.Assert(size == 0);
+            D3D12Graphics.DeferredRelease(heap);
+            heap = null;
         }
 
         public bool Initialize(int capacity, bool isShaderVisible)
@@ -95,17 +123,6 @@ namespace Direct3D12
 
                 return true;
             }
-        }
-        public void Release()
-        {
-            if (heap == null)
-            {
-                return;
-            }
-
-            Debug.Assert(size == 0);
-            D3D12Graphics.DeferredRelease(heap);
-            heap = null;
         }
         public void ProcessDeferredFree(int frameIdx)
         {

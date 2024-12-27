@@ -1,15 +1,42 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using System.Threading;
 using Vortice.Direct3D12;
 
 namespace Direct3D12
 {
-    class D3D12Command
+    class D3D12Command : IDisposable
     {
-        class CommandFrame
+        class CommandFrame : IDisposable
         {
             public ID3D12CommandAllocator CmdAllocator;
             public ulong FenceValue;
+
+            public CommandFrame()
+            {
+
+            }
+            ~CommandFrame()
+            {
+                Dispose(false);
+            }
+            public void Dispose()
+            {
+                Dispose(true);
+                GC.SuppressFinalize(this);
+            }
+            private void Dispose(bool disposing)
+            {
+                if (!disposing)
+                {
+                    return;
+                }
+
+                CmdAllocator?.Dispose();
+                CmdAllocator = null;
+
+                FenceValue = 0;
+            }
 
             public void Wait(AutoResetEvent fenceEvent, ID3D12Fence1 fence)
             {
@@ -18,20 +45,17 @@ namespace Direct3D12
                 // If the current fence value is still less than "fence_value"
                 // then we know the GPU has not finished executing the command lists
                 // since it has not reached the "_cmd_queue->Signal()" command
-                if (fence.CompletedValue < FenceValue)
+                if (fence.CompletedValue >= FenceValue)
                 {
-                    // We have the fence create an event wich is singaled once the fence's current value equals "fence_value"
-                    fence.SetEventOnCompletion(FenceValue, fenceEvent.SafeWaitHandle.DangerousGetHandle());
-
-                    // Wait until the fence has triggered the event that its current value has reached "fence_value"
-                    // indicating that command queue has finished executing.
-                    fenceEvent.WaitOne();
+                    return;
                 }
-            }
-            public void Release()
-            {
-                CmdAllocator.Release();
-                FenceValue = 0;
+
+                // We have the fence create an event wich is singaled once the fence's current value equals "fence_value"
+                fence.SetEventOnCompletion(FenceValue, fenceEvent).CheckError();
+
+                // Wait until the fence has triggered the event that its current value has reached "fence_value"
+                // indicating that command queue has finished executing.
+                fenceEvent.WaitOne();
             }
         }
 
@@ -72,7 +96,7 @@ namespace Direct3D12
             cmdFrames = new CommandFrame[frameBufferCount];
             for (int i = 0; i < frameBufferCount; i++)
             {
-                cmdFrames[i] = new CommandFrame();
+                cmdFrames[i] = new();
             }
 
             for (int i = 0; i < frameBufferCount; i++)
@@ -115,6 +139,43 @@ namespace Direct3D12
             fenceEvent = new AutoResetEvent(false);
             Debug.Assert(fenceEvent != null);
         }
+        ~D3D12Command()
+        {
+            Dispose(false);
+        }
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+        private void Dispose(bool disposing)
+        {
+            if (!disposing)
+            {
+                return;
+            }
+
+            Release();
+        }
+        private void Release()
+        {
+            Flush();
+            fence?.Dispose();
+            fenceValue = 0;
+
+            fenceEvent.Close();
+            fenceEvent.Dispose();
+            fenceEvent = null;
+
+            cmdQueue.Dispose();
+            cmdList.Dispose();
+
+            for (int i = 0; i < frameBufferCount; i++)
+            {
+                cmdFrames[i]?.Dispose();
+                cmdFrames[i] = null;
+            }
+        }
 
         public void BeginFrame()
         {
@@ -145,24 +206,6 @@ namespace Direct3D12
                 cmdFrames[i].Wait(fenceEvent, fence);
             }
             frameIndex = 0;
-        }
-        public void Release()
-        {
-            Flush();
-            fence.Release();
-            fenceValue = 0;
-
-            fenceEvent.Close();
-            fenceEvent.Dispose();
-            fenceEvent = null;
-
-            cmdQueue.Release();
-            cmdList.Release();
-
-            for (int i = 0; i < frameBufferCount; i++)
-            {
-                cmdFrames[i].Release();
-            }
         }
     }
 }

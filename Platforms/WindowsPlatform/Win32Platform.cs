@@ -211,6 +211,8 @@ namespace WindowsPlatform
             bool isRunning = true;
             while (isRunning)
             {
+                Application.Current.Tick();
+
                 while (PeekMessageW(out msg, IntPtr.Zero, 0, 0, (int)PEEK_MESSAGE_REMOVE_TYPE.PM_REMOVE) != 0)
                 {
                     _ = TranslateMessage(ref msg);
@@ -220,11 +222,10 @@ namespace WindowsPlatform
                     {
                         Debug.WriteLine("WM_QUIT received.");
                         isRunning = false;
+                        Application.Current.Exit();
                         break;
                     }
                 }
-
-                Application.Current.Tick();
             }
 
             var windowsToRemove = windows.Values.ToArray();

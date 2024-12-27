@@ -1,9 +1,10 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using Vortice.Direct3D12;
 
 namespace Direct3D12
 {
-    class D3D12RenderTexture
+    class D3D12RenderTexture : IDisposable
     {
         private readonly D3D12Texture texture;
         private readonly D3D12DescriptorHandle[] rtv = new D3D12DescriptorHandle[D3D12Texture.MaxMips];
@@ -57,14 +58,26 @@ namespace Direct3D12
         {
             Release();
         }
-
-        public void Release()
+        /// <inheritdoc/>
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+        private void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                Release();
+            }
+        }
+        private void Release()
         {
             for (uint i = 0; i < MipCount; i++)
             {
                 D3D12Graphics.RtvHeap.Free(ref rtv[i]);
             }
-            texture.Release();
+            texture.Dispose();
             MipCount = 0;
         }
 

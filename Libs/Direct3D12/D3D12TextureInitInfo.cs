@@ -2,6 +2,9 @@
 
 namespace Direct3D12
 {
+    /// <summary>
+    /// Represents a D3D12 texture initialization information.
+    /// </summary>
     struct D3D12TextureInitInfo()
     {
         public ID3D12Heap1 Heap = null;

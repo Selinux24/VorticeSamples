@@ -3,18 +3,18 @@ using PrimalLike.Platform;
 using SharpGen.Runtime;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Text;
 using System.Threading;
 using Vortice.Direct3D;
 using Vortice.Direct3D12;
 using Vortice.DXGI;
-using System.Text;
-
-#if DEBUG
-using Vortice.Direct3D12.Debug;
-#endif
 
 namespace Direct3D12
 {
+#if DEBUG
+    using Vortice.Direct3D12.Debug;
+#endif
+
     /// <summary>
     /// D3D12 graphics implementation.
     /// </summary>
@@ -186,8 +186,6 @@ namespace Direct3D12
         /// <inheritdoc/>
         public static void Shutdown()
         {
-            gfxCommand.Release();
-
             // NOTE: we don't call process_deferred_releases at the end because
             //       some resources (such as swap chains) can't be released before
             //       their depending resources are released.
@@ -201,8 +199,6 @@ namespace Direct3D12
             D3D12Shaders.Shutdown();
             D3D12GPass.Shutdown();
 
-            dxgiFactory.Release();
-
             // NOTE: some modules free their descriptors when they shutdown.
             //       We process those by calling process_deferred_free once more.
             rtvDescHeap.ProcessDeferredFree(0);
@@ -215,21 +211,36 @@ namespace Direct3D12
             //       process_deferred_releases once more.
             ProcessDeferredReleases(0);
 
+            rtvDescHeap.Dispose();
+            dsvDescHeap.Dispose();
+            srvDescHeap.Dispose();
+            uavDescHeap.Dispose();
+
+            resourceBarriers.Dispose();
+
+            gfxCommand.Dispose();
+            gfxCommand = null;
+
+            dxgiFactory.Dispose();
+            dxgiFactory = null;
+
 #if DEBUG
             {
                 infoQueue.Dispose();
+                infoQueue = null;
 
                 var debugDevice = mainDevice.QueryInterface<ID3D12DebugDevice2>();
-                mainDevice.Release();
                 debugDevice.ReportLiveDeviceObjects(
                     ReportLiveDeviceObjectFlags.Summary |
                     ReportLiveDeviceObjectFlags.Detail |
                     ReportLiveDeviceObjectFlags.IgnoreInternal);
                 debugDevice.Dispose();
+                debugDevice = null;
             }
 #endif
 
-            mainDevice.Release();
+            mainDevice?.Dispose();
+            mainDevice = null;
         }
         /// <inheritdoc/>
         public static string GetEngineShaderPath()
@@ -246,7 +257,7 @@ namespace Direct3D12
                     return adapter;
                 }
 
-                adapter.Release();
+                adapter.Dispose();
             }
 
             return null;
@@ -327,6 +338,7 @@ namespace Direct3D12
         public static void RemoveSurface(uint id)
         {
             gfxCommand.Flush();
+            surfaces[(int)id].Dispose();
             surfaces[(int)id] = null;
         }
         /// <inheritdoc/>

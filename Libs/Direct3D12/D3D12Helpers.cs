@@ -255,7 +255,7 @@ namespace Direct3D12
 
             if (!DxCall(device.CreateRootSignature<ID3D12RootSignature>(0, signature_blob.BufferPointer, signature_blob.BufferSize, out var signature)))
             {
-                signature.Release();
+                signature.Dispose();
             }
 
             return signature;
