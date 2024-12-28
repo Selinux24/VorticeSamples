@@ -425,17 +425,17 @@ namespace Direct3D12
             var iq = mainDevice.QueryInterfaceOrNull<ID3D12InfoQueue1>();
             if (iq != null)
             {
-                iq.RegisterMessageCallback(DebugCallback, MessageCallbackFlags.None);
+                iq.RegisterMessageCallback(DebugCallback);
                 infoQueue = iq;
             }
             else
             {
                 infoQueue = mainDevice.QueryInterfaceOrNull<ID3D12InfoQueue>();
-
-                infoQueue.SetBreakOnSeverity(MessageSeverity.Corruption, true);
-                infoQueue.SetBreakOnSeverity(MessageSeverity.Warning, true);
-                infoQueue.SetBreakOnSeverity(MessageSeverity.Error, true);
             }
+
+            infoQueue.SetBreakOnSeverity(MessageSeverity.Corruption, true);
+            infoQueue.SetBreakOnSeverity(MessageSeverity.Warning, true);
+            infoQueue.SetBreakOnSeverity(MessageSeverity.Error, true);
         }
         private static void DebugCallback(MessageCategory category, MessageSeverity severity, MessageId id, string description)
         {
@@ -445,16 +445,16 @@ namespace Direct3D12
         {
             if (infoQueue is ID3D12InfoQueue1 iq)
             {
-                iq.RegisterMessageCallback(null, MessageCallbackFlags.None);
+                iq.RegisterMessageCallback(null);
             }
             else
             {
                 infoQueue = mainDevice.QueryInterfaceOrNull<ID3D12InfoQueue>();
-
-                infoQueue.SetBreakOnSeverity(MessageSeverity.Corruption, false);
-                infoQueue.SetBreakOnSeverity(MessageSeverity.Warning, false);
-                infoQueue.SetBreakOnSeverity(MessageSeverity.Error, false);
             }
+
+            infoQueue.SetBreakOnSeverity(MessageSeverity.Corruption, false);
+            infoQueue.SetBreakOnSeverity(MessageSeverity.Warning, false);
+            infoQueue.SetBreakOnSeverity(MessageSeverity.Error, false);
 
             var debugDevice = mainDevice.QueryInterface<ID3D12DebugDevice2>();
             debugDevice.ReportLiveDeviceObjects(
