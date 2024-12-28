@@ -32,10 +32,6 @@ namespace PrimalLike.Platform
         /// </summary>
         public abstract nint Handle { get; }
         /// <summary>
-        /// Gets the number of back buffers.
-        /// </summary>
-        public int BackBufferCount { get; } = 2;
-        /// <summary>
         /// Gets the client area of the window.
         /// </summary>
         public Rectangle ClientArea
@@ -127,6 +123,12 @@ namespace PrimalLike.Platform
         {
             FullScreenChanged?.Invoke(this, EventArgs.Empty);
         }
+
+        /// <summary>
+        /// Shows the window.
+        /// </summary>
+        /// <param name="maximize">Show maximized</param>
+        public abstract void Show(bool maximize = false);
 
         /// <summary>
         /// Sets the client area of the window.

@@ -267,7 +267,7 @@ namespace WindowsPlatform
                     }
                     break;
                 case WM_SYSCHAR:
-                    toggleFullscreen = wParam == VK_RETURN && (HIWORD(lParam) & KF_ALTDOWN) != 0;
+                    toggleFullscreen = wParam == VK_RETURN && (HiWord(lParam) & KF_ALTDOWN) != 0;
                     break;
                 case WM_KEYDOWN:
                     if (wParam == VK_ESCAPE)
@@ -298,7 +298,7 @@ namespace WindowsPlatform
             var callback = Marshal.GetDelegateForFunctionPointer<WndProcDelegate>(callbackPtr);
             return callback(hwnd, msg, wParam, lParam);
         }
-        private static IntPtr HIWORD(IntPtr l)
+        private static IntPtr HiWord(IntPtr l)
         {
             return (ushort)((l >> 16) & 0xffff);
         }

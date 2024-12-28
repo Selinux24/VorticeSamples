@@ -4,6 +4,10 @@ using System.Drawing;
 
 namespace WindowsPlatform
 {
+    /// <summary>
+    /// Win32 window.
+    /// </summary>
+    /// <param name="hwnd">Window handler</param>
     public class Win32Window(nint hwnd) : PlatformWindow()
     {
         private readonly IntPtr hwnd = hwnd;
@@ -18,7 +22,8 @@ namespace WindowsPlatform
             }
         }
 
-        public void Show(bool maximize = false)
+        /// <inheritdoc />
+        public override void Show(bool maximize = false)
         {
             Win32Platform.Show(hwnd, maximize);
         }
