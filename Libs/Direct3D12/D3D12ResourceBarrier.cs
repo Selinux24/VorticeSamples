@@ -46,7 +46,7 @@ namespace Direct3D12
         /// <summary>
         /// Adds a transition barrier to the list of barriers.
         /// </summary>
-        public void Add(
+        public void AddTransitionBarrier(
             ID3D12Resource resource,
             ResourceStates before,
             ResourceStates after,
@@ -64,7 +64,7 @@ namespace Direct3D12
         /// <summary>
         /// Adds a UAV barrier to the list of barriers.
         /// </summary>
-        public void Add(ID3D12Resource resource)
+        public void AddUAVBarrier(ID3D12Resource resource)
         {
             Debug.Assert(resource != null);
             Debug.Assert(offset < MaxResourceBarriers);
@@ -74,7 +74,7 @@ namespace Direct3D12
             barriers[offset++] = new(uav);
         }
 
-        public void Add(ID3D12Resource resourceBefore, ID3D12Resource resourceAfter)
+        public void AddAliasingBarrier(ID3D12Resource resourceBefore, ID3D12Resource resourceAfter)
         {
             Debug.Assert(resourceBefore != null && resourceAfter != null);
             Debug.Assert(offset < MaxResourceBarriers);

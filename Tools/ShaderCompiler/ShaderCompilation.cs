@@ -138,7 +138,7 @@ namespace ShaderCompiler
         }
         private static string GetEngineShadersPath(string outputFileName)
         {
-            return Path.GetFullPath(Path.Combine("./OutputShaders/", outputFileName));
+            return Path.GetFullPath(outputFileName);
         }
         private static DxcCompiledShader Compile(string shadersSourcePath, ShaderFileInfo info, string fullPath, string[] extraArgs)
         {

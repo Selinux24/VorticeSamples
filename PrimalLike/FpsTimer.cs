@@ -37,7 +37,7 @@ namespace PrimalLike
 
             if ((DateTime.Now - seconds).TotalSeconds >= 1)
             {
-                Debug.WriteLine($"Avg. frame (ms): {msAvg} {counter} fps");
+                Trace.WriteLine($"Avg. frame (ms): {msAvg} {counter} fps");
                 FramesPerSecond = msAvg;
                 msAvg = 0f;
                 counter = 1;

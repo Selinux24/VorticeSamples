@@ -5,7 +5,7 @@ namespace ShaderCompiler
     internal class Program
     {
         private const string shadersSourcePath = "../../../../../Libs/Direct3D12/Shaders/";
-        private const string outputFileName = "engineShaders.bin";
+        private const string outputFileName = "./OutputShaders/engineShaders.bin";
 
         private const uint fullScreenTriangleVs = 0;
         private const uint fillColorPs = 1;

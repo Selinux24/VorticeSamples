@@ -15,14 +15,12 @@
     <Content Include="Content\game.bin">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="Content\engineShaders.bin">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\Libs\Direct3D12\Direct3D12.csproj" />
     <ProjectReference Include="..\..\Platforms\WindowsPlatform\WindowsPlatform.csproj" />
+    <ProjectReference Include="..\..\Tools\ShaderCompiler\ShaderCompiler.csproj" />
   </ItemGroup>
 
 </Project>

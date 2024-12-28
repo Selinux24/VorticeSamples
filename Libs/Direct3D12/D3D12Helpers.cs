@@ -114,10 +114,13 @@ namespace Direct3D12
 
             Debug.WriteLine($"DirectX call failed: {result.Description}");
 
-            var removedReason = D3D12Graphics.Device.DeviceRemovedReason;
-            if (!removedReason.Success)
+            if (D3D12Graphics.Device != null)
             {
-                Debug.WriteLine($"Device removed: {removedReason.Description}");
+                var removedReason = D3D12Graphics.Device.DeviceRemovedReason;
+                if (!removedReason.Success)
+                {
+                    Debug.WriteLine($"Device removed: {removedReason.Description}");
+                }
             }
 
 #if DEBUG
