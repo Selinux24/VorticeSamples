@@ -1,7 +1,7 @@
 ﻿
 namespace ContentTools
 {
-    public class GeometryImportSettings
+    public struct GeometryImportSettings
     {
         public float SmoothingAngle { get; set; }
         public bool CalculateNormals { get; set; }

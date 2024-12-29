@@ -29,6 +29,13 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ContentTools", "Tools\Conte
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShaderCompiler", "Tools\ShaderCompiler\ShaderCompiler.csproj", "{087F27DA-D3E5-4338-A9B0-30DC60F10C44}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AssetsImporter", "Tools\AssetsImporter\AssetsImporter.csproj", "{EA43D06F-7230-468B-B8D9-3F9C0C4F4525}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Assets", "Assets", "{53D3EA94-812F-43BD-A112-FDEEF8B328A1}"
+	ProjectSection(SolutionItems) = preProject
+		Assets\ToyTank.fbx = Assets\ToyTank.fbx
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -101,6 +108,14 @@ Global
 		{087F27DA-D3E5-4338-A9B0-30DC60F10C44}.Release|Any CPU.Build.0 = Release|Any CPU
 		{087F27DA-D3E5-4338-A9B0-30DC60F10C44}.ReleaseEditor|Any CPU.ActiveCfg = Release|Any CPU
 		{087F27DA-D3E5-4338-A9B0-30DC60F10C44}.ReleaseEditor|Any CPU.Build.0 = Release|Any CPU
+		{EA43D06F-7230-468B-B8D9-3F9C0C4F4525}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EA43D06F-7230-468B-B8D9-3F9C0C4F4525}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EA43D06F-7230-468B-B8D9-3F9C0C4F4525}.DebugEditor|Any CPU.ActiveCfg = Debug|Any CPU
+		{EA43D06F-7230-468B-B8D9-3F9C0C4F4525}.DebugEditor|Any CPU.Build.0 = Debug|Any CPU
+		{EA43D06F-7230-468B-B8D9-3F9C0C4F4525}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EA43D06F-7230-468B-B8D9-3F9C0C4F4525}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EA43D06F-7230-468B-B8D9-3F9C0C4F4525}.ReleaseEditor|Any CPU.ActiveCfg = Release|Any CPU
+		{EA43D06F-7230-468B-B8D9-3F9C0C4F4525}.ReleaseEditor|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -112,6 +127,7 @@ Global
 		{182604A7-B9A1-4F8D-B188-90A2A144C1A6} = {EFF65604-E5ED-48D6-8895-3CAAFBD72457}
 		{674D2F94-0214-4871-9F51-3E3EF9FB089C} = {80B26C20-E545-4CE3-973C-F002D616E3B9}
 		{087F27DA-D3E5-4338-A9B0-30DC60F10C44} = {80B26C20-E545-4CE3-973C-F002D616E3B9}
+		{EA43D06F-7230-468B-B8D9-3F9C0C4F4525} = {80B26C20-E545-4CE3-973C-F002D616E3B9}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {59432B32-A400-4B62-9614-63EB4A9812E7}

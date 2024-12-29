@@ -8,8 +8,10 @@ namespace ContentTools
         // Initial data
         public List<Vector3> Positions { get; set; } = [];
         public List<Vector3> Normals { get; set; } = [];
-        public List<Vector4> Tangents { get; set; } = [];
+        public List<Vector3> Tangents { get; set; } = [];
         public List<List<Vector2>> UVSets { get; set; } = [];
+        public List<int> MaterialIndices { get; set; } = [];
+        public List<int> MaterialUsed { get; set; } = [];
 
         public List<uint> RawIndices { get; set; } = [];
 

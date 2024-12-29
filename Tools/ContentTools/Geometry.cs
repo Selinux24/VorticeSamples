@@ -1,21 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Text;
 
 namespace ContentTools
 {
-    static class Geometry
+    public static class Geometry
     {
-        private static readonly float epsilon = 1e-5f;
-
-        private static readonly int SizeUSHORT = Marshal.SizeOf(typeof(ushort));
-        private static readonly int SizeINT = Marshal.SizeOf(typeof(int));
-        private static readonly int SizeUINT = Marshal.SizeOf(typeof(uint));
-        private static readonly int SizeFLOAT = Marshal.SizeOf(typeof(float));
-        private static readonly int SizePACKEDVERTEX = Marshal.SizeOf(typeof(PackedVertex));
+        private const float Epsilon = 1e-5f;
 
         public static void ProcessScene(Scene scene, GeometryImportSettings settings)
         {
@@ -29,7 +24,7 @@ namespace ContentTools
         }
         private static void ProcessVertices(Mesh m, GeometryImportSettings settings)
         {
-            if (m.RawIndices.Count % 3 != 0) throw new InvalidOperationException();
+            Debug.Assert(m.RawIndices.Count % 3 == 0);
             if (settings.CalculateNormals || m.Normals.Count == 0)
             {
                 RecalculateNormals(m);
@@ -70,9 +65,9 @@ namespace ContentTools
         }
         private static void ProcessNormals(Mesh m, float smoothingAngle)
         {
-            float cosAlpha = (float)Math.Cos(MathF.PI - smoothingAngle * MathF.PI / 180f);
-            bool isHardEdge = Math.Abs(smoothingAngle - 180f) < epsilon;
-            bool isSoftEdge = Math.Abs(smoothingAngle) < epsilon;
+            float cosAlpha = MathF.Cos(MathF.PI - smoothingAngle * MathF.PI / 180f);
+            bool isHardEdge = MathF.Abs(smoothingAngle - 180f) < Epsilon;
+            bool isSoftEdge = MathF.Abs(smoothingAngle) < Epsilon;
             int numIndices = m.RawIndices.Count;
             int numVertices = m.Positions.Count;
             Debug.Assert(numIndices > 0 && numVertices > 0);
@@ -139,7 +134,7 @@ namespace ContentTools
 
             int numVertices = oldVertices.Count;
             int numIndices = oldIndices.Count;
-            if (numVertices == 0 || numIndices == 0) throw new InvalidOperationException();
+            Debug.Assert(numVertices > 0 && numIndices > 0);
 
             var idxRef = new List<List<int>>(numVertices);
             for (int i = 0; i < numVertices; ++i)
@@ -149,6 +144,7 @@ namespace ContentTools
 
             for (int i = 0; i < numIndices; ++i)
             {
+                m.Indices.Add(0);
                 idxRef[(int)oldIndices[i]].Add(i);
             }
 
@@ -181,29 +177,12 @@ namespace ContentTools
         private static void PackVerticesStatic(Mesh m)
         {
             int numVertices = m.Vertices.Count;
-            if (numVertices == 0) throw new InvalidOperationException();
-            m.PackedVerticesStatic = new List<PackedVertex>(numVertices);
+            Debug.Assert(numVertices > 0);
 
             for (int i = 0; i < numVertices; ++i)
             {
-                var v = m.Vertices[i];
-                byte signs = (byte)((v.Normal.Z > 0f) ? 2 : 0);
-                ushort normalX = PackFloat16(v.Normal.X, -1f, 1f);
-                ushort normalY = PackFloat16(v.Normal.Y, -1f, 1f);
-
-                m.PackedVerticesStatic.Add(new PackedVertex
-                {
-                    Position = v.Position,
-                    Signs = signs,
-                    NormalX = normalX,
-                    NormalY = normalY,
-                    UV = v.UV
-                });
+                m.PackedVerticesStatic.Add(new(m.Vertices[i]));
             }
-        }
-        private static ushort PackFloat16(float value, float min, float max)
-        {
-            return (ushort)((value - min) / (max - min) * 65535f);
         }
 
         public static void PackData(Scene scene, SceneData data)
@@ -228,7 +207,7 @@ namespace ContentTools
 
                 foreach (var m in lod.Meshes)
                 {
-                    PackMeshData(m, buffer, ref at);
+                    PackMeshData(buffer, ref at, m);
                 }
             }
 
@@ -242,18 +221,18 @@ namespace ContentTools
             int sceneNameLength = scene.Name.Length;
 
             int size =
-                SizeINT +                 // name length
-                sceneNameLength +         // room for scene name string
-                SizeINT;                  // number of LODs
+                sizeof(int) +               // name length
+                sceneNameLength +           // room for scene name string
+                sizeof(int);                // number of LODs
 
             foreach (var lod in scene.LODGroups)
             {
                 int lodNameLength = lod.Name.Length;
 
                 int lodSize =
-                    SizeINT +
-                    lodNameLength +       // LOD name length and room for LOD name string
-                    SizeINT;              // number of meshes in this LOD
+                    sizeof(int) +
+                    lodNameLength +         // LOD name length and room for LOD name string
+                    sizeof(int);            // number of meshes in this LOD
 
                 foreach (var m in lod.Meshes)
                 {
@@ -270,24 +249,24 @@ namespace ContentTools
             int nameLength = m.Name.Length;
             int numVertices = m.Vertices.Count;
             int numIndices = m.Indices.Count;
-            int vertexBufferSize = SizePACKEDVERTEX * numVertices;
-            int indexSize = (numVertices < (1 << 16)) ? SizeUSHORT : SizeUINT;
+            int vertexBufferSize = Marshal.SizeOf(typeof(PackedVertex)) * numVertices;
+            int indexSize = (numVertices < (1 << 16)) ? sizeof(ushort) : sizeof(uint);
             int indexBufferSize = indexSize * numIndices;
 
             int size =
-                SizeINT + nameLength +       // mesh name length and room for mesh name string
-                SizeINT +                    // lod id
-                SizeINT +                    // vertex size
-                SizeINT +                    // number of vertices
-                SizeINT +                    // index size (16 bit or 32 bit)
-                SizeINT +                    // number of indices
-                SizeFLOAT +                  // LOD threshold
+                sizeof(int) + nameLength +   // mesh name length and room for mesh name string
+                sizeof(int) +                // lod id
+                sizeof(int) +                // vertex size
+                sizeof(int) +                // number of vertices
+                sizeof(int) +                // index size (16 bit or 32 bit)
+                sizeof(int) +                // number of indices
+                sizeof(float) +              // LOD threshold
                 vertexBufferSize +           // room for vertices
                 indexBufferSize;             // room for indices
 
             return size;
         }
-        private static void PackMeshData(Mesh m, byte[] buffer, ref int at)
+        private static void PackMeshData(byte[] buffer, ref int at, Mesh m)
         {
             // mesh name
             WriteData(buffer, ref at, m.Name);
@@ -295,11 +274,10 @@ namespace ContentTools
             // lod id
             WriteData(buffer, ref at, m.LODId);
 
-            int vertexSize = SizePACKEDVERTEX;
+            int vertexSize = Marshal.SizeOf(typeof(PackedVertex));
             int numVertices = m.Vertices.Count;
-            int indexSize = (numVertices < (1 << 16)) ? SizeUSHORT : SizeUINT;
+            int indexSize = (numVertices < (1 << 16)) ? sizeof(ushort) : sizeof(uint);
             int numIndices = m.Indices.Count;
-            int vertexDataLength = vertexSize * numVertices;
 
             // vertex size
             WriteData(buffer, ref at, vertexSize);
@@ -317,44 +295,49 @@ namespace ContentTools
             WriteData(buffer, ref at, m.LODThreshold);
 
             // vertex data
-            WriteData(buffer, ref at, vertexDataLength);
+            var vData = m.PackedVerticesStatic.SelectMany(pv => pv.GetData()).ToArray();
+            WriteData(buffer, ref at, vData);
 
             // index data
             int indexDataLenght = indexSize * numIndices;
-            var data = m.Indices.ToArray();
-            var indices = new List<uint>(numIndices);
-            if (indexSize == (uint)SizeUSHORT)
+            if (indexSize == (uint)sizeof(ushort))
             {
-                for (uint i = 0; i < numIndices; ++i)
-                {
-                    indices.Add(m.Indices[(int)i]);
-                }
-                data = [.. indices];
+                ushort[] data = m.Indices.Take(numIndices).Select(i => (ushort)i).ToArray();
+                WriteData(buffer, ref at, data.ToArray(), indexDataLenght);
             }
-            WriteData(buffer, ref at, data, indexDataLenght);
+            else
+            {
+                var data = m.Indices.ToArray();
+                WriteData(buffer, ref at, data, indexDataLenght);
+            }
         }
         private static void WriteData(byte[] buffer, ref int at, string value)
         {
-            int valueLength = value.Length;
-            Buffer.BlockCopy(BitConverter.GetBytes(valueLength), 0, buffer, at, SizeINT);
-            at += SizeINT;
-            Buffer.BlockCopy(Encoding.UTF8.GetBytes(value), 0, buffer, at, valueLength);
-            at += valueLength;
+            WriteData(buffer, ref at, BitConverter.GetBytes(value.Length));
+            WriteData(buffer, ref at, Encoding.UTF8.GetBytes(value));
         }
         private static void WriteData(byte[] buffer, ref int at, int value)
         {
-            Buffer.BlockCopy(BitConverter.GetBytes(value), 0, buffer, at, SizeINT);
-            at += SizeINT;
+            WriteData(buffer, ref at, BitConverter.GetBytes(value));
         }
         private static void WriteData(byte[] buffer, ref int at, float value)
         {
-            Buffer.BlockCopy(BitConverter.GetBytes(value), 0, buffer, at, SizeFLOAT);
-            at += SizeFLOAT;
+            WriteData(buffer, ref at, BitConverter.GetBytes(value));
+        }
+        private static void WriteData(byte[] buffer, ref int at, ushort[] data, int length)
+        {
+            Buffer.BlockCopy(data, 0, buffer, at, length);
+            at += length;
         }
         private static void WriteData(byte[] buffer, ref int at, uint[] data, int length)
         {
             Buffer.BlockCopy(data, 0, buffer, at, length);
             at += length;
+        }
+        private static void WriteData(byte[] dst, ref int at, byte[] src)
+        {
+            Buffer.BlockCopy(src, 0, dst, at, src.Length);
+            at += src.Length;
         }
     }
 }

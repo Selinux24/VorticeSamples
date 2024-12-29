@@ -173,7 +173,7 @@ namespace ContentTools
             Debug.Assert(data != null && info != null);
             Debug.Assert(info.Type < PrimitiveMeshType.Count);
 
-            var scene = new Scene();
+            var scene = new Scene("PrimitiveMesh");
             Creators[(int)info.Type](scene, info);
 
             data.Settings.CalculateNormals = true;

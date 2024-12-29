@@ -422,15 +422,13 @@ namespace Direct3D12
 
         private static void ConfigureInfoQueue()
         {
-            var iq = mainDevice.QueryInterfaceOrNull<ID3D12InfoQueue1>();
-            if (iq != null)
+            infoQueue = 
+                mainDevice.QueryInterfaceOrNull<ID3D12InfoQueue1>() ??
+                mainDevice.QueryInterfaceOrNull<ID3D12InfoQueue>();
+
+            if (infoQueue is ID3D12InfoQueue1 iq1)
             {
-                iq.RegisterMessageCallback(DebugCallback);
-                infoQueue = iq;
-            }
-            else
-            {
-                infoQueue = mainDevice.QueryInterfaceOrNull<ID3D12InfoQueue>();
+                iq1.RegisterMessageCallback(DebugCallback);
             }
 
             infoQueue.SetBreakOnSeverity(MessageSeverity.Corruption, true);
@@ -443,9 +441,9 @@ namespace Direct3D12
         }
         private static void ClearInfoQueueConfiguration()
         {
-            if (infoQueue is ID3D12InfoQueue1 iq)
+            if (infoQueue is ID3D12InfoQueue1 iq1)
             {
-                iq.RegisterMessageCallback(null);
+                iq1.RegisterMessageCallback(null);
             }
             else
             {

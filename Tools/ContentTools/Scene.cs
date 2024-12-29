@@ -2,9 +2,9 @@
 
 namespace ContentTools
 {
-    public class Scene
+    public class Scene(string name)
     {
-        public string Name { get; set; }
+        public string Name { get; set; } = name;
         public List<LODGroup> LODGroups { get; set; } = [];
     }
 }
