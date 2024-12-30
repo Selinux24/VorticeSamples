@@ -361,3 +361,6 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Add Assets folder with all it's content, obj files too
+!Assets/**/*
