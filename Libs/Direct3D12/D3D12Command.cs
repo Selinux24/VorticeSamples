@@ -194,12 +194,14 @@ namespace Direct3D12
             }
         }
 
-        public void BeginFrame()
+        public ID3D12GraphicsCommandList6 BeginFrame()
         {
             var frame = cmdFrames[frameIndex];
             frame.Wait(fenceEvent, fence);
             frame.CmdAllocator.Reset();
             cmdList.Reset(frame.CmdAllocator, null);
+
+            return cmdList;
         }
         public void EndFrame(D3D12Surface surface)
         {

@@ -13,7 +13,7 @@ namespace AssetsImporter
     using APropertyConfig = Assimp.Configs.PropertyConfig;
     using AScene = Assimp.Scene;
 
-    class AssimpImporter
+    static class AssimpImporter
     {
         private static readonly Mutex mutex = new();
         private static Scene scene = null;
@@ -132,8 +132,7 @@ namespace AssetsImporter
                 {
                     if (aMesh.HasNormals)
                     {
-                        Vector3[] normals = [.. aMesh.Normals];
-                        mesh.Normals.AddRange(normals);
+                        mesh.Normals.AddRange(aMesh.Normals);
                     }
                     else
                     {
@@ -145,8 +144,7 @@ namespace AssetsImporter
                 {
                     if (aMesh.HasTangentBasis)
                     {
-                        Vector3[] tangents = [.. aMesh.Tangents];
-                        mesh.Tangents.AddRange(tangents);
+                        mesh.Tangents.AddRange(aMesh.Tangents.Select(t => new Vector4(t, 0f)));
                     }
                     else
                     {

@@ -42,7 +42,7 @@ namespace Direct3D12
         private static readonly D3D12DescriptorHeap uavDescHeap = new(DescriptorHeapType.ConstantBufferViewShaderResourceViewUnorderedAccessView);
 
         private static readonly List<IUnknown>[] deferredReleases = new List<IUnknown>[FrameBufferCount];
-        private static readonly int[] deferredReleasesFlags = new int[FrameBufferCount];
+        private static readonly bool[] deferredReleasesFlags = new bool[FrameBufferCount];
         private static readonly Mutex deferredReleasesMutex = new();
 
         private static D3D12FrameInfo frameInfo = new();
@@ -77,7 +77,7 @@ namespace Direct3D12
         /// </summary>
         public static void SetDeferredReleasesFlag()
         {
-            deferredReleasesFlags[CurrentFrameIndex] = 1;
+            deferredReleasesFlags[CurrentFrameIndex] = true;
         }
 
         /// <inheritdoc/>
@@ -254,7 +254,7 @@ namespace Direct3D12
                 // NOTE: we clear this flag in the beginning. If we'd clear it at the end
                 //       then it might overwrite some other thread that was trying to set it.
                 //       It's fine if overwriting happens before processing the items.
-                deferredReleasesFlags[frameIdx] = 0;
+                deferredReleasesFlags[frameIdx] = false;
 
                 rtvDescHeap.ProcessDeferredFree(frameIdx);
                 dsvDescHeap.ProcessDeferredFree(frameIdx);
@@ -329,17 +329,15 @@ namespace Direct3D12
             // Wait for the GPU to finish with the command allocator and
             // reset the allocator once the GPU is done with it.
             // This frees the memory that was used to store commands.
-            gfxCommand.BeginFrame();
-            var cmdList = gfxCommand.CommandList;
+            var cmdList = gfxCommand.BeginFrame();
 
             int frameIdx = CurrentFrameIndex;
-            if (deferredReleasesFlags[frameIdx] != 0)
+            if (deferredReleasesFlags[frameIdx])
             {
                 ProcessDeferredReleases(frameIdx);
             }
 
             var surface = surfaces[(int)id];
-            var currentBackBuffer = surface.Backbuffer;
 
             frameInfo.SurfaceHeight = surface.Height;
             frameInfo.SurfaceWidth = surface.Width;
@@ -350,6 +348,8 @@ namespace Direct3D12
             cmdList.SetDescriptorHeaps([srvDescHeap.Heap]);
             cmdList.RSSetViewport(surface.Viewport);
             cmdList.RSSetScissorRect(surface.ScissorRect);
+
+            var currentBackBuffer = surface.Backbuffer;
 
             // Depth prepass
             resourceBarriers.AddTransitionBarrier(

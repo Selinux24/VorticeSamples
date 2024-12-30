@@ -205,9 +205,7 @@ namespace Direct3D12
 
             barriers.AddTransitionBarrier(
                 gpassDepthBuffer.Resource,
-                ResourceStates.DepthRead |
-                ResourceStates.PixelShaderResource |
-                ResourceStates.NonPixelShaderResource,
+                ResourceStates.DepthRead | ResourceStates.PixelShaderResource | ResourceStates.NonPixelShaderResource,
                 ResourceStates.DepthWrite,
                 flags);
 
@@ -224,9 +222,7 @@ namespace Direct3D12
             barriers.AddTransitionBarrier(
                 gpassDepthBuffer.Resource,
                 ResourceStates.DepthWrite,
-                ResourceStates.DepthRead |
-                ResourceStates.PixelShaderResource |
-                ResourceStates.NonPixelShaderResource);
+                ResourceStates.DepthRead | ResourceStates.PixelShaderResource | ResourceStates.NonPixelShaderResource);
         }
         public static void AddTransitionsForPostProcess(D3D12ResourceBarrier barriers)
         {

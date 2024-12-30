@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Numerics;
 using System.Runtime.InteropServices;
@@ -8,6 +9,9 @@ using System.Text;
 
 namespace ContentTools
 {
+    /// <summary>
+    /// Geometry utils
+    /// </summary>
     public static class Geometry
     {
         private const float Epsilon = 1e-5f;
@@ -21,6 +25,26 @@ namespace ContentTools
                     ProcessVertices(m, settings);
                 }
             }
+        }
+        private static void DetermineElementsType(Mesh m)
+        {
+            if (m.Normals.Count > 0)
+            {
+                if (m.Normals.Count > 0 && m.UVSets[0].Count > 0)
+                {
+                    m.ElementsType = ElementsType.StaticNormalTexture;
+                }
+                else
+                {
+                    m.ElementsType = ElementsType.StaticNormal;
+                }
+            }
+            else if (m.Normals.Count > 0)
+            {
+                m.ElementsType = ElementsType.StaticColor;
+            }
+
+            // TODO: we lack data for skeletal meshes. Expand for skeletal meshes later.
         }
         private static void ProcessVertices(Mesh m, GeometryImportSettings settings)
         {
@@ -37,7 +61,8 @@ namespace ContentTools
                 ProcessUVs(m);
             }
 
-            PackVerticesStatic(m);
+            DetermineElementsType(m);
+            PackVertices(m);
         }
         private static void RecalculateNormals(Mesh m)
         {
@@ -174,15 +199,117 @@ namespace ContentTools
                 }
             }
         }
-        private static void PackVerticesStatic(Mesh m)
+        private static int GetVertexElementSize(ElementsType type)
+        {
+            return type switch
+            {
+                ElementsType.StaticNormal => StaticNormal.GetStride(),
+                ElementsType.StaticNormalTexture => StaticNormalTexture.GetStride(),
+                ElementsType.StaticColor => StaticColor.GetStride(),
+                ElementsType.Skeletal => Skeletal.GetStride(),
+                ElementsType.SkeletalColor => SkeletalColor.GetStride(),
+                ElementsType.SkeletalNormal => SkeletalNormal.GetStride(),
+                ElementsType.SkeletalNormalColor => SkeletalNormalColor.GetStride(),
+                ElementsType.SkeletalNormalTexture => SkeletalNormalTexture.GetStride(),
+                ElementsType.SkeletalNormalTextureColor => SkeletalNormalTextureColor.GetStride(),
+                _ => 0
+            };
+        }
+        private static void PackVertices(Mesh m)
         {
             int numVertices = m.Vertices.Count;
             Debug.Assert(numVertices > 0);
 
-            for (int i = 0; i < numVertices; ++i)
+            int positionsCapacity = Marshal.SizeOf(typeof(Vector3)) * numVertices;
+            using MemoryStream msPositionBuffer = new(positionsCapacity);
+            for (int i = 0; i < numVertices; i++)
             {
-                m.PackedVerticesStatic.Add(new(m.Vertices[i]));
+                msPositionBuffer.Write(BitConverter.GetBytes(m.Vertices[i].Position.X));
+                msPositionBuffer.Write(BitConverter.GetBytes(m.Vertices[i].Position.Y));
+                msPositionBuffer.Write(BitConverter.GetBytes(m.Vertices[i].Position.Z));
             }
+            m.PositionBuffer = msPositionBuffer.ToArray();
+
+            int elementsCapacity = GetVertexElementSize(m.ElementsType) * numVertices;
+            using MemoryStream msElementsType = new(elementsCapacity);
+
+            switch (m.ElementsType)
+            {
+                case ElementsType.StaticColor:
+                {
+                    for (int i = 0; i < numVertices; i++)
+                    {
+                        StaticColor.Write(msElementsType, m.Vertices[i]);
+                    }
+                }
+                break;
+                case ElementsType.StaticNormal:
+                {
+                    for (int i = 0; i < numVertices; i++)
+                    {
+                        StaticNormal.Write(msElementsType, m.Vertices[i]);
+                    }
+                }
+                break;
+                case ElementsType.StaticNormalTexture:
+                {
+                    for (int i = 0; i < numVertices; i++)
+                    {
+                        StaticNormalTexture.Write(msElementsType, m.Vertices[i]);
+                    }
+                }
+                break;
+                case ElementsType.Skeletal:
+                {
+                    for (int i = 0; i < numVertices; i++)
+                    {
+                        Skeletal.Write(msElementsType, m.Vertices[i]);
+                    }
+                }
+                break;
+                case ElementsType.SkeletalColor:
+                {
+                    for (int i = 0; i < numVertices; i++)
+                    {
+                        SkeletalColor.Write(msElementsType, m.Vertices[i]);
+                    }
+                }
+                break;
+                case ElementsType.SkeletalNormal:
+                {
+                    for (int i = 0; i < numVertices; i++)
+                    {
+                        SkeletalNormal.Write(msElementsType, m.Vertices[i]);
+                    }
+                }
+                break;
+                case ElementsType.SkeletalNormalColor:
+                {
+                    for (int i = 0; i < numVertices; i++)
+                    {
+                        SkeletalNormalColor.Write(msElementsType, m.Vertices[i]);
+                    }
+                }
+                break;
+                case ElementsType.SkeletalNormalTexture:
+                {
+                    for (int i = 0; i < numVertices; i++)
+                    {
+                        SkeletalNormalTexture.Write(msElementsType, m.Vertices[i]);
+                    }
+                }
+                break;
+                case ElementsType.SkeletalNormalTextureColor:
+                {
+                    for (int i = 0; i < numVertices; i++)
+                    {
+                        SkeletalNormalTextureColor.Write(msElementsType, m.Vertices[i]);
+                    }
+                }
+                break;
+            }
+
+            m.ElementBuffer = msElementsType.ToArray();
         }
 
         public static void PackData(Scene scene, SceneData data)
@@ -249,20 +376,25 @@ namespace ContentTools
             int nameLength = m.Name.Length;
             int numVertices = m.Vertices.Count;
             int numIndices = m.Indices.Count;
-            int vertexBufferSize = Marshal.SizeOf(typeof(PackedVertex)) * numVertices;
+            int positionBufferSize = m.PositionBuffer.Length;
+            Debug.Assert(positionBufferSize == Marshal.SizeOf(typeof(Vector3)) * numVertices);
+            int elementBufferSize = m.ElementBuffer.Length;
+            Debug.Assert(elementBufferSize == GetVertexElementSize(m.ElementsType) * numVertices);
             int indexSize = (numVertices < (1 << 16)) ? sizeof(ushort) : sizeof(uint);
             int indexBufferSize = indexSize * numIndices;
 
             int size =
-                sizeof(int) + nameLength +   // mesh name length and room for mesh name string
-                sizeof(int) +                // lod id
-                sizeof(int) +                // vertex size
-                sizeof(int) +                // number of vertices
-                sizeof(int) +                // index size (16 bit or 32 bit)
-                sizeof(int) +                // number of indices
-                sizeof(float) +              // LOD threshold
-                vertexBufferSize +           // room for vertices
-                indexBufferSize;             // room for indices
+                sizeof(int) + nameLength +  // mesh name length and room for mesh name string
+                sizeof(int) +               // lod id
+                sizeof(int) +               // vertex element size (vertex size excluding position element)
+                sizeof(int) +               // element type enumeration
+                sizeof(int) +               // number of vertices
+                sizeof(int) +               // index size (16 bit or 32 bit)
+                sizeof(int) +               // number of indices
+                sizeof(float) +             // LOD threshold
+                positionBufferSize +        // room for vertex positions
+                elementBufferSize +         // room for vertex elements
+                indexBufferSize;            // room for indices
 
             return size;
         }
@@ -274,29 +406,35 @@ namespace ContentTools
             // lod id
             WriteData(buffer, ref at, m.LODId);
 
-            int vertexSize = Marshal.SizeOf(typeof(PackedVertex));
-            int numVertices = m.Vertices.Count;
-            int indexSize = (numVertices < (1 << 16)) ? sizeof(ushort) : sizeof(uint);
-            int numIndices = m.Indices.Count;
+            // elements size
+            int elementsSize = GetVertexElementSize(m.ElementsType);
+            WriteData(buffer, ref at, elementsSize);
 
-            // vertex size
-            WriteData(buffer, ref at, vertexSize);
+            // elements type enumeration
+            WriteData(buffer, ref at, (uint)m.ElementsType);
 
             // number of vertices
+            int numVertices = m.Vertices.Count;
             WriteData(buffer, ref at, numVertices);
 
             // index size (16 bit or 32 bit)
+            int indexSize = (numVertices < (1 << 16)) ? sizeof(ushort) : sizeof(uint);
             WriteData(buffer, ref at, indexSize);
 
             // number of indices
+            int numIndices = m.Indices.Count;
             WriteData(buffer, ref at, numIndices);
 
             // LOD threshold
             WriteData(buffer, ref at, m.LODThreshold);
 
-            // vertex data
-            var vData = m.PackedVerticesStatic.SelectMany(pv => pv.GetData()).ToArray();
-            WriteData(buffer, ref at, vData);
+            // position buffer
+            Debug.Assert(m.PositionBuffer.Length == Marshal.SizeOf(typeof(Vector3)) * numVertices);
+            WriteData(buffer, ref at, m.PositionBuffer);
+
+            // element buffer
+            Debug.Assert(m.ElementBuffer.Length == elementsSize * numVertices);
+            WriteData(buffer, ref at, m.ElementBuffer);
 
             // index data
             int indexDataLenght = indexSize * numIndices;
