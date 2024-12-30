@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Numerics;
 
 namespace ContentTools
@@ -11,7 +12,7 @@ namespace ContentTools
         public List<Vector3> Tangents { get; set; } = [];
         public List<List<Vector2>> UVSets { get; set; } = [];
         public List<int> MaterialIndices { get; set; } = [];
-        public List<int> MaterialUsed { get; set; } = [];
+        public int[] MaterialUsed { get=> MaterialIndices.Distinct().ToArray(); } 
 
         public List<uint> RawIndices { get; set; } = [];
 

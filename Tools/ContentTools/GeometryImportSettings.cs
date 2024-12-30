@@ -1,14 +1,17 @@
 ﻿
 namespace ContentTools
 {
-    public struct GeometryImportSettings
+    /// <summary>
+    /// Settings for importing geometry
+    /// </summary>
+    public class GeometryImportSettings()
     {
-        public float SmoothingAngle { get; set; }
-        public bool CalculateNormals { get; set; }
-        public bool CalculateTangents { get; set; }
-        public bool ReverseHandedness { get; set; }
-        public bool ImportEmbeddedTextures { get; set; }
-        public bool ImportAnimations { get; set; }
-        public bool CoalesceMeshes { get; set; }
+        public float SmoothingAngle { get; set; } = 0f;
+        public bool CalculateNormals { get; set; } = true;
+        public bool CalculateTangents { get; set; } = true;
+        public bool ReverseHandedness { get; set; } = false;
+        public bool ImportEmbeddedTextures { get; set; } = false;
+        public bool ImportAnimations { get; set; } = false;
+        public bool CoalesceMeshes { get; set; } = false;
     }
 }

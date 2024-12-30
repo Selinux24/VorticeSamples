@@ -15,31 +15,35 @@ namespace AssetsImporter
 
     class AssimpImporter
     {
-        private readonly Scene scene = null;
-        private AScene aScene = null;
+        private static readonly Mutex mutex = new();
+        private static Scene scene = null;
 
-        public AssimpImporter(string filePath, Scene scene)
+        public static void Add(string filePath, SceneData sceneData)
         {
-            this.scene = scene;
+            scene ??= new(sceneData.Name);
 
-            APostProcessSteps steps =
-                APostProcessSteps.ValidateDataStructure |
-                APostProcessSteps.GlobalScale |
-                APostProcessSteps.Triangulate |
-                APostProcessSteps.GenerateNormals |
-                APostProcessSteps.CalculateTangentSpace;
+            lock (mutex)
+            {
+                APostProcessSteps steps =
+                    APostProcessSteps.ValidateDataStructure |
+                    APostProcessSteps.GlobalScale |
+                    APostProcessSteps.Triangulate |
+                    APostProcessSteps.GenerateNormals |
+                    APostProcessSteps.CalculateTangentSpace;
+                var scaleConfig = new AFBXConvertToMetersConfig(true);
 
-            var scaleConfig = new AFBXConvertToMetersConfig(true);
-
-            Import(filePath, steps, [scaleConfig]);
+                var aScene = ReadFile(filePath, steps, [scaleConfig]);
+                ReadScene(aScene, sceneData.Settings);
+            }
         }
-
-        private void Import(
-            string filePath,
-            APostProcessSteps ppSteps = APostProcessSteps.None,
-            APropertyConfig[] configs = null)
+        public static void Import(SceneData sceneData)
         {
-            Console.WriteLine($"Importing {filePath} with Assimp");
+            Geometry.ProcessScene(scene, sceneData.Settings);
+            Geometry.PackData(scene, sceneData);
+        }
+        private static AScene ReadFile(string filePath, APostProcessSteps ppSteps = APostProcessSteps.None, APropertyConfig[] configs = null)
+        {
+            Console.WriteLine($"Reading {filePath} with Assimp");
 
             using AAssimpContext importer = new();
             if (configs != null)
@@ -50,10 +54,9 @@ namespace AssetsImporter
                 }
             }
 
-            aScene = importer.ImportFile(filePath, ppSteps);
+            return importer.ImportFile(filePath, ppSteps);
         }
-
-        private void GetScene()
+        private static void ReadScene(AScene aScene, GeometryImportSettings settings)
         {
             foreach (var aMesh in aScene.Meshes)
             {
@@ -73,26 +76,82 @@ namespace AssetsImporter
                 scene.LODGroups.Add(lod);
 
                 // Get vertices
-                Vector3[] vertices = [.. aMesh.Vertices];
-                uint[] indices = [.. aMesh.GetUnsignedIndices()];
-                Debug.Assert(vertices.Length > 0 && indices.Length > 0);
-                if (vertices.Length <= 0 || indices.Length <= 0)
+                if (!aMesh.HasVertices)
                 {
                     continue;
                 }
-                Debug.Assert(indices.Length % 3 == 0);
-                mesh.Positions.AddRange(vertices);
-                mesh.RawIndices.AddRange(indices);
+                Vector3[] vertices = [.. aMesh.Vertices];
+                uint[] indices = [.. aMesh.GetUnsignedIndices()];
+                uint[] vertexRef = new uint[vertices.Length];
 
-                Vector3[] normals = [.. aMesh.Normals];
-                Vector3[] tangents = [.. aMesh.Tangents];
-                mesh.Normals.AddRange(normals);
-                mesh.Tangents.AddRange(tangents);
+                if (indices.Length == 0)
+                {
+                    Debug.Assert(vertices.Length % 3 == 0);
+
+                    // Populate indices
+                    indices = new uint[vertices.Length];
+                    for (uint i = 0; i < vertices.Length; i++)
+                    {
+                        indices[i] = i;
+                    }
+                }
+
+                for (int i = 0; i < indices.Length; i++)
+                {
+                    mesh.RawIndices.Add(uint.MaxValue);
+                }
+                for (int i = 0; i < vertices.Length; i++)
+                {
+                    vertexRef[i] = uint.MaxValue;
+                }
+
+                for (int i = 0; i < indices.Length; i++)
+                {
+                    uint vIdx = indices[i];
+
+                    // Did we encounter this vertex before? If so, just add its index.
+                    // If not, add the vertex and a new index.
+                    if (vertexRef[vIdx] != uint.MaxValue)
+                    {
+                        mesh.RawIndices[i] = vertexRef[vIdx];
+                    }
+                    else
+                    {
+                        var v = vertices[vIdx];
+                        mesh.RawIndices[i] = (uint)mesh.Positions.Count;
+                        vertexRef[vIdx] = mesh.RawIndices[i];
+                        mesh.Positions.Add(v);
+                    }
+                }
+                Debug.Assert(vertices.Length > 0 && indices.Length > 0);
+                Debug.Assert(indices.Length % 3 == 0);
 
                 mesh.MaterialIndices.Add(aMesh.MaterialIndex);
-                if (!mesh.MaterialUsed.Contains(aMesh.MaterialIndex))
+
+                if (settings.CalculateNormals)
                 {
-                    mesh.MaterialUsed.Add(aMesh.MaterialIndex);
+                    if (aMesh.HasNormals)
+                    {
+                        Vector3[] normals = [.. aMesh.Normals];
+                        mesh.Normals.AddRange(normals);
+                    }
+                    else
+                    {
+                        settings.CalculateNormals = true;
+                    }
+                }
+
+                if (settings.CalculateTangents)
+                {
+                    if (aMesh.HasTangentBasis)
+                    {
+                        Vector3[] tangents = [.. aMesh.Tangents];
+                        mesh.Tangents.AddRange(tangents);
+                    }
+                    else
+                    {
+                        settings.CalculateTangents = true;
+                    }
                 }
 
                 for (int i = 0; i < aMesh.TextureCoordinateChannelCount; i++)
@@ -101,23 +160,6 @@ namespace AssetsImporter
                     mesh.UVSets.Add(new(uvs));
                 }
             }
-        }
-
-        private static readonly Mutex mutex = new();
-
-        public static void Import(string filePath, SceneData data)
-        {
-            Scene scene = new("Import Scene");
-
-            lock (mutex)
-            {
-                AssimpImporter importer = new(filePath, scene);
-
-                importer.GetScene();
-            }
-
-            Geometry.ProcessScene(scene, data.Settings);
-            Geometry.PackData(scene, data);
         }
     }
 }
