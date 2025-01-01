@@ -3,7 +3,6 @@ using PrimalLike.Platform;
 using SharpGen.Runtime;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Threading;
 using Vortice.Direct3D;
 using Vortice.Direct3D12;
 using Vortice.DXGI;
@@ -43,7 +42,7 @@ namespace Direct3D12
 
         private static readonly List<IUnknown>[] deferredReleases = new List<IUnknown>[FrameBufferCount];
         private static readonly bool[] deferredReleasesFlags = new bool[FrameBufferCount];
-        private static readonly Mutex deferredReleasesMutex = new();
+        private static readonly object deferredReleasesMutex = new();
 
         private static D3D12FrameInfo frameInfo = new();
 
@@ -144,7 +143,7 @@ namespace Direct3D12
             }
 
             // initialize modules
-            if (!D3D12Shaders.Initialize() || !D3D12GPass.Initialize() || !D3D12PostProcess.Initialize())
+            if (!D3D12Shaders.Initialize() || !D3D12GPass.Initialize() || !D3D12PostProcess.Initialize() || !D3D12UploadContext.Initialize())
             {
                 return FailedInit();
             }
@@ -169,6 +168,7 @@ namespace Direct3D12
             }
 
             // shutdown modules
+            D3D12UploadContext.Shutdown();
             D3D12PostProcess.Shutdown();
             D3D12Shaders.Shutdown();
             D3D12GPass.Shutdown();

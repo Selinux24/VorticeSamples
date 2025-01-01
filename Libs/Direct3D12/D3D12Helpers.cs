@@ -1,13 +1,15 @@
 ﻿global using D3D12Device = Vortice.Direct3D12.ID3D12Device8;
 global using D3D12GraphicsCommandList = Vortice.Direct3D12.ID3D12GraphicsCommandList6;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using Vortice.Direct3D12;
+using Vortice.DXGI;
 
 namespace Direct3D12
 {
     using HResult = SharpGen.Runtime.Result;
 
-    static class D3D12Helpers
+    static unsafe class D3D12Helpers
     {
         #region Structured Collections
 
@@ -20,7 +22,15 @@ namespace Direct3D12
                 0,
                 0);
 
+            private static readonly HeapProperties uploadHeap = new(
+                HeapType.Upload,
+                CpuPageProperty.Unknown,
+                MemoryPool.Unknown,
+                0,
+                0);
+
             public static HeapProperties DefaultHeap { get => defaultHeap; }
+            public static HeapProperties UploadHeap { get => uploadHeap; }
         }
         public readonly struct RasterizerStatesCollection()
         {
@@ -256,6 +266,90 @@ namespace Direct3D12
             }
 
             return signature;
+        }
+
+        public static ID3D12Resource CreateBuffer<T>(
+            T[] data, uint bufferSize,
+            bool isCpuAccessible = false,
+            ResourceStates state = ResourceStates.Common,
+            ResourceFlags flags = ResourceFlags.None,
+            ID3D12Heap heap = null, ulong heapOffset = 0) where T : unmanaged
+        {
+            Debug.Assert(bufferSize > 0);
+
+            ResourceDescription desc = new()
+            {
+                Dimension = ResourceDimension.Buffer,
+                Alignment = 0,
+                Width = bufferSize,
+                Height = 1,
+                DepthOrArraySize = 1,
+                MipLevels = 1,
+                Format = Format.Unknown,
+                SampleDescription = new(1, 0),
+                Layout = TextureLayout.RowMajor,
+                Flags = isCpuAccessible ? ResourceFlags.None : flags
+            };
+
+            // The buffer will be only used for upload or as constant buffer/UAV.
+            Debug.Assert(desc.Flags == ResourceFlags.None || desc.Flags == ResourceFlags.AllowUnorderedAccess);
+
+            ID3D12Resource resource = null;
+            ResourceStates resourceState = isCpuAccessible ? ResourceStates.GenericRead : state;
+
+            if (heap != null)
+            {
+                DxCall(D3D12Graphics.Device.CreatePlacedResource(
+                    heap, heapOffset,
+                    desc,
+                    resourceState,
+                    out resource));
+            }
+            else
+            {
+                DxCall(D3D12Graphics.Device.CreateCommittedResource(
+                    isCpuAccessible ? HeapPropertiesCollection.UploadHeap : HeapPropertiesCollection.DefaultHeap,
+                    HeapFlags.None,
+                    desc,
+                    resourceState,
+                    out resource));
+            }
+
+            if (data != null)
+            {
+                // If we have initial data which we'd like to be able to change later, we set is_cpu_accessible
+                // to true. If we only want to upload some data once to be used by the GPU, then is_cpu_accessible
+                // should be set to false.
+                if (isCpuAccessible)
+                {
+                    // NOTE: range's Begin and End fields are set to 0, to indicate that
+                    //       the CPU is not reading any data (i.e. write-only)
+                    Range range = new();
+                    void* cpuAddress = default;
+                    DxCall(resource.Map(0, range, cpuAddress));
+                    Debug.Assert(cpuAddress != null);
+                    uint sizeInBytes = (uint)(sizeof(T) * data.Length);
+                    fixed (T* dataPtr = data)
+                    {
+                        NativeMemory.Copy(dataPtr, cpuAddress, sizeInBytes);
+                    }
+                    resource.Unmap(0, null);
+                }
+                else
+                {
+                    D3D12UploadContext context = new(bufferSize);
+                    uint sizeInBytes = (uint)(sizeof(T) * data.Length);
+                    fixed (T* dataPtr = data)
+                    {
+                        NativeMemory.Copy(dataPtr, context.CpuAddress, sizeInBytes);
+                    }
+                    context.CmdList.CopyResource(resource, context.UploadBuffer);
+                    context.EndUpload();
+                }
+            }
+
+            Debug.Assert(resource != null);
+            return resource;
         }
     }
 }

@@ -3,7 +3,6 @@ using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
-using System.Threading;
 
 namespace AssetsImporter
 {
@@ -15,7 +14,7 @@ namespace AssetsImporter
 
     static class AssimpImporter
     {
-        private static readonly Mutex mutex = new();
+        private static readonly object mutex = new();
         private static Scene scene = null;
 
         public static void Add(string filePath, SceneData sceneData)

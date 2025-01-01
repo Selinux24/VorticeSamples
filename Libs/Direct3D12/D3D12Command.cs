@@ -155,6 +155,10 @@ namespace Direct3D12
 
             fenceEvent = new AutoResetEvent(false);
             Debug.Assert(fenceEvent != null);
+            if (fenceEvent == null)
+            {
+                Release();
+            }
         }
         ~D3D12Command()
         {

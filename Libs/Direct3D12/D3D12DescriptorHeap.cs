@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Threading;
 using Vortice.Direct3D12;
 
 namespace Direct3D12
@@ -9,7 +8,7 @@ namespace Direct3D12
     class D3D12DescriptorHeap : IDisposable
     {
         private readonly DescriptorHeapType type;
-        private readonly Mutex mutex;
+        private readonly object mutex = new();
         private readonly List<uint>[] deferredFreeIndices;
 
         private ID3D12DescriptorHeap heap;
@@ -32,8 +31,6 @@ namespace Direct3D12
         public D3D12DescriptorHeap(DescriptorHeapType type)
         {
             this.type = type;
-
-            mutex = new();
 
             deferredFreeIndices = new List<uint>[D3D12Graphics.FrameBufferCount];
             for (int i = 0; i < D3D12Graphics.FrameBufferCount; i++)
