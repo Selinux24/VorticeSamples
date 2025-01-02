@@ -1,5 +1,6 @@
 ﻿global using SurfaceId = System.UInt32;
 using PrimalLike.Platform;
+using System;
 
 namespace PrimalLike.Graphics
 {
@@ -51,6 +52,15 @@ namespace PrimalLike.Graphics
         public static void RenderSurface(SurfaceId id)
         {
             gfx.RenderSurface(id);
+        }
+
+        public static int AddSubmesh(IntPtr data)
+        {
+            return gfx.AddSubmesh(data);
+        }
+        public static void RemoveSubmesh(int id)
+        {
+            gfx.RemoveSubmesh(id);
         }
     }
 }

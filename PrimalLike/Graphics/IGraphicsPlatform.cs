@@ -1,4 +1,5 @@
 ﻿using PrimalLike.Platform;
+using System;
 
 namespace PrimalLike.Graphics
 {
@@ -52,5 +53,16 @@ namespace PrimalLike.Graphics
         /// </summary>
         /// <param name="id">Surface id</param>
         void RenderSurface(SurfaceId id);
+
+        /// <summary>
+        /// Adds a submesh.
+        /// </summary>
+        /// <param name="data">Submesh data</param>
+        int AddSubmesh(IntPtr data);
+        /// <summary>
+        /// Removes a submesh.
+        /// </summary>
+        /// <param name="id">Submesh id</param>
+        void RemoveSubmesh(int id);
     }
 }

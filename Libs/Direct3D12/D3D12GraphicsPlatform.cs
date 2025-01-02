@@ -54,5 +54,16 @@ namespace Direct3D12
         {
             D3D12Graphics.RenderSurface(id);
         }
+
+        /// <inheritdoc/>
+        public int AddSubmesh(nint data)
+        {
+            return D3D12Content.AddSubmesh(data);
+        }
+        /// <inheritdoc/>
+        public void RemoveSubmesh(int id)
+        {
+            D3D12Content.Remove(id);
+        }
     }
 }

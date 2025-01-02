@@ -161,6 +161,8 @@ namespace Direct3D12
 
         public D3D12UploadContext(uint alignedSize)
         {
+            Debug.Assert(uploadCmdQueue != null);
+
             // We don't want to lock this function for longer than necessary. So, we scope this lock.
             lock (frameMutex)
             {
@@ -189,7 +191,7 @@ namespace Direct3D12
         }
         ~D3D12UploadContext()
         {
-
+            Debug.Assert(frameIndex == uint.MaxValue);
         }
 
         public void EndUpload()
