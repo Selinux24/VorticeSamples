@@ -58,11 +58,11 @@ namespace PrimalLike.Graphics
         /// Adds a submesh.
         /// </summary>
         /// <param name="data">Submesh data</param>
-        int AddSubmesh(IntPtr data);
+        SubmeshId AddSubmesh(IntPtr data);
         /// <summary>
         /// Removes a submesh.
         /// </summary>
         /// <param name="id">Submesh id</param>
-        void RemoveSubmesh(int id);
+        void RemoveSubmesh(SubmeshId id);
     }
 }

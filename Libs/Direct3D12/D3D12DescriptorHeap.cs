@@ -82,7 +82,7 @@ namespace Direct3D12
 
                 Release();
 
-                ID3D12Device device = D3D12Graphics.Device;
+                var device = D3D12Graphics.Device;
                 Debug.Assert(device != null);
 
                 DescriptorHeapDescription desc;

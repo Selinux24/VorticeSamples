@@ -26,7 +26,7 @@ namespace Direct3D12
         private readonly RenderTargetData[] renderTargetData = new RenderTargetData[BufferCount];
         private readonly PlatformWindow window;
         private int currentBbIndex = 0;
-        private readonly bool allowTearing = false;
+        private readonly uint allowTearing = 0;
         private PresentFlags presentFlags = 0;
         private Viewport viewport;
         private RectI scissorRect;
@@ -109,7 +109,7 @@ namespace Direct3D12
 
             int frameBufferCount = BufferCount;
 
-            if (factory.CheckFeatureSupport(Vortice.DXGI.Feature.PresentAllowTearing, allowTearing) && allowTearing)
+            if (factory.CheckFeatureSupport(Vortice.DXGI.Feature.PresentAllowTearing, allowTearing) && allowTearing != 0)
             {
                 presentFlags = PresentFlags.AllowTearing;
             }
@@ -121,7 +121,7 @@ namespace Direct3D12
                 AlphaMode = AlphaMode.Unspecified,
                 BufferCount = frameBufferCount,
                 BufferUsage = Usage.RenderTargetOutput,
-                Flags = allowTearing ? SwapChainFlags.AllowTearing : 0,
+                Flags = allowTearing != 0 ? SwapChainFlags.AllowTearing : 0,
                 Format = ToNonSrgb(format),
                 Height = window.Height,
                 Width = window.Width,
@@ -203,7 +203,7 @@ namespace Direct3D12
                 renderTargetData[i].Resource = null;
             }
 
-            SwapChainFlags flags = allowTearing ? SwapChainFlags.AllowTearing : 0;
+            SwapChainFlags flags = allowTearing != 0 ? SwapChainFlags.AllowTearing : 0;
             swapChain.ResizeBuffers(frameBufferCount, 0, 0, Format.Unknown, flags);
             currentBbIndex = swapChain.CurrentBackBufferIndex;
 

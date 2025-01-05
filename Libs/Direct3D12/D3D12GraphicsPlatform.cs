@@ -56,12 +56,12 @@ namespace Direct3D12
         }
 
         /// <inheritdoc/>
-        public int AddSubmesh(nint data)
+        public uint AddSubmesh(nint data)
         {
             return D3D12Content.AddSubmesh(data);
         }
         /// <inheritdoc/>
-        public void RemoveSubmesh(int id)
+        public void RemoveSubmesh(uint id)
         {
             D3D12Content.Remove(id);
         }

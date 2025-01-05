@@ -1,5 +1,7 @@
 ﻿global using D3D12Device = Vortice.Direct3D12.ID3D12Device8;
 global using D3D12GraphicsCommandList = Vortice.Direct3D12.ID3D12GraphicsCommandList6;
+global using DXGIAdapter = Vortice.DXGI.IDXGIAdapter4;
+global using DXGIFactory = Vortice.DXGI.IDXGIFactory7;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Vortice.Direct3D12;
@@ -9,7 +11,7 @@ namespace Direct3D12
 {
     using HResult = SharpGen.Runtime.Result;
 
-    static unsafe class D3D12Helpers
+    public static unsafe class D3D12Helpers
     {
         #region Structured Collections
 
@@ -150,6 +152,11 @@ namespace Direct3D12
             string fullName = $"{name}[{index}]";
             obj.Name = fullName;
             Debug.WriteLine($"D3D12 Object Created: {fullName}");
+        }
+        public static void NameDXGIObject(IDXGIObject obj, string name)
+        {
+            obj.DebugName = name;
+            Debug.WriteLine($"D3D12 Object Created: {name}");
         }
 
         public static DescriptorRange1 Range(
@@ -324,9 +331,8 @@ namespace Direct3D12
                 {
                     // NOTE: range's Begin and End fields are set to 0, to indicate that
                     //       the CPU is not reading any data (i.e. write-only)
-                    Range range = new();
                     void* cpuAddress = default;
-                    DxCall(resource.Map(0, range, cpuAddress));
+                    DxCall(resource.Map(0, cpuAddress));
                     Debug.Assert(cpuAddress != null);
                     uint sizeInBytes = (uint)(sizeof(T) * data.Length);
                     fixed (T* dataPtr = data)
@@ -337,7 +343,7 @@ namespace Direct3D12
                 }
                 else
                 {
-                    D3D12UploadContext context = new(bufferSize);
+                    D3D12Upload.UploadContext context = new(bufferSize);
                     uint sizeInBytes = (uint)(sizeof(T) * data.Length);
                     fixed (T* dataPtr = data)
                     {
@@ -345,6 +351,7 @@ namespace Direct3D12
                     }
                     context.CmdList.CopyResource(resource, context.UploadBuffer);
                     context.EndUpload();
+                    context = null;
                 }
             }
 

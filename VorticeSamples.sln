@@ -41,6 +41,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Assets", "Assets", "{53D3EA
 		Assets\ToyTank.fbx = Assets\ToyTank.fbx
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "D3D12LibTests", "Tests\D3D12LibTests\D3D12LibTests.csproj", "{FCC73F6A-E687-4440-B20A-A50E9C99F40D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -121,6 +123,14 @@ Global
 		{EA43D06F-7230-468B-B8D9-3F9C0C4F4525}.Release|Any CPU.Build.0 = Release|Any CPU
 		{EA43D06F-7230-468B-B8D9-3F9C0C4F4525}.ReleaseEditor|Any CPU.ActiveCfg = Release|Any CPU
 		{EA43D06F-7230-468B-B8D9-3F9C0C4F4525}.ReleaseEditor|Any CPU.Build.0 = Release|Any CPU
+		{FCC73F6A-E687-4440-B20A-A50E9C99F40D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FCC73F6A-E687-4440-B20A-A50E9C99F40D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FCC73F6A-E687-4440-B20A-A50E9C99F40D}.DebugEditor|Any CPU.ActiveCfg = DebugEditor|Any CPU
+		{FCC73F6A-E687-4440-B20A-A50E9C99F40D}.DebugEditor|Any CPU.Build.0 = DebugEditor|Any CPU
+		{FCC73F6A-E687-4440-B20A-A50E9C99F40D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FCC73F6A-E687-4440-B20A-A50E9C99F40D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FCC73F6A-E687-4440-B20A-A50E9C99F40D}.ReleaseEditor|Any CPU.ActiveCfg = ReleaseEditor|Any CPU
+		{FCC73F6A-E687-4440-B20A-A50E9C99F40D}.ReleaseEditor|Any CPU.Build.0 = ReleaseEditor|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -133,6 +143,7 @@ Global
 		{674D2F94-0214-4871-9F51-3E3EF9FB089C} = {80B26C20-E545-4CE3-973C-F002D616E3B9}
 		{087F27DA-D3E5-4338-A9B0-30DC60F10C44} = {80B26C20-E545-4CE3-973C-F002D616E3B9}
 		{EA43D06F-7230-468B-B8D9-3F9C0C4F4525} = {80B26C20-E545-4CE3-973C-F002D616E3B9}
+		{FCC73F6A-E687-4440-B20A-A50E9C99F40D} = {EFF65604-E5ED-48D6-8895-3CAAFBD72457}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {59432B32-A400-4B62-9614-63EB4A9812E7}

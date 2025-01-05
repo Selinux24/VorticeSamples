@@ -66,7 +66,6 @@ namespace PrimalLike.Content
 
             return true;
         }
-
         public static void UnloadGame()
         {
             foreach (var entity in entities)
@@ -91,7 +90,6 @@ namespace PrimalLike.Content
 
             return true;
         }
-
         private static bool ReadScript(byte[] data, ref EntityInfo info)
         {
             string scriptName = Encoding.UTF8.GetString(data);
