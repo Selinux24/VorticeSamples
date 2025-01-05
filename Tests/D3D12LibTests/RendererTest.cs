@@ -2,11 +2,14 @@
 using NUnit.Framework;
 using PrimalLike;
 using PrimalLike.Components;
+using PrimalLike.Content;
 using PrimalLike.EngineAPI;
 using PrimalLike.Graphics;
 using PrimalLike.Platform;
 using ShaderCompiler;
+using System.IO;
 using System.Threading;
+using Vortice.Direct3D12;
 using WindowsPlatform;
 
 namespace D3D12LibTests
@@ -24,7 +27,7 @@ namespace D3D12LibTests
 
             protected override void Initialize()
             {
-                Engine.EngineInitialize("Content/Game.bin");
+                Engine.EngineInitialize(gameBinFile);
             }
             protected override void Update(Time time)
             {
@@ -52,6 +55,8 @@ namespace D3D12LibTests
 
         private const string shadersSourcePath = "../../../../../Libs/Direct3D12/Shaders/";
         private const string outputFileName = "./Content/engineShaders.bin";
+        private const string gameBinFile = "./Content/Game.bin";
+        private const string testModelFile = "./Content/Model.model";
 
         private static readonly string[] profileStrings = ["vs_6_5", "hs_6_5", "ds_6_5", "gs_6_5", "ps_6_5", "cs_6_5", "as_6_5", "ms_6_5"];
 
@@ -164,7 +169,26 @@ namespace D3D12LibTests
             Assert.That(true);
         }
         [Test()]
-        public void UploadTest()
+        public void UploadModelTest()
+        {
+            InitializeApplication();
+
+            ShowTestWindows();
+
+            using var file = new MemoryStream(File.ReadAllBytes(testModelFile));
+            var modelId = ContentToEngine.CreateResource(file, AssetTypes.Mesh);
+            Assert.That(modelId != uint.MaxValue, "Model creation error.");
+            if (modelId != uint.MaxValue)
+            {
+                ContentToEngine.DestroyResource(modelId, AssetTypes.Mesh);
+            }
+
+            app.Run();
+
+            Assert.That(true);
+        }
+        [Test()]
+        public void UploadContextTest()
         {
             InitializeApplication();
 

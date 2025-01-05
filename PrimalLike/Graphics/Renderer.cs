@@ -55,9 +55,9 @@ namespace PrimalLike.Graphics
             gfx.RenderSurface(id);
         }
 
-        public static SubmeshId AddSubmesh(IntPtr data)
+        public static SubmeshId AddSubmesh(ref IntPtr data)
         {
-            return gfx.AddSubmesh(data);
+            return gfx.AddSubmesh(ref data);
         }
         public static void RemoveSubmesh(SubmeshId id)
         {

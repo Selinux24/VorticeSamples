@@ -10,7 +10,7 @@ namespace PrimalLike.Utilities
     public class BlobStreamReader
     {
         private readonly IntPtr _buffer;
-        private int _position;
+        private IntPtr _position;
 
         /// <summary>
         /// Buffer start pointer
@@ -19,11 +19,11 @@ namespace PrimalLike.Utilities
         /// <summary>
         /// Current position
         /// </summary>
-        public int Position => _position;
+        public IntPtr Position => _position;
         /// <summary>
         /// Current offset
         /// </summary>
-        public int Offset => _position;
+        public ulong Offset => (ulong)(_position - _buffer);
 
         /// <summary>
         /// Constructor
@@ -33,7 +33,7 @@ namespace PrimalLike.Utilities
         {
             Debug.Assert(buffer != IntPtr.Zero);
             _buffer = buffer;
-            _position = 0;
+            _position = buffer;
         }
 
         /// <summary>
@@ -44,7 +44,7 @@ namespace PrimalLike.Utilities
         public T Read<T>() where T : struct
         {
             int size = Marshal.SizeOf<T>();
-            T value = Marshal.PtrToStructure<T>(_buffer + _position);
+            T value = Marshal.PtrToStructure<T>(_position);
             _position += size;
             return value;
         }
@@ -56,7 +56,7 @@ namespace PrimalLike.Utilities
         public byte[] Read(int length)
         {
             byte[] buffer = new byte[length];
-            Marshal.Copy(_buffer + _position, buffer, 0, length);
+            Marshal.Copy(_position, buffer, 0, length);
             _position += length;
             return buffer;
         }

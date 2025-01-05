@@ -58,7 +58,7 @@ namespace Direct3D12
         /// - Position and element buffers should be padded to be a multiple of 4 bytes in length.
         ///   This 16 bytes is defined as D3D12_STANDARD_MAXIMUM_ELEMENT_ALIGNMENT_BYTE_MULTIPLE.
         /// </remarks>
-        public static uint AddSubmesh(IntPtr data)
+        public static uint AddSubmesh(ref IntPtr data)
         {
             BlobStreamReader blob = new(data);
 
@@ -81,6 +81,8 @@ namespace Direct3D12
 
             byte[] buffer = blob.Read((int)totalBufferSize);
             var resource = D3D12Helpers.CreateBuffer(buffer, totalBufferSize);
+
+            data = blob.Position;
 
             SubmeshView view = new();
             view.PositionBufferView.BufferLocation = resource.GPUVirtualAddress;

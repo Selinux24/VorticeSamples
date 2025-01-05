@@ -1,5 +1,6 @@
 ﻿using PrimalLike.Graphics;
 using PrimalLike.Platform;
+using System;
 
 namespace Direct3D12
 {
@@ -56,9 +57,9 @@ namespace Direct3D12
         }
 
         /// <inheritdoc/>
-        public uint AddSubmesh(nint data)
+        public uint AddSubmesh(ref IntPtr data)
         {
-            return D3D12Content.AddSubmesh(data);
+            return D3D12Content.AddSubmesh(ref data);
         }
         /// <inheritdoc/>
         public void RemoveSubmesh(uint id)

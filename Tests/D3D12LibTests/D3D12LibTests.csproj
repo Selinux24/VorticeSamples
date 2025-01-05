@@ -8,7 +8,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Content\model.model" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Content Include="Content\game.bin">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Content\model.model">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

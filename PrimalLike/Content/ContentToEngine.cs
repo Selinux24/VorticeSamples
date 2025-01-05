@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.IO;
 
 namespace PrimalLike.Content
 {
@@ -20,6 +21,24 @@ namespace PrimalLike.Content
         private static readonly List<IntPtr> GeometryHierarchies = [];
         private static readonly object GeometryMutex = new();
 
+        public static uint CreateResource(MemoryStream stream, AssetTypes assetType)
+        {
+            IntPtr data = IntPtr.Zero;
+            try
+            {
+                byte[] buffer = stream.ToArray();
+                data = Marshal.AllocHGlobal(buffer.Length);
+                Marshal.Copy(buffer, 0, data, buffer.Length);
+                return CreateResource(data, assetType);
+            }
+            finally
+            {
+                if (data != IntPtr.Zero)
+                {
+                    Marshal.FreeHGlobal(data);
+                }
+            }
+        }
         public static uint CreateResource(IntPtr data, AssetTypes assetType)
         {
             Debug.Assert(data != IntPtr.Zero);
@@ -71,8 +90,8 @@ namespace PrimalLike.Content
             // skip lod_count, lod_threshold, submesh_count and size_of_submeshes
             blob.Skip(sizeof(uint) + sizeof(float) + sizeof(uint) + sizeof(uint));
 
-            int at = blob.Position;
-            uint gpuId = Renderer.AddSubmesh(at);
+            IntPtr at = blob.Position;
+            uint gpuId = Renderer.AddSubmesh(ref at);
 
             // create a fake pointer and put it in the geometry_hierarchies.
             IntPtr fakePointer = CreateGpuIdFakePointer(gpuId);
@@ -91,38 +110,37 @@ namespace PrimalLike.Content
         {
             Debug.Assert(data != IntPtr.Zero);
             int size = GetGeometryHierarchyBufferSize(data);
-            IntPtr hierarchyBuffer = Marshal.AllocHGlobal(size);
             BlobStreamReader blob = new(data);
 
             uint lodCount = blob.Read<uint>();
             Debug.Assert(lodCount > 0);
 
-            GeometryHierarchyStream stream = new(hierarchyBuffer, lodCount);
+            GeometryHierarchyStream stream = new(size, lodCount);
             ushort submeshIndex = 0;
-            uint[] gpuIds = stream.GpuIds;
 
-            for (var lodIdx = 0; lodIdx < lodCount; ++lodIdx)
+            for (int lodIdx = 0; lodIdx < lodCount; ++lodIdx)
             {
-                stream.Thresholds[lodIdx] = blob.Read<float>();
+                float trheshold = blob.Read<float>();
+                stream.Thresholds.Add(trheshold);
 
                 uint id = blob.Read<uint>();
                 Debug.Assert(id < ushort.MaxValue);
                 ushort idCount = (ushort)id;
-
-                stream.LodOffsets[lodIdx] = new LodOffset
+                stream.LodOffsets.Add(new()
                 {
                     Offset = submeshIndex,
                     Count = idCount
-                };
+                });
 
                 // skip over size_of_submeshes
                 blob.Skip(sizeof(uint));
 
                 for (ushort idIdx = 0; idIdx < idCount; idIdx++)
                 {
-                    var at = blob.Position;
-                    gpuIds[submeshIndex++] = (uint)Renderer.AddSubmesh(at);
-                    blob.Skip(at - blob.Position);
+                    IntPtr at = blob.Position;
+                    stream.GpuIds.Add(Renderer.AddSubmesh(ref at));
+                    submeshIndex++;
+                    blob.Skip((uint)(at - blob.Position));
                     Debug.Assert(submeshIndex < ushort.MaxValue);
                 }
             }
@@ -132,7 +150,7 @@ namespace PrimalLike.Content
             Debug.Assert(Marshal.SizeOf(typeof(IntPtr)) > 2, "We need the least significant bit for the single mesh marker.");
             lock (GeometryMutex)
             {
-                GeometryHierarchies.Add(hierarchyBuffer);
+                GeometryHierarchies.Add(stream.GetHierarchyBuffer());
                 return (uint)(GeometryHierarchies.Count - 1);
             }
         }
@@ -192,8 +210,8 @@ namespace PrimalLike.Content
                 {
                     GeometryHierarchyStream stream = new(pointer);
                     uint lodCount = stream.LodCount;
-                    uint idIndex = 0;
-                    for (uint lod = 0; lod < lodCount; lod++)
+                    int idIndex = 0;
+                    for (int lod = 0; lod < lodCount; lod++)
                     {
                         for (ushort i = 0; i < stream.LodOffsets[lod].Count; i++)
                         {
