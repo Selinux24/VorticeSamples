@@ -2,7 +2,7 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
-namespace PrimalLike.Utilities
+namespace Utilities
 {
     /// <summary>
     /// Blob stream reader.
@@ -23,7 +23,7 @@ namespace PrimalLike.Utilities
         /// <summary>
         /// Current offset
         /// </summary>
-        public ulong Offset => (ulong)(_position - _buffer);
+        public int Offset => (int)(_position - _buffer);
 
         /// <summary>
         /// Constructor

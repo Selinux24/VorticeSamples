@@ -1,9 +1,9 @@
 ﻿using PrimalLike.Content;
-using PrimalLike.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
 using System.Runtime.InteropServices;
+using Utilities;
 using Vortice.Direct3D12;
 using Vortice.DXGI;
 

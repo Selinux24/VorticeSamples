@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text;
 
-namespace PrimalLike.Utilities
+namespace Utilities
 {
     /// <summary>
     /// Blob stream writer.
@@ -10,7 +11,7 @@ namespace PrimalLike.Utilities
     public class BlobStreamWriter
     {
         private readonly IntPtr _buffer;
-        private int _position;
+        private IntPtr _position;
         private readonly int _bufferSize;
 
         /// <summary>
@@ -20,15 +21,15 @@ namespace PrimalLike.Utilities
         /// <summary>
         /// Buffer end pointer
         /// </summary>
-        public IntPtr BufferEnd => _buffer;
+        public IntPtr BufferEnd => _buffer + _bufferSize;
         /// <summary>
         /// Current position
         /// </summary>
-        public int Position => _position;
+        public IntPtr Position => _position;
         /// <summary>
         /// Current offset
         /// </summary>
-        public int Offset => _position;
+        public int Offset => (int)(_position - _buffer);
 
         /// <summary>
         /// Constructor
@@ -39,10 +40,23 @@ namespace PrimalLike.Utilities
         {
             Debug.Assert(buffer != IntPtr.Zero && bufferSize > 0);
             _buffer = buffer;
-            _position = 0;
+            _position = buffer;
             _bufferSize = bufferSize;
         }
 
+        /// <summary>
+        /// Writes 'value' into 'buffer'.
+        /// </summary>
+        /// <param name="value">String value</param>
+        public void Write(string value)
+        {
+            byte[] buffer = Encoding.UTF8.GetBytes(value);
+            int size = buffer.Length;
+            Debug.Assert(Offset + size <= _bufferSize);
+            Write(size);
+            Marshal.Copy(buffer, 0, _position, size);
+            _position += size;
+        }
         /// <summary>
         /// This method is intended to write primitive types (e.g. int, float, bool)
         /// </summary>
@@ -51,9 +65,22 @@ namespace PrimalLike.Utilities
         public void Write<T>(T value) where T : struct
         {
             int size = Marshal.SizeOf<T>();
-            Debug.Assert(_position + size <= _bufferSize);
-            Marshal.StructureToPtr(value, _buffer + _position, false);
+            Debug.Assert(Offset + size <= _bufferSize);
+            Marshal.StructureToPtr(value, _position, false);
             _position += size;
+        }
+        /// <summary>
+        /// Writes 'array' into 'buffer'.
+        /// </summary>
+        /// <typeparam name="T">Array type</typeparam>
+        /// <param name="array">Array</param>
+        public void Write<T>(T[] array) where T : struct
+        {
+            int size = Marshal.SizeOf<T>() * array.Length;
+            Debug.Assert(Offset + size <= _bufferSize);
+            byte[] buffer = new byte[size];
+            Buffer.BlockCopy(array, 0, buffer, 0, size);
+            Write(buffer);
         }
         /// <summary>
         /// Writes bytes into 'buffer'.
@@ -61,10 +88,10 @@ namespace PrimalLike.Utilities
         /// <param name="buffer">Buffer</param>
         public void Write(byte[] buffer)
         {
-            int length = buffer.Length;
-            Debug.Assert(_position + length <= _bufferSize);
-            Marshal.Copy(buffer, 0, _buffer + _position, length);
-            _position += length;
+            int size = buffer.Length;
+            Debug.Assert(Offset + size <= _bufferSize);
+            Marshal.Copy(buffer, 0, _position, size);
+            _position += size;
         }
         /// <summary>
         /// Writes 'length' bytes into 'buffer'.
@@ -73,10 +100,10 @@ namespace PrimalLike.Utilities
         /// <param name="length">Buffer length</param>
         public void Write(IntPtr buffer, int length)
         {
-            Debug.Assert(_position + length <= _bufferSize);
+            Debug.Assert(Offset + length <= _bufferSize);
             byte[] tempBuffer = new byte[length];
             Marshal.Copy(buffer, tempBuffer, 0, length);
-            Marshal.Copy(tempBuffer, 0, _buffer + _position, length);
+            Marshal.Copy(tempBuffer, 0, _position, length);
             _position += length;
         }
         /// <summary>
@@ -85,8 +112,17 @@ namespace PrimalLike.Utilities
         /// <param name="offset">Offset</param>
         public void Skip(int offset)
         {
-            Debug.Assert(_position + offset <= _bufferSize);
+            Debug.Assert(Offset + offset <= _bufferSize);
             _position += offset;
+        }
+        /// <summary>
+        /// Skips 'offset' bytes.
+        /// </summary>
+        /// <param name="offset">Offset</param>
+        public void Skip(uint offset)
+        {
+            Debug.Assert(Offset + offset <= _bufferSize);
+            _position += (int)offset;
         }
     }
 }

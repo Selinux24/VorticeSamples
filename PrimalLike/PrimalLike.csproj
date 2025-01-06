@@ -13,4 +13,8 @@
     <DefineConstants>$(DefineConstants);EDITOR</DefineConstants>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Libs\Utilities\Utilities.csproj" />
+  </ItemGroup>
+
 </Project>

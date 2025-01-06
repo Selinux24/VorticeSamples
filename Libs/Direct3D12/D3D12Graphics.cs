@@ -178,38 +178,38 @@ namespace Direct3D12
             D3D12Shaders.Shutdown();
             D3D12GPass.Shutdown();
 
-            dxgiFactory.Dispose();
+            dxgiFactory?.Dispose();
             dxgiFactory = null;
 
             // NOTE: some modules free their descriptors when they shutdown.
             //       We process those by calling process_deferred_free once more.
-            rtvDescHeap.ProcessDeferredFree(0);
-            dsvDescHeap.ProcessDeferredFree(0);
-            srvDescHeap.ProcessDeferredFree(0);
-            uavDescHeap.ProcessDeferredFree(0);
+            rtvDescHeap?.ProcessDeferredFree(0);
+            dsvDescHeap?.ProcessDeferredFree(0);
+            srvDescHeap?.ProcessDeferredFree(0);
+            uavDescHeap?.ProcessDeferredFree(0);
 
-            rtvDescHeap.Dispose();
-            dsvDescHeap.Dispose();
-            srvDescHeap.Dispose();
-            uavDescHeap.Dispose();
+            rtvDescHeap?.Dispose();
+            dsvDescHeap?.Dispose();
+            srvDescHeap?.Dispose();
+            uavDescHeap?.Dispose();
 
             // NOTE: some types only use deferred release for their resources during
             //       shutdown/reset/clear. To finally release these resources we call
             //       process_deferred_releases once more.
             ProcessDeferredReleases(0);
 
-            gfxCommand.Dispose();
+            gfxCommand?.Dispose();
             gfxCommand = null;
 
-            resourceBarriers.Dispose();
+            resourceBarriers?.Dispose();
 
-            mainAdapter.Dispose();
+            mainAdapter?.Dispose();
             mainAdapter = null;
 
 #if DEBUG
             ClearInfoQueueConfiguration();
 
-            infoQueue.Dispose();
+            infoQueue?.Dispose();
             infoQueue = null;
 
             ID3D12DebugDevice2 debugDevice = null;
@@ -218,7 +218,7 @@ namespace Direct3D12
             {
                 debugDevice = mainDevice.QueryInterfaceOrNull<ID3D12DebugDevice2>();
             }
-            mainDevice.Dispose();
+            mainDevice?.Dispose();
             mainDevice = null;
 
             if (debugDevice != null)
@@ -235,7 +235,7 @@ namespace Direct3D12
                 dxgiDebug.Dispose();
             }
 #else
-            mainDevice.Dispose();
+            mainDevice?.Dispose();
             mainDevice = null;
 #endif
         }

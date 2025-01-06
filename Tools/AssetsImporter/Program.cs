@@ -49,7 +49,7 @@ namespace AssetsImporter
             {
                 Directory.CreateDirectory(outputDir);
             }
-            File.WriteAllBytes(output, sceneData.Buffer);
+            sceneData.SaveToFile(output);
 
             Console.WriteLine(sceneData.BufferSize > 0 ? $"Asset imported successfully. {sceneData.BufferSize} bytes" : "Asset import failed");
         }

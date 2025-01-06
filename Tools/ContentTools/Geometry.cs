@@ -5,7 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Numerics;
 using System.Runtime.InteropServices;
-using System.Text;
+using Utilities;
 
 namespace ContentTools
 {
@@ -315,33 +315,32 @@ namespace ContentTools
         public static void PackData(Scene scene, SceneData data)
         {
             int sceneSize = GetSceneSize(scene);
-            var buffer = new byte[sceneSize];
-            int at = 0;
+            data.Buffer = Marshal.AllocHGlobal(sceneSize);
+            data.BufferSize = sceneSize;
+
+            BlobStreamWriter blob = new(data.Buffer, data.BufferSize);
 
             // scene name
-            WriteData(buffer, ref at, scene.Name);
+            blob.Write(scene.Name);
 
             // number of LODs
-            WriteData(buffer, ref at, scene.LODGroups.Count);
+            blob.Write(scene.LODGroups.Count);
 
             foreach (var lod in scene.LODGroups)
             {
                 // LOD name
-                WriteData(buffer, ref at, lod.Name);
+                blob.Write(lod.Name);
 
                 // number of meshes in this LOD
-                WriteData(buffer, ref at, lod.Meshes.Count);
+                blob.Write(lod.Meshes.Count);
 
                 foreach (var m in lod.Meshes)
                 {
-                    PackMeshData(buffer, ref at, m);
+                    PackMeshData(m, blob);
                 }
             }
 
-            Debug.Assert(sceneSize == at);
-
-            data.BufferSize = sceneSize;
-            data.Buffer = buffer;
+            Debug.Assert(sceneSize == blob.Offset);
         }
         private static int GetSceneSize(Scene scene)
         {
@@ -398,84 +397,56 @@ namespace ContentTools
 
             return size;
         }
-        private static void PackMeshData(byte[] buffer, ref int at, Mesh m)
+        private static void PackMeshData(Mesh m, BlobStreamWriter blob)
         {
             // mesh name
-            WriteData(buffer, ref at, m.Name);
+            blob.Write(m.Name);
 
             // lod id
-            WriteData(buffer, ref at, m.LODId);
+            blob.Write(m.LODId);
 
             // elements size
             int elementsSize = GetVertexElementSize(m.ElementsType);
-            WriteData(buffer, ref at, elementsSize);
+            blob.Write(elementsSize);
 
             // elements type enumeration
-            WriteData(buffer, ref at, (uint)m.ElementsType);
+            blob.Write((uint)m.ElementsType);
 
             // number of vertices
             int numVertices = m.Vertices.Count;
-            WriteData(buffer, ref at, numVertices);
+            blob.Write(numVertices);
 
             // index size (16 bit or 32 bit)
             int indexSize = (numVertices < (1 << 16)) ? sizeof(ushort) : sizeof(uint);
-            WriteData(buffer, ref at, indexSize);
+            blob.Write(indexSize);
 
             // number of indices
             int numIndices = m.Indices.Count;
-            WriteData(buffer, ref at, numIndices);
+            blob.Write(numIndices);
 
             // LOD threshold
-            WriteData(buffer, ref at, m.LODThreshold);
+            blob.Write(m.LODThreshold);
 
             // position buffer
             Debug.Assert(m.PositionBuffer.Length == Marshal.SizeOf(typeof(Vector3)) * numVertices);
-            WriteData(buffer, ref at, m.PositionBuffer);
+            blob.Write(m.PositionBuffer);
 
             // element buffer
             Debug.Assert(m.ElementBuffer.Length == elementsSize * numVertices);
-            WriteData(buffer, ref at, m.ElementBuffer);
+            blob.Write(m.ElementBuffer);
 
             // index data
             int indexDataLenght = indexSize * numIndices;
             if (indexSize == (uint)sizeof(ushort))
             {
                 ushort[] data = m.Indices.Take(numIndices).Select(i => (ushort)i).ToArray();
-                WriteData(buffer, ref at, data.ToArray(), indexDataLenght);
+                blob.Write(data);
             }
             else
             {
                 var data = m.Indices.ToArray();
-                WriteData(buffer, ref at, data, indexDataLenght);
+                blob.Write(data);
             }
-        }
-        private static void WriteData(byte[] buffer, ref int at, string value)
-        {
-            WriteData(buffer, ref at, BitConverter.GetBytes(value.Length));
-            WriteData(buffer, ref at, Encoding.UTF8.GetBytes(value));
-        }
-        private static void WriteData(byte[] buffer, ref int at, int value)
-        {
-            WriteData(buffer, ref at, BitConverter.GetBytes(value));
-        }
-        private static void WriteData(byte[] buffer, ref int at, float value)
-        {
-            WriteData(buffer, ref at, BitConverter.GetBytes(value));
-        }
-        private static void WriteData(byte[] buffer, ref int at, ushort[] data, int length)
-        {
-            Buffer.BlockCopy(data, 0, buffer, at, length);
-            at += length;
-        }
-        private static void WriteData(byte[] buffer, ref int at, uint[] data, int length)
-        {
-            Buffer.BlockCopy(data, 0, buffer, at, length);
-            at += length;
-        }
-        private static void WriteData(byte[] dst, ref int at, byte[] src)
-        {
-            Buffer.BlockCopy(src, 0, dst, at, src.Length);
-            at += src.Length;
         }
     }
 }

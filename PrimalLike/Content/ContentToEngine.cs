@@ -1,10 +1,10 @@
 ﻿using PrimalLike.Graphics;
-using PrimalLike.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
 using System.IO;
+using System.Runtime.InteropServices;
+using Utilities;
 
 namespace PrimalLike.Content
 {

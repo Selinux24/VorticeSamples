@@ -3,9 +3,5 @@
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
   </PropertyGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\Libs\Utilities\Utilities.csproj" />
-  </ItemGroup>
-
+  
 </Project>
