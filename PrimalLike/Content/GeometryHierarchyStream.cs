@@ -77,12 +77,13 @@ namespace PrimalLike.Content
 
             return buffer;
         }
-        public void GetGpuIds(uint lod, out int[] ids, out uint idCount)
+        public void GetGpuIds(uint lod, out uint[] ids, out uint idCount)
         {
             Debug.Assert(lod < lodCount);
-            ids = new int[LodOffsets[(int)lod].Count];
-            idCount = LodOffsets[(int)lod].Count;
-            Marshal.Copy(buffer + LodOffsets[(int)lod].Offset, ids, 0, (int)idCount);
+            var offset = LodOffsets[(int)lod];
+            idCount = offset.Count;
+            ids = new uint[idCount];
+            Array.Copy(GpuIds.ToArray(), offset.Offset, ids, 0, (int)idCount);
         }
         public uint LodFromThreshold(float threshold)
         {

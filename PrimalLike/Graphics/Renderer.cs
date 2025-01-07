@@ -1,11 +1,13 @@
-﻿global using SurfaceId = System.UInt32;
+﻿global using CameraId = System.UInt32;
 global using SubmeshId = System.UInt32;
+global using SurfaceId = System.UInt32;
+using PrimalLike.EngineAPI;
 using PrimalLike.Platform;
 using System;
 
 namespace PrimalLike.Graphics
 {
-    public static class Renderer
+    static class Renderer
     {
         private static IGraphicsPlatform gfx;
 
@@ -13,6 +15,8 @@ namespace PrimalLike.Graphics
         {
             gfx = graphicsFactory.CreateGraphicsPlatform();
         }
+
+        public static IGraphicsPlatform Gfx { get => gfx; }
 
         public static bool Initialize(IGraphicsPlatformFactory graphicsFactory)
         {
@@ -53,6 +57,23 @@ namespace PrimalLike.Graphics
         public static void RenderSurface(SurfaceId id)
         {
             gfx.RenderSurface(id);
+        }
+
+        public static Camera CreateCamera(CameraInitInfo info)
+        {
+            return gfx.CreateCamera(info);
+        }
+        public static void RemoveCamera(CameraId id)
+        {
+            gfx.RemoveCamera(id);
+        }
+        public static void SetParameter(CameraId id, CameraParameters parameter, IntPtr data, int size)
+        {
+            gfx.SetParameter(id, parameter, data, size);
+        }
+        public static void GetParameter(CameraId id, CameraParameters parameter, IntPtr data, int size)
+        {
+            gfx.GetParameter(id, parameter, data, size);
         }
 
         public static SubmeshId AddSubmesh(ref IntPtr data)

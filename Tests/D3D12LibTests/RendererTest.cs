@@ -7,9 +7,10 @@ using PrimalLike.EngineAPI;
 using PrimalLike.Graphics;
 using PrimalLike.Platform;
 using ShaderCompiler;
+using System.Diagnostics;
 using System.IO;
+using System.Numerics;
 using System.Threading;
-using Vortice.Direct3D12;
 using WindowsPlatform;
 
 namespace D3D12LibTests
@@ -157,6 +158,21 @@ namespace D3D12LibTests
             }
         }
 
+        private static Entity CreateOneGameEntity()
+        {
+            EntityInfo entityInfo = new()
+            {
+                Transform = new()
+                {
+                    Rotation = Quaternion.CreateFromYawPitchRoll(0, 3.14f, 0)
+                }
+            };
+
+            Entity ntt = GameEntity.Create(entityInfo);
+            Debug.Assert(ntt.IsValid());
+            return ntt;
+        }
+
         [Test()]
         public void RenderTest()
         {
@@ -201,6 +217,30 @@ namespace D3D12LibTests
 
             // Shutdown worker threads
             JoinTestWorkers();
+
+            Assert.That(true);
+        }
+        [Test()]
+        public void CameraTest()
+        {
+            InitializeApplication();
+
+            ShowTestWindows();
+
+            var entity = CreateOneGameEntity();
+            var camera = app.CreateCamera(new PerspectiveCameraInitInfo(entity.Id));
+            Assert.That(camera.IsValid);
+
+            app.Run();
+
+            if (camera.IsValid)
+            {
+                app.RemoveCamera(camera.Id);
+            }
+            if (entity.IsValid())
+            {
+                GameEntity.Remove(entity.Id);
+            }
 
             Assert.That(true);
         }

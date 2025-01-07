@@ -30,7 +30,7 @@ namespace Direct3D12
         private static D3D12Device mainDevice;
 #if DEBUG
         private static ID3D12InfoQueue infoQueue;
-        private static readonly bool enableGPUBasedValidation = true;
+        private static readonly bool enableGPUBasedValidation = false;
 #endif
         private static DXGIFactory dxgiFactory;
         private static D3D12Command gfxCommand;

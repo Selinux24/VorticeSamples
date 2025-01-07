@@ -1,4 +1,5 @@
-﻿using PrimalLike.Platform;
+﻿using PrimalLike.EngineAPI;
+using PrimalLike.Platform;
 using System;
 
 namespace PrimalLike.Graphics
@@ -53,6 +54,33 @@ namespace PrimalLike.Graphics
         /// </summary>
         /// <param name="id">Surface id</param>
         void RenderSurface(SurfaceId id);
+
+        /// <summary>
+        /// Creates a camera.
+        /// </summary>
+        /// <param name="info">Camera initialization info</param>
+        Camera CreateCamera(CameraInitInfo info);
+        /// <summary>
+        /// Removes a camera.
+        /// </summary>
+        /// <param name="id">Camera id</param>
+        void RemoveCamera(CameraId id);
+        /// <summary>
+        /// Sets a camera parameter.
+        /// </summary>
+        /// <param name="id">Camera id</param>
+        /// <param name="parameter">Parameter to set</param>
+        /// <param name="data">Data to read-from the parameter value</param>
+        /// <param name="size">Size of data</param>
+        void SetParameter(CameraId id, CameraParameters parameter, IntPtr data, int size);
+        /// <summary>
+        /// Gets a camera parameter.
+        /// </summary>
+        /// <param name="id">Camera id</param>
+        /// <param name="parameter">Parameter to get</param>
+        /// <param name="data">Data to write-in the parameter value</param>
+        /// <param name="size">Size of data</param>
+        void GetParameter(CameraId id, CameraParameters parameter, IntPtr data, int size);
 
         /// <summary>
         /// Adds a submesh.

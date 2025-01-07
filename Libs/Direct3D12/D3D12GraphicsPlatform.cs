@@ -1,4 +1,5 @@
-﻿using PrimalLike.Graphics;
+﻿using PrimalLike.EngineAPI;
+using PrimalLike.Graphics;
 using PrimalLike.Platform;
 using System;
 
@@ -54,6 +55,27 @@ namespace Direct3D12
         public void RenderSurface(uint id)
         {
             D3D12Graphics.RenderSurface(id);
+        }
+
+        /// <inheritdoc/>
+        public Camera CreateCamera(CameraInitInfo info)
+        {
+            return D3D12Camera.Create(info);
+        }
+        /// <inheritdoc/>
+        public void RemoveCamera(uint id)
+        {
+            D3D12Camera.Remove(id);
+        }
+        /// <inheritdoc/>
+        public void SetParameter(uint id, CameraParameters parameter, IntPtr data, int size)
+        {
+            D3D12Camera.SetParameter(id, parameter, data, size);
+        }
+        /// <inheritdoc/>
+        public void GetParameter(uint id, CameraParameters parameter, IntPtr data, int size)
+        {
+            D3D12Camera.GetParameter(id, parameter, data, size);
         }
 
         /// <inheritdoc/>

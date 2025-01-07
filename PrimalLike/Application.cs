@@ -1,4 +1,5 @@
-﻿using PrimalLike.Graphics;
+﻿using PrimalLike.EngineAPI;
+using PrimalLike.Graphics;
 using PrimalLike.Platform;
 using System.Collections.Generic;
 using System.Drawing;
@@ -35,6 +36,7 @@ namespace PrimalLike
         private readonly Time time = new();
         private readonly object tickLock = new();
         private readonly List<RenderSurface> renderSurfaces = [];
+        private readonly List<Camera> cameras = [];
 
         /// <summary>
         /// Gets whether the application is running.
@@ -98,6 +100,27 @@ namespace PrimalLike
 
             var surface = renderSurfaces.Find(x => x.Window == window);
             Renderer.ResizeSurface(surface.Surface.Id, clientArea.Width, clientArea.Height);
+        }
+
+        /// <summary>
+        /// Creates a camera
+        /// </summary>
+        /// <param name="info">Camera initialization info</param>
+        public Camera CreateCamera(CameraInitInfo info)
+        {
+            var camera = Renderer.CreateCamera(info);
+            cameras.Add(camera);
+            return camera;
+        }
+        /// <summary>
+        /// Removes a camera.
+        /// </summary>
+        /// <param name="id">Camera id</param>
+        public void RemoveCamera(CameraId id)
+        {
+            var camera = cameras.Find(x => x.Id == id);
+            cameras.Remove(camera);
+            Renderer.RemoveCamera(id);
         }
 
         /// <summary>

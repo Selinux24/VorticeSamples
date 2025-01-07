@@ -55,6 +55,7 @@ namespace DX12Windows
             app.CreateWindow(windowInfo2);
             app.CreateWindow(windowInfo3);
             app.CreateWindow(windowInfo4);
+
             app.Run();
         }
     }

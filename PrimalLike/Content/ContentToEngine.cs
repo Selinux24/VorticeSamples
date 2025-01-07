@@ -116,7 +116,7 @@ namespace PrimalLike.Content
             Debug.Assert(lodCount > 0);
 
             GeometryHierarchyStream stream = new(size, lodCount);
-            ushort submeshIndex = 0;
+            uint submeshIndex = 0;
 
             for (int lodIdx = 0; lodIdx < lodCount; ++lodIdx)
             {
@@ -128,7 +128,7 @@ namespace PrimalLike.Content
                 ushort idCount = (ushort)id;
                 stream.LodOffsets.Add(new()
                 {
-                    Offset = submeshIndex,
+                    Offset = (ushort)submeshIndex,
                     Count = idCount
                 });
 
