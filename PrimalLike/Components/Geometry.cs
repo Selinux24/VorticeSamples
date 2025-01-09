@@ -63,7 +63,7 @@ namespace PrimalLike.Components
             GeometryId last_id = ownerIds[^1];
             //TODO Remove content
             idMapping[(int)IdDetail.Index(last_id)] = index;
-            idMapping[(int)IdDetail.Index(id)] = IdType.MaxValue;
+            idMapping[(int)IdDetail.Index(id)] = IdDetail.InvalidId;
 
             if (generations[(int)index] < GenerationType.MaxValue)
             {

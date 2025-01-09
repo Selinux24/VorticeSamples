@@ -38,7 +38,7 @@ namespace Direct3D12
         }
         public class UploadContext
         {
-            private ID3D12GraphicsCommandList cmdList = null;
+            private readonly ID3D12GraphicsCommandList cmdList = null;
             private ID3D12Resource uploadBuffer = null;
             private void* cpuAddress = null;
             private uint frameIndex = uint.MaxValue;

@@ -1,5 +1,6 @@
 ﻿using PrimalLike.Components;
 using PrimalLike.EngineAPI;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -16,7 +17,7 @@ namespace PrimalLike.Content
             Script,
         }
 
-        delegate bool ComponentReader(byte[] data, ref EntityInfo info);
+        delegate bool ComponentReader(BinaryReader reader, ref EntityInfo info);
         static readonly ComponentReader[] componentReaders =
         [
             ReadTransform,
@@ -48,9 +49,7 @@ namespace PrimalLike.Content
                     int componentType = reader.ReadInt32();
                     Debug.Assert(componentType < componentReaders.Length);
 
-                    int componentSize = reader.ReadInt32();
-                    byte[] componentData = reader.ReadBytes(componentSize);
-                    if (!componentReaders[componentType](componentData, ref info))
+                    if (!componentReaders[componentType](reader, ref info))
                     {
                         return false;
                     }
@@ -74,10 +73,10 @@ namespace PrimalLike.Content
             }
         }
 
-        private static bool ReadTransform(byte[] data, ref EntityInfo info)
+        private static bool ReadTransform(BinaryReader reader, ref EntityInfo info)
         {
-            using MemoryStream stream = new(data);
-            using BinaryReader reader = new(stream, Encoding.UTF8, false);
+            int componentSize = reader.ReadInt32();
+            long position = reader.BaseStream.Position;
 
             TransformInfo transform = new()
             {
@@ -86,18 +85,25 @@ namespace PrimalLike.Content
                 Scale = new(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle())
             };
 
+            Debug.Assert(position + componentSize == reader.BaseStream.Position);
+
             info.Transform = transform;
 
             return true;
         }
-        private static bool ReadScript(byte[] data, ref EntityInfo info)
+        private static bool ReadScript(BinaryReader reader, ref EntityInfo info)
         {
-            string scriptName = Encoding.UTF8.GetString(data);
+            int componentSize = reader.ReadInt32();
+            long position = reader.BaseStream.Position;
+            
+            string scriptName = Encoding.UTF8.GetString(reader.ReadBytes(componentSize));
 
             ScriptInfo script = new()
             {
                 ScriptCreator = Script.GetScriptCreator(scriptName)
             };
+
+            Debug.Assert(position + componentSize == reader.BaseStream.Position);
 
             info.Script = script;
 

@@ -1,7 +1,6 @@
 ﻿using PrimalLike.Common;
 using PrimalLike.Graphics;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -19,8 +18,7 @@ namespace PrimalLike.Content
         /// </summary>
         private const IntPtr SingleMeshMarker = 0x01;
         private static readonly int ShiftBits = (Marshal.SizeOf<IntPtr>() - sizeof(IdType)) << 3;
-
-        private static readonly List<IntPtr> GeometryHierarchies = [];
+        private static readonly FreeList<IntPtr> GeometryHierarchies = new();
         private static readonly object GeometryMutex = new();
 
         private static readonly List<IntPtr> Shaders = [];
@@ -102,8 +100,7 @@ namespace PrimalLike.Content
             IntPtr fakePointer = CreateGpuIdFakePointer(gpuId);
             lock (GeometryMutex)
             {
-                GeometryHierarchies.Add(fakePointer);
-                return (uint)(GeometryHierarchies.Count - 1);
+                return (uint)GeometryHierarchies.Add(fakePointer);
             }
         }
         private static IntPtr CreateGpuIdFakePointer(uint gpuId)
@@ -155,8 +152,7 @@ namespace PrimalLike.Content
             Debug.Assert(Marshal.SizeOf(typeof(IntPtr)) > 2, "We need the least significant bit for the single mesh marker.");
             lock (GeometryMutex)
             {
-                GeometryHierarchies.Add(stream.GetHierarchyBuffer());
-                return (uint)(GeometryHierarchies.Count - 1);
+                return (uint)GeometryHierarchies.Add(stream.GetHierarchyBuffer());
             }
         }
         private static int GetGeometryHierarchyBufferSize(IntPtr data)
@@ -228,13 +224,13 @@ namespace PrimalLike.Content
                     Marshal.FreeHGlobal(pointer);
                 }
 
-                GeometryHierarchies[(int)id] = IntPtr.Zero;
+                GeometryHierarchies.Remove((int)id);
             }
         }
         private static IdType GpuIdFromFakePointer(IntPtr pointer)
         {
             Debug.Assert((pointer & SingleMeshMarker) != 0);
-            return (IdType)((pointer >> ShiftBits) & IdType.MaxValue);
+            return (IdType)((pointer >> ShiftBits) & IdDetail.InvalidId);
         }
 
         public static IdType AddShader(IntPtr data)

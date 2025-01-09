@@ -1,6 +1,5 @@
 ﻿using PrimalLike.Content;
 using System;
-using System.Collections.Generic;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using Utilities;
@@ -22,8 +21,8 @@ namespace Direct3D12
             public uint ElementsType;
         };
 
-        static readonly List<ID3D12Resource> submeshBuffers = [];
-        static readonly List<SubmeshView> submeshViews = [];
+        static readonly FreeList<ID3D12Resource> submeshBuffers = new();
+        static readonly FreeList<SubmeshView> submeshViews = new();
         static readonly object submeshMutex = new();
 
         private static D3DPrimitiveTopology GetD3DPrimitiveTopology(PrimitiveTopology type)
@@ -105,8 +104,7 @@ namespace Direct3D12
             lock (submeshMutex)
             {
                 submeshBuffers.Add(resource);
-                submeshViews.Add(view);
-                return (uint)(submeshViews.Count - 1);
+                return (uint)submeshViews.Add(view);
             }
         }
         /// <summary>
@@ -117,10 +115,10 @@ namespace Direct3D12
         {
             lock (submeshMutex)
             {
-                submeshViews[(int)id] = default;
+                submeshViews.Remove((int)id);
 
                 D3D12Graphics.DeferredRelease(submeshBuffers[(int)id]);
-                submeshBuffers[(int)id] = null;
+                submeshBuffers.Remove((int)id);
             }
         }
     }

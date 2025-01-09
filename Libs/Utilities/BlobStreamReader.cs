@@ -9,21 +9,27 @@ namespace Utilities
     /// </summary>
     public class BlobStreamReader
     {
-        private readonly IntPtr _buffer;
-        private IntPtr _position;
+        /// <summary>
+        /// Start buffer pointer
+        /// </summary>
+        private readonly IntPtr buffer;
+        /// <summary>
+        /// Current buffer pointer
+        /// </summary>
+        private IntPtr position;
 
         /// <summary>
         /// Buffer start pointer
         /// </summary>
-        public IntPtr BufferStart => _buffer;
+        public IntPtr Start => buffer;
         /// <summary>
         /// Current position
         /// </summary>
-        public IntPtr Position => _position;
+        public IntPtr Position => position;
         /// <summary>
         /// Current offset
         /// </summary>
-        public int Offset => (int)(_position - _buffer);
+        public int Offset => (int)(position - buffer);
 
         /// <summary>
         /// Constructor
@@ -32,8 +38,8 @@ namespace Utilities
         public BlobStreamReader(IntPtr buffer)
         {
             Debug.Assert(buffer != IntPtr.Zero);
-            _buffer = buffer;
-            _position = buffer;
+            this.buffer = buffer;
+            position = buffer;
         }
 
         /// <summary>
@@ -41,11 +47,11 @@ namespace Utilities
         /// </summary>
         /// <typeparam name="T">Primitive type</typeparam>
         /// <returns>Returns the value</returns>
-        public T Read<T>() where T : struct
+        public T Read<T>() where T : unmanaged
         {
             int size = Marshal.SizeOf<T>();
-            T value = Marshal.PtrToStructure<T>(_position);
-            _position += size;
+            T value = Marshal.PtrToStructure<T>(position);
+            position += size;
             return value;
         }
         /// <summary>
@@ -56,8 +62,8 @@ namespace Utilities
         public byte[] Read(int length)
         {
             byte[] buffer = new byte[length];
-            Marshal.Copy(_position, buffer, 0, length);
-            _position += length;
+            Marshal.Copy(position, buffer, 0, length);
+            position += length;
             return buffer;
         }
         /// <summary>
@@ -66,7 +72,7 @@ namespace Utilities
         /// <param name="offset">Offset</param>
         public void Skip(int offset)
         {
-            _position += offset;
+            position += offset;
         }
         /// <summary>
         /// Skips 'offset' bytes.
@@ -74,7 +80,7 @@ namespace Utilities
         /// <param name="offset">Offset</param>
         public void Skip(uint offset)
         {
-            _position += (int)offset;
+            Skip((int)offset);
         }
     }
 }

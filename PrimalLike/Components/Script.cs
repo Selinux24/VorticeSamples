@@ -80,7 +80,7 @@ namespace PrimalLike.Components
             entityScripts.RemoveAt(entityScripts.Count - 1);
 
             idMapping[(int)IdDetail.Index(last_id)] = index;
-            idMapping[(int)IdDetail.Index(id)] = IdType.MaxValue;
+            idMapping[(int)IdDetail.Index(id)] = IdDetail.InvalidId;
 
             if (generations[(int)index] < GenerationType.MaxValue)
             {

@@ -1,16 +1,16 @@
 ﻿using PrimalLike.Common;
 using PrimalLike.EngineAPI;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.InteropServices;
+using Utilities;
 
 namespace Direct3D12
 {
     public class D3D12Camera
     {
-        private static readonly List<D3D12Camera> cameras = [];
+        private static readonly FreeList<D3D12Camera> cameras = new();
 
         delegate void SetFunction(D3D12Camera camera, IntPtr data, int size);
         delegate void GetFunction(D3D12Camera camera, IntPtr data, int size);
@@ -51,14 +51,14 @@ namespace Direct3D12
 
         public static Camera Create(CameraInitInfo info)
         {
-            cameras.Add(new D3D12Camera(info));
-            int id = cameras.Count - 1;
+            int id = cameras.Add(new D3D12Camera(info));
+
             return new Camera((uint)id);
         }
         public static void Remove(uint id)
         {
             Debug.Assert(IdDetail.IsValid(id));
-            cameras[(int)id] = null;
+            cameras.Remove((int)id);
         }
         public static void SetParameter(uint id, CameraParameters parameter, IntPtr data, int dataSize)
         {
@@ -322,7 +322,7 @@ namespace Direct3D12
             entityId = info.EntityId;
             isDirty = true;
 
-            Debug.Assert(entityId != uint.MaxValue);
+            Debug.Assert(entityId != IdDetail.InvalidId);
             Update();
         }
 
