@@ -14,9 +14,9 @@ namespace DX12Windows
 
         private static readonly EngineShaderInfo[] engineShaderFiles =
         [
-            new ((int)EngineShaders.FullScreenTriangleVs, new ("FullScreenTriangle.hlsl", "FullScreenTriangleVS", (int)D3D12ShaderTypes.Vertex, profileStrings[(int)D3D12ShaderTypes.Vertex])),
-            new ((int)EngineShaders.FillColorPs, new ("FillColor.hlsl", "FillColorPS", (int)D3D12ShaderTypes.Pixel, profileStrings[(int)D3D12ShaderTypes.Pixel])),
-            new ((int)EngineShaders.PostProcessPs, new ("PostProcess.hlsl", "PostProcessPS", (int)D3D12ShaderTypes.Pixel, profileStrings[(int)D3D12ShaderTypes.Pixel])),
+            new ((int)EngineShaders.FullScreenTriangleVs, new ("FullScreenTriangle.hlsl", "FullScreenTriangleVS", (int)ShaderTypes.Vertex, profileStrings[(int)ShaderTypes.Vertex])),
+            new ((int)EngineShaders.FillColorPs, new ("FillColor.hlsl", "FillColorPS", (int)ShaderTypes.Pixel, profileStrings[(int)ShaderTypes.Pixel])),
+            new ((int)EngineShaders.PostProcessPs, new ("PostProcess.hlsl", "PostProcessPS", (int)ShaderTypes.Pixel, profileStrings[(int)ShaderTypes.Pixel])),
         ];
 
         static void Main()

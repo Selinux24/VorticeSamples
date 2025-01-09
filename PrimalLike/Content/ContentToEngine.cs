@@ -1,4 +1,5 @@
-﻿using PrimalLike.Graphics;
+﻿using PrimalLike.Common;
+using PrimalLike.Graphics;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -18,8 +19,12 @@ namespace PrimalLike.Content
         /// </summary>
         private const IntPtr SingleMeshMarker = 0x01;
         private static readonly int ShiftBits = (Marshal.SizeOf<IntPtr>() - sizeof(IdType)) << 3;
+
         private static readonly List<IntPtr> GeometryHierarchies = [];
         private static readonly object GeometryMutex = new();
+
+        private static readonly List<IntPtr> Shaders = [];
+        private static readonly object ShaderMutex = new();
 
         public static uint CreateResource(MemoryStream stream, AssetTypes assetType)
         {
@@ -230,6 +235,39 @@ namespace PrimalLike.Content
         {
             Debug.Assert((pointer & SingleMeshMarker) != 0);
             return (IdType)((pointer >> ShiftBits) & IdType.MaxValue);
+        }
+
+        public static IdType AddShader(IntPtr data)
+        {
+            CompiledShader shaderPtr = Marshal.PtrToStructure<CompiledShader>(data);
+
+            ulong size = sizeof(ulong) + CompiledShader.HashLength + shaderPtr.ByteCodeSize;
+            var shader = shaderPtr.ByteCode;
+            IntPtr shaderData = Marshal.AllocHGlobal((int)size);
+            Marshal.Copy(shader, 0, shaderData, (int)size);
+
+            lock (ShaderMutex)
+            {
+                Shaders.Add(shaderData);
+                return (IdType)Shaders.Count - 1;
+            }
+        }
+        public static void RemoveShader(IdType id)
+        {
+            lock (ShaderMutex)
+            {
+                Debug.Assert(IdDetail.IsValid(id));
+                Shaders[(int)id] = IntPtr.Zero;
+            }
+        }
+        public static IntPtr GetShader(IdType id)
+        {
+            lock (ShaderMutex)
+            {
+                Debug.Assert(IdDetail.IsValid(id));
+
+                return Shaders[(int)id];
+            }
         }
     }
 }

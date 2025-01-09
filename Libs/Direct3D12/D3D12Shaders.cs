@@ -1,4 +1,5 @@
 ﻿using PrimalLike;
+using PrimalLike.Content;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -9,19 +10,8 @@ namespace Direct3D12
 {
     class D3D12Shaders
     {
-        [StructLayout(LayoutKind.Sequential)]
-        struct CompiledShader
-        {
-            public byte[] ByteCode;
-
-            public readonly bool IsValid()
-            {
-                return ByteCode?.Length > 0;
-            }
-        }
-
         private static readonly CompiledShader?[] engineShaders = new CompiledShader?[Enum.GetValues(typeof(EngineShaders)).Length];
-        private static byte[] shadersBlob;
+        private static byte[] engineShadersBlob;
 
         public static bool Initialize()
         {
@@ -29,17 +19,18 @@ namespace Direct3D12
         }
         private static bool LoadEngineShaders()
         {
-            Debug.Assert(shadersBlob == null);
-            bool result = Engine.LoadEngineShaders(out shadersBlob);
-            Debug.Assert(shadersBlob != null && shadersBlob.Length > 0);
+            Debug.Assert(engineShadersBlob == null);
+            bool result = Engine.LoadEngineShaders(out engineShadersBlob);
+            Debug.Assert(engineShadersBlob != null && engineShadersBlob.Length > 0);
 
             int egCount = Enum.GetValues(typeof(EngineShaders)).Length;
 
-            using var stream = new MemoryStream(shadersBlob);
+            using var stream = new MemoryStream(engineShadersBlob);
             using var reader = new BinaryReader(stream, Encoding.UTF8, false);
             for (uint i = 0; i < egCount; i++)
             {
                 int size = reader.ReadInt32();
+                byte[] hash = reader.ReadBytes(16);
                 byte[] data = reader.ReadBytes(size);
 
                 nint pt = Marshal.AllocHGlobal(size);
@@ -63,7 +54,7 @@ namespace Direct3D12
             {
                 engineShaders[i] = null;
             }
-            shadersBlob = null;
+            engineShadersBlob = null;
         }
 
         public static byte[] GetEngineShader(EngineShaders id)

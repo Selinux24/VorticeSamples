@@ -37,7 +37,6 @@ namespace Direct3D12
         static D3D12RenderTexture gpassMainBuffer;
         static D3D12DepthBuffer gpassDepthBuffer;
         static SizeI dimensions = initialDimensions;
-        static ResourceBarrierFlags flags = ResourceBarrierFlags.None;
 
         static ID3D12RootSignature gpassRootSig = null;
         static ID3D12PipelineState gpassPso = null;
@@ -113,8 +112,6 @@ namespace Direct3D12
 
             D3D12Helpers.NameD3D12Object(gpassMainBuffer.Resource, "GPass Main Buffer");
             D3D12Helpers.NameD3D12Object(gpassDepthBuffer.Resource, "GPass Depth Buffer");
-
-            flags = ResourceBarrierFlags.None;
 
             return gpassMainBuffer.Resource != null && gpassDepthBuffer.Resource != null;
         }
@@ -206,10 +203,7 @@ namespace Direct3D12
             barriers.AddTransitionBarrier(
                 gpassDepthBuffer.Resource,
                 ResourceStates.DepthRead | ResourceStates.PixelShaderResource | ResourceStates.NonPixelShaderResource,
-                ResourceStates.DepthWrite,
-                flags);
-
-            flags = ResourceBarrierFlags.EndOnly;
+                ResourceStates.DepthWrite);
         }
         public static void AddTransitionsForGPass(D3D12ResourceBarrier barriers)
         {
@@ -230,12 +224,6 @@ namespace Direct3D12
                 gpassMainBuffer.Resource,
                 ResourceStates.RenderTarget,
                 ResourceStates.PixelShaderResource);
-
-            barriers.AddTransitionBarrier(
-                gpassDepthBuffer.Resource,
-                ResourceStates.DepthRead | ResourceStates.PixelShaderResource | ResourceStates.NonPixelShaderResource,
-                ResourceStates.DepthWrite,
-                ResourceBarrierFlags.BeginOnly);
         }
         public static void SetRenderTargetsForDepthPrePass(ID3D12GraphicsCommandList cmdList)
         {

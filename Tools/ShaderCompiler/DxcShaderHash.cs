@@ -1,9 +1,23 @@
-﻿
+﻿using System.Runtime.InteropServices;
+using System.Text;
+
 namespace ShaderCompiler
 {
-    class DxcShaderHash(int flags, byte[] hashDigest)
+    [StructLayout(LayoutKind.Sequential)]
+    struct DxcShaderHash(uint flags, byte[] hashDigest)
     {
-        public int Flags { get; } = flags;
-        public byte[] HashDigest { get; } = hashDigest;
+        public uint Flags = flags;
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 16)]
+        public byte[] HashDigest = hashDigest;
+
+        public string GetHashDigestString()
+        {
+            StringBuilder sb = new();
+            for (int i = 0; i < HashDigest.Length; i++)
+            {
+                sb.Append($"{HashDigest[i]:x2} ");
+            }
+            return sb.ToString();
+        }
     }
 }
