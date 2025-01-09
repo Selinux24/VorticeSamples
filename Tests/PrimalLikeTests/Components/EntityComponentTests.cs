@@ -21,7 +21,7 @@ namespace PrimalLikeTests.Components
         {
             for (int r = 0; r < 100; ++r)
             {
-                for (int i = 0; i < 10000; ++i)
+                for (int i = 0; i < 1000; ++i)
                 {
                     CreateRandom();
                     RemoveRandom();

@@ -21,7 +21,7 @@ namespace PrimalLike.Content
         private static readonly FreeList<IntPtr> GeometryHierarchies = new();
         private static readonly object GeometryMutex = new();
 
-        private static readonly List<IntPtr> Shaders = [];
+        private static readonly FreeList<IntPtr> Shaders = new();
         private static readonly object ShaderMutex = new();
 
         public static uint CreateResource(MemoryStream stream, AssetTypes assetType)
@@ -244,8 +244,7 @@ namespace PrimalLike.Content
 
             lock (ShaderMutex)
             {
-                Shaders.Add(shaderData);
-                return (IdType)Shaders.Count - 1;
+                return (IdType)Shaders.Add(shaderData);
             }
         }
         public static void RemoveShader(IdType id)
@@ -253,7 +252,7 @@ namespace PrimalLike.Content
             lock (ShaderMutex)
             {
                 Debug.Assert(IdDetail.IsValid(id));
-                Shaders[(int)id] = IntPtr.Zero;
+                Shaders.Remove((int)id);
             }
         }
         public static IntPtr GetShader(IdType id)

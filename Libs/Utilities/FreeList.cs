@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace Utilities
@@ -56,6 +57,7 @@ namespace Utilities
         public void Remove(int id)
         {
             Debug.Assert(id < array.Count && !AlreadyRemoved(id));
+            (array[id] as IDisposable)?.Dispose();
             array[id] = default;
             indices[id] = nextFreeIndex;
             nextFreeIndex = id;
