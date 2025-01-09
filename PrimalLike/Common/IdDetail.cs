@@ -1,4 +1,4 @@
-﻿global using GenerationType = ushort; //Based on GenerationBits: ushort when <=8, uint when <=16, ulong when <=32, else not possible
+﻿global using GenerationType = uint; //Based on GenerationBits: ushort when <=8, uint when <=16, ulong when <=32, else not possible
 global using IdType = uint;
 using System;
 using System.Diagnostics;
@@ -9,30 +9,32 @@ namespace PrimalLike.Common
 {
     public static class IdDetail
     {
-        public const IdType One = 1u;
-        public const uint GenerationBits = 8;
-        public const uint IndexBits = sizeof(IdType) * 8 - GenerationBits;
-        public const IdType IndexMask = (One << (int)IndexBits) - 1;
-        public const IdType GenerationMask = (One << (int)GenerationBits) - 1;
+        public const int GenerationBits = 10;
+        public const int IndexBits = sizeof(IdType) * 8 - GenerationBits;
+        public const IdType IndexMask = ((IdType)1ul << IndexBits) - 1u;
+        public const IdType GenerationMask = ((IdType)1ul << GenerationBits) - 1u;
+        public const IdType InvalidId = IdType.MaxValue;
         public const uint MinDeletedElements = 1024;
 
         public static bool IsValid(IdType id)
         {
-            return id != IdType.MaxValue;
+            return id != InvalidId;
         }
         public static IdType Index(IdType id)
         {
-            return id & IndexMask;
+            IdType index = id & IndexMask;
+            Debug.Assert(index != IndexMask);
+            return index;
         }
         public static IdType Generation(IdType id)
         {
-            return id >> (int)IndexBits & GenerationMask;
+            return id >> IndexBits & GenerationMask;
         }
         public static IdType NewGeneration(IdType id)
         {
-            IdType generation = Generation(id) + One;
-            Debug.Assert(generation < (One << (int)GenerationBits) - 1);
-            return Index(id) | generation << (int)IndexBits;
+            IdType generation = Generation(id) + 1;
+            Debug.Assert(generation < GenerationMask);
+            return Index(id) | generation << IndexBits;
         }
 
         public static string StringHash<T>()

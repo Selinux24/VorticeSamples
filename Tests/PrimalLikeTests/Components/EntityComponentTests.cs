@@ -19,9 +19,9 @@ namespace PrimalLikeTests.Components
         [Test()]
         public void CreateTest()
         {
-            for (int r = 0; r < 10; ++r)
+            for (int r = 0; r < 100; ++r)
             {
-                for (int i = 0; i < 1000; ++i)
+                for (int i = 0; i < 10000; ++i)
                 {
                     CreateRandom();
                     RemoveRandom();

@@ -3,6 +3,7 @@ using PrimalLike.Platform;
 using SharpGen.Runtime;
 using System.Collections.Generic;
 using System.Diagnostics;
+using Utilities;
 using Vortice.Direct3D;
 using Vortice.Direct3D12;
 using Vortice.DXGI;
@@ -34,7 +35,7 @@ namespace Direct3D12
 #endif
         private static DXGIFactory dxgiFactory;
         private static D3D12Command gfxCommand;
-        private static readonly List<D3D12Surface> surfaces = [];
+        private static readonly FreeList<D3D12Surface> surfaces = new();
         private static readonly D3D12ResourceBarrier resourceBarriers = new();
 
         private static readonly D3D12DescriptorHeap rtvDescHeap = new(DescriptorHeapType.RenderTargetView);
@@ -326,9 +327,7 @@ namespace Direct3D12
         {
             var surface = new D3D12Surface(window);
             surface.CreateSwapChain(dxgiFactory, gfxCommand.CommandQueue);
-
-            surfaces.Add(surface);
-            surface.Id = (uint)surfaces.Count - 1;
+            surface.Id = (uint)surfaces.Add(surface);
 
             return surface;
         }
@@ -337,7 +336,7 @@ namespace Direct3D12
         {
             gfxCommand.Flush();
             surfaces[(int)id].Dispose();
-            surfaces[(int)id] = null;
+            surfaces.Remove((int)id);
         }
         /// <inheritdoc/>
         public static void ResizeSurface(uint id, int width, int height)

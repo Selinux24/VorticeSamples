@@ -4,6 +4,7 @@ using PrimalLike.Platform;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Threading.Tasks;
+using Utilities;
 
 namespace PrimalLike
 {
@@ -36,7 +37,6 @@ namespace PrimalLike
         private readonly Time time = new();
         private readonly object tickLock = new();
         private readonly List<RenderSurface> renderSurfaces = [];
-        private readonly List<Camera> cameras = [];
 
         /// <summary>
         /// Gets whether the application is running.
@@ -108,9 +108,7 @@ namespace PrimalLike
         /// <param name="info">Camera initialization info</param>
         public Camera CreateCamera(CameraInitInfo info)
         {
-            var camera = Renderer.CreateCamera(info);
-            cameras.Add(camera);
-            return camera;
+            return Renderer.CreateCamera(info);
         }
         /// <summary>
         /// Removes a camera.
@@ -118,8 +116,6 @@ namespace PrimalLike
         /// <param name="id">Camera id</param>
         public void RemoveCamera(CameraId id)
         {
-            var camera = cameras.Find(x => x.Id == id);
-            cameras.Remove(camera);
             Renderer.RemoveCamera(id);
         }
 
