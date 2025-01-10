@@ -78,7 +78,7 @@ namespace D3D12LibTests
 
         private void InitializeApplication()
         {
-            var resCompile = ShaderCompiler.ShaderCompiler.CompileShaders(engineShaderFiles, shadersSourceDir, shadersOutputPath);
+            var resCompile = Compiler.CompileShaders(engineShaderFiles, shadersSourceDir, shadersOutputPath);
             Assert.That(resCompile, "Shader compilation error.");
 
             bool resRegister = GameEntity.RegisterScript<TestScript>();

@@ -1,6 +1,7 @@
 ﻿using Direct3D12;
 using PrimalLike.Components;
 using ShaderCompiler;
+using System;
 using WindowsPlatform;
 
 namespace DX12Windows
@@ -19,18 +20,24 @@ namespace DX12Windows
 
         static void Main()
         {
-            ShaderCompiler.ShaderCompiler.CompileShaders(engineShaderFiles, shadersSourceDir, shadersOutputPath);
+            if (!GameEntity.RegisterScript<TestScript>())
+            {
+                Console.WriteLine("Failed to register TestScript");
+            }
+
+            if (!Compiler.CompileShaders(engineShaderFiles, shadersSourceDir, shadersOutputPath))
+            {
+                Console.WriteLine("Engine shaders compilation failed");
+            }
+            
+            var app = HelloWorldApp.Start<Win32PlatformFactory, D3D12GraphicsPlatformFactory>();
 
             Win32WindowInfo windowInfo = new()
             {
                 Title = "DX12 for Windows",
-                ClientArea = new System.Drawing.Rectangle(250, 250, 800, 600),
+                ClientArea = new(50, 50, 800, 600),
                 IsFullScreen = false,
             };
-
-            GameEntity.RegisterScript<TestScript>();
-
-            var app = HelloWorldApp.Start<Win32PlatformFactory, D3D12GraphicsPlatformFactory>();
             app.CreateWindow(windowInfo);
 
             app.Run();

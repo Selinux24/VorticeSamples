@@ -20,7 +20,7 @@ namespace ShaderCompiler
 
         static void Main()
         {
-            bool res = ShaderCompiler.CompileShaders(engineShaderFiles, shadersSourcePath, outputFileName);
+            bool res = Compiler.CompileShaders(engineShaderFiles, shadersSourcePath, outputFileName);
 
             Console.WriteLine(res ? "Shaders compiled successfully" : "Shaders compilation failed");
             Console.ReadKey();
