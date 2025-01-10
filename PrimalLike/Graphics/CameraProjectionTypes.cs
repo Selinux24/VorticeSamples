@@ -1,5 +1,5 @@
 ﻿
-namespace PrimalLike.EngineAPI
+namespace PrimalLike.Graphics
 {
     public enum CameraProjectionTypes : uint
     {

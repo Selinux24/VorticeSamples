@@ -12,7 +12,7 @@ namespace Direct3D12
         const int MaxResourceBarriers = 32;
 
         private readonly ResourceBarrier[] barriers;
-        private int offset;
+        private uint offset;
 
         public D3D12ResourceBarrier()
         {
@@ -51,7 +51,7 @@ namespace Direct3D12
             ResourceStates before,
             ResourceStates after,
             ResourceBarrierFlags flags = ResourceBarrierFlags.None,
-            int subresource = D3D12.ResourceBarrierAllSubResources)
+            uint subresource = D3D12.ResourceBarrierAllSubResources)
         {
             Debug.Assert(resource != null);
             Debug.Assert(offset < MaxResourceBarriers);

@@ -1,5 +1,6 @@
 ﻿using PrimalLike.Common;
 using PrimalLike.EngineAPI;
+using PrimalLike.Graphics;
 using System;
 using System.Diagnostics;
 using System.Numerics;
@@ -221,14 +222,8 @@ namespace Direct3D12
         private Vector3 up;
         private float nearZ;
         private float farZ;
-        /// <summary>
-        /// The field of view for perspective camera or view width in pixels for orthographic camera
-        /// </summary>
-        private float fieldOfView;
-        /// <summary>
-        /// Width/height aspect ratio for perspective camera or view height in pixels for orthographic camera
-        /// </summary>
-        private float aspectRatio;
+        private float fieldOfView; // The field of view for perspective camera or view width in pixels for orthographic camera
+        private float aspectRatio; // Width/height aspect ratio for perspective camera or view height in pixels for orthographic camera
         private CameraProjectionTypes projectionType;
         private uint entityId;
         private bool isDirty;
@@ -331,13 +326,13 @@ namespace Direct3D12
             Entity entity = new(entityId);
             Vector3 position = entity.Transform.Position;
             Vector3 direction = entity.Transform.Orientation;
-            view = Matrix4x4.CreateLookAt(position, direction, up);
+            view = Matrix4x4.CreateLookTo(position, direction, up);
 
             if (isDirty)
             {
                 projection = (projectionType == CameraProjectionTypes.Perspective) ?
-                    Matrix4x4.CreatePerspectiveFieldOfView(fieldOfView * MathF.PI, aspectRatio, nearZ, farZ) :
-                    Matrix4x4.CreatePerspective(fieldOfView, aspectRatio, nearZ, farZ);
+                    Matrix4x4.CreatePerspectiveFieldOfView(FieldOfView * MathF.PI, AspectRatio, nearZ, farZ) :
+                    Matrix4x4.CreateOrthographic(ViewWidth, ViewHeight, nearZ, farZ);
                 Matrix4x4.Invert(projection, out inverseProjection);
                 isDirty = false;
             }

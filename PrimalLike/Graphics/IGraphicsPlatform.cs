@@ -1,5 +1,4 @@
-﻿using PrimalLike.EngineAPI;
-using PrimalLike.Platform;
+﻿using PrimalLike.Platform;
 using System;
 
 namespace PrimalLike.Graphics

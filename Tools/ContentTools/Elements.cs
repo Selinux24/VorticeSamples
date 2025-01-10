@@ -66,7 +66,7 @@ namespace ContentTools
             ms.WriteByte(vertex.Blue);
             ms.WriteByte(0);
         }
-    };
+    }
 
     [StructLayout(LayoutKind.Explicit)]
     struct StaticNormal()
@@ -97,7 +97,7 @@ namespace ContentTools
             ms.Write(BitConverter.GetBytes(PackingHelper.PackFloat16(vertex.Normal.X, -1f, 1f)));
             ms.Write(BitConverter.GetBytes(PackingHelper.PackFloat16(vertex.Normal.Y, -1f, 1f)));
         }
-    };
+    }
 
     [StructLayout(LayoutKind.Explicit)]
     struct StaticNormalTexture()
@@ -138,7 +138,7 @@ namespace ContentTools
             ms.Write(BitConverter.GetBytes(vertex.UV.X));
             ms.Write(BitConverter.GetBytes(vertex.UV.Y));
         }
-    };
+    }
 
     [StructLayout(LayoutKind.Explicit)]
     struct Skeletal()
@@ -175,7 +175,7 @@ namespace ContentTools
             ms.Write(BitConverter.GetBytes(vertex.JointIndices[2]));
             ms.Write(BitConverter.GetBytes(vertex.JointIndices[3]));
         }
-    };
+    }
 
     [StructLayout(LayoutKind.Explicit)]
     struct SkeletalColor()
@@ -224,7 +224,7 @@ namespace ContentTools
             ms.WriteByte(vertex.Blue);
             ms.WriteByte(0);
         }
-    };
+    }
 
     [StructLayout(LayoutKind.Explicit)]
     struct SkeletalNormal()
@@ -267,7 +267,7 @@ namespace ContentTools
             ms.Write(BitConverter.GetBytes(PackingHelper.PackFloat16(vertex.Normal.X, -1f, 1f)));
             ms.Write(BitConverter.GetBytes(PackingHelper.PackFloat16(vertex.Normal.Y, -1f, 1f)));
         }
-    };
+    }
 
     [StructLayout(LayoutKind.Explicit)]
     struct SkeletalNormalColor()
@@ -322,7 +322,7 @@ namespace ContentTools
             ms.WriteByte(vertex.Blue);
             ms.WriteByte(0);
         }
-    };
+    }
 
     [StructLayout(LayoutKind.Explicit)]
     struct SkeletalNormalTexture()
@@ -375,7 +375,7 @@ namespace ContentTools
             ms.Write(BitConverter.GetBytes(vertex.UV.X));
             ms.Write(BitConverter.GetBytes(vertex.UV.Y));
         }
-    };
+    }
 
     [StructLayout(LayoutKind.Explicit)]
     struct SkeletalNormalTextureColor()
@@ -440,5 +440,5 @@ namespace ContentTools
             ms.WriteByte(vertex.Blue);
             ms.WriteByte(0);
         }
-    };
+    }
 }

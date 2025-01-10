@@ -2,11 +2,12 @@
 
 namespace PrimalLike.Content
 {
+    [StructLayout(LayoutKind.Explicit, Size = 4)]
     struct LodOffset
     {
-        public ushort Offset;
-        public ushort Count;
+        [FieldOffset(0)] public ushort Offset;
+        [FieldOffset(2)] public ushort Count;
 
-        public static int Stride => Marshal.SizeOf<IdType>();
+        public static int Stride => Marshal.SizeOf<LodOffset>();
     }
 }

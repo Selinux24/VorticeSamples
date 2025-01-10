@@ -11,21 +11,16 @@ namespace ShaderCompiler
         private const uint fillColorPs = 1;
         private const uint postProcessPS = 2;
 
-        private const uint shaderVertex = 0;
-        private const uint shaderPixel = 4;
-
-        private static readonly string[] profileStrings = ["vs_6_6", "hs_6_6", "ds_6_6", "gs_6_6", "ps_6_6", "cs_6_6", "as_6_6", "ms_6_6"];
-
         private static readonly EngineShaderInfo[] engineShaderFiles =
         [
-            new (fullScreenTriangleVs, new ("FullScreenTriangle.hlsl", "FullScreenTriangleVS", shaderVertex, profileStrings[(int)shaderVertex])),
-            new (fillColorPs, new ("FillColor.hlsl", "FillColorPS", shaderPixel, profileStrings[(int)shaderPixel])),
-            new (postProcessPS, new ("PostProcess.hlsl", "PostProcessPS", shaderPixel, profileStrings[(int)shaderPixel])),
+            new (fullScreenTriangleVs, new ("FullScreenTriangle.hlsl", "FullScreenTriangleVS", ShaderStage.Vertex)),
+            new (fillColorPs, new ("FillColor.hlsl", "FillColorPS", ShaderStage.Pixel)),
+            new (postProcessPS, new ("PostProcess.hlsl", "PostProcessPS", ShaderStage.Pixel)),
         ];
 
         static void Main()
         {
-            bool res = ShaderCompilation.CompileShaders(shadersSourcePath, engineShaderFiles, outputFileName);
+            bool res = ShaderCompilation.CompileShaders(engineShaderFiles, shadersSourcePath, outputFileName);
 
             Console.WriteLine(res ? "Shaders compiled successfully" : "Shaders compilation failed");
             Console.ReadKey();

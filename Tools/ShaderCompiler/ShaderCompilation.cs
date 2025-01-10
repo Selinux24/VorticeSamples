@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -9,146 +8,56 @@ namespace ShaderCompiler
 {
     public static class ShaderCompilation
     {
-        class ShaderCompiler
+        public static DxcShaderModel DefaultShaderModel { get; set; } = DxcShaderModel.Model6_5;
+        private static readonly IDxcCompiler3 compiler = DxcCompiler.Compiler;
+        private static readonly IDxcUtils utils = DxcCompiler.Utils;
+
+        public static bool CompileShaders(EngineShaderInfo[] engineShaderFiles, string shadersSourceDir, string shadersOutputPath)
         {
-            private readonly IDxcCompiler3 compiler;
-            private readonly IDxcUtils utils;
-            private readonly IDxcIncludeHandler includeHandler;
-
-            public ShaderCompiler()
+            shadersSourceDir = Path.GetFullPath(shadersSourceDir);
+            if (!Directory.Exists(shadersSourceDir))
             {
-                if (!Dxc.DxcCreateInstance(Dxc.CLSID_DxcCompiler, out compiler).Success)
-                {
-                    Console.WriteLine("Failed to create DXC compiler instance");
-                    return;
-                }
-                if (!Dxc.DxcCreateInstance(Dxc.CLSID_DxcUtils, out utils).Success)
-                {
-                    Console.WriteLine("Failed to create DXC utils instance");
-                    return;
-                }
-                if (!utils.CreateDefaultIncludeHandler(out includeHandler).Success)
-                {
-                    Console.WriteLine("Failed to create DXC include handler instance");
-                    return;
-                }
-            }
-
-            public DxcCompiledShader Compile(string shadersSourcePath, ShaderFileInfo info, string fullPath)
-            {
-                Debug.Assert(compiler != null && utils != null && includeHandler != null);
-
-                Console.WriteLine($"[{info.Type}] -> {info.FileName} {info.Function}");
-
-                string source = File.ReadAllText(fullPath);
-                var args = GetArgs(shadersSourcePath, info, []);
-                if (compiler.Compile(source, args, includeHandler, out IDxcResult results).Failure)
-                {
-                    var errors = results.GetErrors();
-                    if (!string.IsNullOrEmpty(errors))
-                    {
-                        Console.WriteLine($"Shader compilation error: {errors}");
-                    }
-
-                    return null;
-                }
-
-                Console.WriteLine(" [ Succeeded ]");
-
-                if (results.GetOutput(DxcOutKind.ShaderHash, out IDxcBlob hashBlob).Failure)
-                {
-                    return null;
-                }
-
-                var shaderHash = Marshal.PtrToStructure<DxcShaderHash>(hashBlob.BufferPointer);
-                // different source code could result in the same byte code, so we only care about byte code hash.
-                Debug.Assert((shaderHash.Flags & Dxc.DXC_HASHFLAG_INCLUDES_SOURCE) == 0);
-                Console.WriteLine($"Shader hash: {shaderHash.GetHashDigestString()}");
-
-                Console.WriteLine("Disassembling...");
-                byte[] disassemblyBytes = null;
-                if (compiler.Disassemble(source, out IDxcResult disasmResults).Success)
-                {
-                    if (disasmResults.GetOutput(DxcOutKind.Disassembly, out IDxcBlobUtf8 disassembly).Success)
-                    {
-                        disassemblyBytes = disassembly.AsBytes();
-                    }
-                }
-
-                return new DxcCompiledShader(
-                    results.GetObjectBytecodeArray(),
-                    disassemblyBytes,
-                    shaderHash);
-            }
-            private static string[] GetArgs(string shadersSourcePath, ShaderFileInfo info, IEnumerable<string> extraArgs)
-            {
-                var args = new List<string>
-                {
-                    info.FileName,
-                    "-E", info.Function,
-                    "-T", info.Profile,
-                    "-I", shadersSourcePath,
-                    "-enable-16bit-types",
-                    Dxc.DXC_ARG_ALL_RESOURCES_BOUND,
-#if DEBUG
-                    Dxc.DXC_ARG_DEBUG,
-                    Dxc.DXC_ARG_SKIP_OPTIMIZATIONS,
-#else
-                    Dxc.DXC_ARG_OPTIMIZATION_LEVEL3,
-#endif
-                    Dxc.DXC_ARG_WARNINGS_ARE_ERRORS,
-                    "-Qstrip_reflect",
-                    "-Qstrip_debug"
-                };
-
-                args.AddRange(extraArgs ?? []);
-
-                return [.. args];
-            }
-        }
-
-        public static bool CompileShaders(string shadersSourcePath, EngineShaderInfo[] engineShaderFiles, string outputFileName)
-        {
-            if (CompiledShadersAreUpToDate(shadersSourcePath, outputFileName))
-            {
-                Console.WriteLine(" [ Up to Date ]");
-
-                return true;
-            }
-
-            var shaders = new List<DxcCompiledShader>();
-
-            foreach (var file in engineShaderFiles)
-            {
-                var fullPath = Path.Combine(shadersSourcePath, file.Info.FileName);
-                fullPath = Path.GetFullPath(fullPath);
-                if (!File.Exists(fullPath)) return false;
-
-                var compiledShader = Compile(shadersSourcePath, file.Info, fullPath);
-                if (compiledShader.ByteCode != null && compiledShader.ByteCode.Length > 0)
-                {
-                    shaders.Add(compiledShader);
-                }
-                else
-                {
-                    return false;
-                }
-            }
-
-            return SaveCompiledShaders(shaders, outputFileName);
-        }
-
-        private static bool CompiledShadersAreUpToDate(string shadersSourcePath, string outputFileName)
-        {
-            var engineShadersPath = GetEngineShadersPath(outputFileName);
-            if (!File.Exists(engineShadersPath))
-            {
+                Debug.WriteLine($"Shader Compilation: Source folder not exists: {shadersSourceDir}");
                 return false;
             }
 
-            var shadersCompilationTime = File.GetLastWriteTime(engineShadersPath);
+            shadersOutputPath = Path.GetFullPath(shadersOutputPath);
+            string shadersOutputDir = Path.GetDirectoryName(shadersOutputPath);
+            if (!Directory.Exists(shadersOutputDir))
+            {
+                Debug.WriteLine($"Shader Compilation: Output folder not exists: {shadersOutputDir}");
+                return false;
+            }
 
-            foreach (var entry in Directory.GetFiles(shadersSourcePath))
+            if (CompiledShadersAreUpToDate(shadersSourceDir, shadersOutputPath))
+            {
+                Debug.WriteLine("Shader Compilation: [ Up to Date ]");
+                //return true;
+            }
+
+            var shaders = new List<CompiledShader>();
+
+            foreach (var file in engineShaderFiles)
+            {
+                if (!Compile(shadersSourceDir, file.Info, out var compiledShader))
+                {
+                    return false;
+                }
+
+                shaders.Add(compiledShader);
+            }
+
+            bool saved = SaveCompiledShaders(shaders, shadersOutputPath);
+
+            Debug.WriteLine(saved ? "Shader Compilation: Successfully" : "Shader Compilation: Failed");
+
+            return saved;
+        }
+        private static bool CompiledShadersAreUpToDate(string shadersSourceDir, string shadersOutputPath)
+        {
+            var shadersCompilationTime = File.GetLastWriteTime(shadersOutputPath);
+
+            foreach (var entry in Directory.GetFiles(shadersSourceDir))
             {
                 if (File.GetLastWriteTime(entry) > shadersCompilationTime)
                 {
@@ -158,37 +67,110 @@ namespace ShaderCompiler
 
             return true;
         }
-        private static string GetEngineShadersPath(string outputFileName)
+        public static bool Compile(string shadersSourceDir, ShaderFileInfo info, out CompiledShader compiledShader)
         {
-            return Path.GetFullPath(outputFileName);
-        }
-        private static DxcCompiledShader Compile(string shadersSourcePath, ShaderFileInfo info, string fullPath)
-        {
-            var compiler = new ShaderCompiler();
-
-            return compiler.Compile(shadersSourcePath, info, fullPath);
-        }
-        private static bool SaveCompiledShaders(IEnumerable<DxcCompiledShader> shaders, string outputFileName)
-        {
-            var engineShadersPath = GetEngineShadersPath(outputFileName);
-            var engineShadersDir = Path.GetDirectoryName(engineShadersPath);
-            if (!Directory.Exists(engineShadersDir))
+            var fullPath = Path.Combine(shadersSourceDir, info.FileName);
+            fullPath = Path.GetFullPath(fullPath);
+            if (!File.Exists(fullPath))
             {
-                Directory.CreateDirectory(engineShadersDir);
+                Debug.WriteLine($"Shader Compilation: Source not found: {fullPath}");
+                compiledShader = default;
+                return false;
             }
 
-            using (var file = new BinaryWriter(File.Open(engineShadersPath, FileMode.Create)))
+            if (!utils.CreateDefaultIncludeHandler(out var includeHandler).Success)
+            {
+                Debug.WriteLine("Shader Compilation: Failed to create DXC include handler instance");
+                compiledShader = default;
+                return false;
+            }
+
+            string shaderSource = File.ReadAllText(fullPath);
+            var args = GetArgs(shadersSourceDir, info, DefaultShaderModel);
+
+            Debug.WriteLine($"Shader Compilation: {info.Stage} {info.Profile} - {info.EntryPoint} {info.FileName}");
+
+            using (includeHandler)
+            {
+                using IDxcResult results = compiler.Compile(shaderSource, args, includeHandler);
+                if (results.GetStatus().Failure)
+                {
+                    Debug.WriteLine(results.GetErrors());
+                    compiledShader = default;
+                    return false;
+                }
+
+                byte[] disassembly = null;
+                if (results.GetOutput(DxcOutKind.Disassembly, out IDxcBlob disassemblyBlob).Success)
+                {
+                    disassembly = disassemblyBlob.AsBytes();
+                }
+                else
+                {
+                    Debug.WriteLine("Shader Compilation: Failed to get disassembly");
+                }
+
+                if (results.GetOutput(DxcOutKind.ShaderHash, out IDxcBlob hashBlob).Failure)
+                {
+                    Debug.WriteLine("Shader Compilation: Failed to get shader hash");
+                    compiledShader = default;
+                    return false;
+                }
+                var shaderHash = Marshal.PtrToStructure<ShaderHash>(hashBlob.BufferPointer);
+                Debug.WriteLine($"Shader Compilation: HashDigest [{shaderHash.GetHashDigestString()}]");
+
+                compiledShader = new(results.GetObjectBytecodeMemory(), shaderHash, disassembly);
+
+                return true;
+            }
+        }
+        private static string[] GetArgs(string shadersSourcePath, ShaderFileInfo info, DxcShaderModel shaderModel, IEnumerable<string> extraArgs = null)
+        {
+            var args = new List<string>
+            {
+                info.FileName,
+                "-E", info.EntryPoint,
+                "-T", info.Profile,
+                "-I", shadersSourcePath,
+                "-enable-16bit-types",
+                Dxc.DXC_ARG_ALL_RESOURCES_BOUND,
+#if DEBUG
+                Dxc.DXC_ARG_DEBUG,
+                Dxc.DXC_ARG_SKIP_OPTIMIZATIONS,
+#else
+                Dxc.DXC_ARG_OPTIMIZATION_LEVEL3,
+#endif
+                Dxc.DXC_ARG_WARNINGS_ARE_ERRORS,
+                "-HV",
+                "2021",
+                "-Qstrip_reflect",
+                "-Qstrip_debug",
+            };
+
+            args.AddRange(extraArgs ?? []);
+
+            return [.. args];
+        }
+        private static bool SaveCompiledShaders(IEnumerable<CompiledShader> shaders, string shadersOutputPath)
+        {
+            var shadersOutputDir = Path.GetDirectoryName(shadersOutputPath);
+            if (!Directory.Exists(shadersOutputDir))
+            {
+                Directory.CreateDirectory(shadersOutputDir);
+            }
+
+            using (var file = new BinaryWriter(File.Open(shadersOutputPath, FileMode.Create)))
             {
                 foreach (var shader in shaders)
                 {
                     var byteCode = shader.ByteCode;
                     file.Write(byteCode.Length);
                     file.Write(shader.Hash.HashDigest);
-                    file.Write(byteCode);
+                    file.Write(byteCode.Span);
                 }
             }
 
-            return File.Exists(engineShadersPath);
+            return File.Exists(shadersOutputPath);
         }
     }
 }

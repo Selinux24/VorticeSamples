@@ -161,11 +161,11 @@ namespace Direct3D12
 
         public static DescriptorRange1 Range(
             DescriptorRangeType rangeType,
-            int descriptorCount,
-            int shaderRegister,
-            int space = 0,
+            uint descriptorCount,
+            uint shaderRegister,
+            uint space = 0,
             DescriptorRangeFlags flags = DescriptorRangeFlags.None,
-            int offsetFromTableStart = D3D12.DescriptorRangeOffsetAppend)
+            uint offsetFromTableStart = D3D12.DescriptorRangeOffsetAppend)
         {
             return new()
             {
@@ -179,10 +179,10 @@ namespace Direct3D12
         }
 
         public static RootParameter1 AsConstants(
-            int numConstants,
+            uint numConstants,
             ShaderVisibility visibility,
-            int shaderRegister,
-            int space = 0)
+            uint shaderRegister,
+            uint space = 0)
         {
             RootConstants rootConstants = new(shaderRegister, space, numConstants);
 
@@ -192,8 +192,8 @@ namespace Direct3D12
         private static RootParameter1 AsDescriptor(
             RootParameterType type,
             ShaderVisibility visibility,
-            int shaderRegister,
-            int space,
+            uint shaderRegister,
+            uint space,
             RootDescriptorFlags flags)
         {
             RootDescriptor1 rootDescriptor = new(shaderRegister, space, flags);
@@ -203,8 +203,8 @@ namespace Direct3D12
 
         public static RootParameter1 AsCbv(
             ShaderVisibility visibility,
-            int shaderRegister,
-            int space = 0,
+            uint shaderRegister,
+            uint space = 0,
             RootDescriptorFlags flags = RootDescriptorFlags.None)
         {
             return AsDescriptor(RootParameterType.ConstantBufferView, visibility, shaderRegister, space, flags);
@@ -212,8 +212,8 @@ namespace Direct3D12
 
         public static RootParameter1 AsSrv(
             ShaderVisibility visibility,
-            int shaderRegister,
-            int space = 0,
+            uint shaderRegister,
+            uint space = 0,
             RootDescriptorFlags flags = RootDescriptorFlags.None)
         {
             return AsDescriptor(RootParameterType.ShaderResourceView, visibility, shaderRegister, space, flags);
@@ -221,8 +221,8 @@ namespace Direct3D12
 
         public static RootParameter1 AsUav(
             ShaderVisibility visibility,
-            int shaderRegister,
-            int space = 0,
+            uint shaderRegister,
+            uint space = 0,
             RootDescriptorFlags flags = RootDescriptorFlags.None)
         {
             return AsDescriptor(RootParameterType.UnorderedAccessView, visibility, shaderRegister, space, flags);
@@ -267,7 +267,7 @@ namespace Direct3D12
                 return null;
             }
 
-            if (!DxCall(device.CreateRootSignature<ID3D12RootSignature>(0, signature_blob.BufferPointer, signature_blob.BufferSize, out var signature)))
+            if (!DxCall(device.CreateRootSignature(0, signature_blob.BufferPointer, signature_blob.BufferSize, out ID3D12RootSignature signature)))
             {
                 signature.Dispose();
             }
@@ -357,6 +357,11 @@ namespace Direct3D12
 
             Debug.Assert(resource != null);
             return resource;
+        }
+
+        public static void DeferredRelease(ID3D12Resource resource)
+        {
+            D3D12Graphics.DeferredRelease(resource);
         }
     }
 }

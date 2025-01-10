@@ -25,7 +25,7 @@ namespace Direct3D12
         private IDXGISwapChain4 swapChain;
         private readonly RenderTargetData[] renderTargetData = new RenderTargetData[BufferCount];
         private readonly PlatformWindow window;
-        private int currentBbIndex = 0;
+        private uint currentBbIndex = 0;
         private readonly uint allowTearing = 0;
         private PresentFlags presentFlags = 0;
         private Viewport viewport;
@@ -107,7 +107,7 @@ namespace Direct3D12
             Debug.Assert(factory != null && cmdQueue != null);
             Release();
 
-            int frameBufferCount = BufferCount;
+            uint frameBufferCount = BufferCount;
 
             if (factory.CheckFeatureSupport(Vortice.DXGI.Feature.PresentAllowTearing, allowTearing) && allowTearing != 0)
             {
@@ -153,7 +153,7 @@ namespace Direct3D12
         private void FinalizeSwapChainCreation()
         {
             // create RTVs for back-buffers
-            for (int i = 0; i < BufferCount; i++)
+            for (uint i = 0; i < BufferCount; i++)
             {
                 Debug.Assert(renderTargetData[i].Resource == null);
                 swapChain.GetBuffer(i, out renderTargetData[i].Resource);
@@ -166,8 +166,8 @@ namespace Direct3D12
             }
 
             SwapChainDescription scdesc = swapChain.Description;
-            int width = scdesc.BufferDescription.Width;
-            int height = scdesc.BufferDescription.Height;
+            uint width = scdesc.BufferDescription.Width;
+            uint height = scdesc.BufferDescription.Height;
             Debug.Assert(window.Width == width && window.Height == height);
 
             // set viewport and scissor rect
@@ -178,7 +178,7 @@ namespace Direct3D12
             viewport.MinDepth = 0f;
             viewport.MaxDepth = 1f;
 
-            scissorRect = new(0, 0, width, height);
+            scissorRect = new(0, 0, (int)width, (int)height);
         }
 
         /// <summary>
@@ -194,7 +194,7 @@ namespace Direct3D12
         /// <inheritdoc/>
         public void Resize(int width, int height)
         {
-            int frameBufferCount = BufferCount;
+            uint frameBufferCount = BufferCount;
 
             Debug.Assert(swapChain != null);
             for (int i = 0; i < frameBufferCount; i++)

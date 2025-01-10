@@ -17,12 +17,12 @@ namespace PrimalLike.Content
         /// This constant indicates that an element in GeometryHierarchies is not a pointer, but a gpuId
         /// </summary>
         private const IntPtr SingleMeshMarker = 0x01;
-        private static readonly int ShiftBits = (Marshal.SizeOf<IntPtr>() - sizeof(IdType)) << 3;
-        private static readonly FreeList<IntPtr> GeometryHierarchies = new();
-        private static readonly object GeometryMutex = new();
+        private static readonly int shiftBits = (Marshal.SizeOf<IntPtr>() - sizeof(IdType)) << 3;
+        private static readonly FreeList<IntPtr> geometryHierarchies = new();
+        private static readonly object geometryMutex = new();
 
-        private static readonly FreeList<IntPtr> Shaders = new();
-        private static readonly object ShaderMutex = new();
+        private static readonly FreeList<IntPtr> shaders = new();
+        private static readonly object shaderMutex = new();
 
         public static uint CreateResource(MemoryStream stream, AssetTypes assetType)
         {
@@ -98,15 +98,15 @@ namespace PrimalLike.Content
 
             // create a fake pointer and put it in the geometry_hierarchies.
             IntPtr fakePointer = CreateGpuIdFakePointer(gpuId);
-            lock (GeometryMutex)
+            lock (geometryMutex)
             {
-                return (uint)GeometryHierarchies.Add(fakePointer);
+                return (uint)geometryHierarchies.Add(fakePointer);
             }
         }
         private static IntPtr CreateGpuIdFakePointer(uint gpuId)
         {
             Debug.Assert(Marshal.SizeOf<IntPtr>() > sizeof(IdType));
-            return new(((IntPtr)gpuId << ShiftBits) | SingleMeshMarker);
+            return new(((IntPtr)gpuId << shiftBits) | SingleMeshMarker);
         }
         private static uint CreateMeshHierarchy(IntPtr data)
         {
@@ -150,9 +150,9 @@ namespace PrimalLike.Content
             Debug.Assert(ValidateThresholdValues(stream, lodCount));
 
             Debug.Assert(Marshal.SizeOf(typeof(IntPtr)) > 2, "We need the least significant bit for the single mesh marker.");
-            lock (GeometryMutex)
+            lock (geometryMutex)
             {
-                return (uint)GeometryHierarchies.Add(stream.GetHierarchyBuffer());
+                return (uint)geometryHierarchies.Add(stream.GetHierarchyBuffer());
             }
         }
         private static int GetGeometryHierarchyBufferSize(IntPtr data)
@@ -199,9 +199,9 @@ namespace PrimalLike.Content
 
         private static void DestroyGeometryResource(uint id)
         {
-            lock (GeometryMutex)
+            lock (geometryMutex)
             {
-                IntPtr pointer = GeometryHierarchies[(int)id];
+                IntPtr pointer = geometryHierarchies[(int)id];
                 if ((pointer & SingleMeshMarker) != 0)
                 {
                     IdType fakePointer = GpuIdFromFakePointer(pointer);
@@ -224,44 +224,39 @@ namespace PrimalLike.Content
                     Marshal.FreeHGlobal(pointer);
                 }
 
-                GeometryHierarchies.Remove((int)id);
+                geometryHierarchies.Remove((int)id);
             }
         }
         private static IdType GpuIdFromFakePointer(IntPtr pointer)
         {
             Debug.Assert((pointer & SingleMeshMarker) != 0);
-            return (IdType)((pointer >> ShiftBits) & IdDetail.InvalidId);
+            return (IdType)((pointer >> shiftBits) & IdDetail.InvalidId);
         }
 
-        public static IdType AddShader(IntPtr data)
+        public static IdType AddShader(CompiledShader shader)
         {
-            CompiledShader shaderPtr = Marshal.PtrToStructure<CompiledShader>(data);
-
-            ulong size = sizeof(ulong) + CompiledShader.HashLength + shaderPtr.ByteCodeSize;
-            var shader = shaderPtr.ByteCode;
-            IntPtr shaderData = Marshal.AllocHGlobal((int)size);
-            Marshal.Copy(shader, 0, shaderData, (int)size);
-
-            lock (ShaderMutex)
+            var shaderData = shader.GetData();
+            
+            lock (shaderMutex)
             {
-                return (IdType)Shaders.Add(shaderData);
+                return (IdType)shaders.Add(shaderData);
             }
         }
         public static void RemoveShader(IdType id)
         {
-            lock (ShaderMutex)
+            lock (shaderMutex)
             {
                 Debug.Assert(IdDetail.IsValid(id));
-                Shaders.Remove((int)id);
+                shaders.Remove((int)id);
             }
         }
         public static IntPtr GetShader(IdType id)
         {
-            lock (ShaderMutex)
+            lock (shaderMutex)
             {
                 Debug.Assert(IdDetail.IsValid(id));
 
-                return Shaders[(int)id];
+                return shaders[(int)id];
             }
         }
     }

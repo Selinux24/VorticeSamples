@@ -4,6 +4,7 @@ using PrimalLike.Components;
 using NUnit.Framework;
 using System.IO;
 using System.Text;
+using PrimalLike.EngineAPI;
 
 namespace PrimalLikeTests.Content
 {
@@ -59,6 +60,20 @@ namespace PrimalLikeTests.Content
             bool result = Engine.EngineInitialize(path);
 
             Assert.That(result);
+        }
+    }
+
+    class TestScript : EntityScript
+    {
+        public TestScript() : base()
+        {
+        }
+        public TestScript(Entity entity) : base(entity)
+        {
+        }
+
+        public override void Update(float deltaTime)
+        {
         }
     }
 }

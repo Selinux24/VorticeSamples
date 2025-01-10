@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using Vortice.Direct3D;
 using Vortice.Direct3D12;
 using Vortice.DXGI;
@@ -12,12 +13,15 @@ namespace Direct3D12
         private const int RP_Count = 1;
         private const int RP_RootConstants = 0;
 
+        [StructLayout(LayoutKind.Sequential)]
         struct FrameConstants
         {
             public float Width;
             public float Height;
             public int Frame;
         }
+
+        [StructLayout(LayoutKind.Sequential)]
         struct PipelineStateStream
         {
             public PipelineStateSubObjectTypeRootSignature RootSignature;
@@ -73,7 +77,7 @@ namespace Direct3D12
                     Dimension = ResourceDimension.Texture2D,
                     Flags = ResourceFlags.AllowRenderTarget,
                     Format = mainBufferFormat,
-                    Height = size.Height,
+                    Height = (uint)size.Height,
                     Layout = TextureLayout.Unknown,
                     MipLevels = 0, // make space for all mip levels
                     SampleDescription = new(1, 0),
@@ -132,8 +136,8 @@ namespace Direct3D12
             PipelineStateStream pipelineState = new();
             {
                 pipelineState.RootSignature = gpassRootSig;
-                pipelineState.Vs = new(D3D12Shaders.GetEngineShader(EngineShaders.FullScreenTriangleVs));
-                pipelineState.Ps = new(D3D12Shaders.GetEngineShader(EngineShaders.FillColorPs));
+                pipelineState.Vs = new(D3D12Shaders.GetEngineShader(EngineShaders.FullScreenTriangleVs).Span);
+                pipelineState.Ps = new(D3D12Shaders.GetEngineShader(EngineShaders.FillColorPs).Span);
                 pipelineState.PrimitiveTopology = new(PrimitiveTopologyType.Triangle);
                 pipelineState.RenderTargetFormats = new([mainBufferFormat]);
                 pipelineState.DepthStencilFormat = new(depthBufferFormat);

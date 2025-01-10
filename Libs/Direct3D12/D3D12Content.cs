@@ -1,4 +1,4 @@
-﻿using PrimalLike.Content;
+﻿using PrimalLike.Graphics;
 using System;
 using System.Numerics;
 using System.Runtime.InteropServices;
@@ -85,18 +85,18 @@ namespace Direct3D12
 
             SubmeshView view = new();
             view.PositionBufferView.BufferLocation = resource.GPUVirtualAddress;
-            view.PositionBufferView.SizeInBytes = (int)positionBufferSize;
-            view.PositionBufferView.StrideInBytes = Marshal.SizeOf(typeof(Vector3));
+            view.PositionBufferView.SizeInBytes = positionBufferSize;
+            view.PositionBufferView.StrideInBytes = (uint)Marshal.SizeOf(typeof(Vector3));
 
             if (elementSize > 0)
             {
                 view.ElementBufferView.BufferLocation = resource.GPUVirtualAddress + alignedPositionBufferSize;
-                view.ElementBufferView.SizeInBytes = (int)elementBufferSize;
-                view.ElementBufferView.StrideInBytes = (int)elementSize;
+                view.ElementBufferView.SizeInBytes = elementBufferSize;
+                view.ElementBufferView.StrideInBytes = elementSize;
             }
 
             view.IndexBufferView.BufferLocation = resource.GPUVirtualAddress + alignedPositionBufferSize + alignedElementBufferSize;
-            view.IndexBufferView.SizeInBytes = (int)positionBufferSize;
+            view.IndexBufferView.SizeInBytes = positionBufferSize;
             view.IndexBufferView.Format = indexSize == sizeof(ushort) ? Format.R16_UInt : Format.R32_UInt;
             view.PrimitiveTopology = GetD3DPrimitiveTopology((PrimitiveTopology)primitiveTopology);
             view.ElementsType = elementsType;

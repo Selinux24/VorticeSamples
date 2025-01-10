@@ -1,7 +1,6 @@
 ﻿global using CameraId = System.UInt32;
 global using SubmeshId = System.UInt32;
 global using SurfaceId = System.UInt32;
-using PrimalLike.EngineAPI;
 using PrimalLike.Platform;
 using System;
 

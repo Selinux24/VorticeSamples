@@ -192,13 +192,13 @@ namespace UtilitiesTests
         }
     }
 
-    public class TestClass
+    class TestClass
     {
         public int InternalId { get; set; }
         public float Value { get; set; }
     }
 
-    public struct TestStruct
+    struct TestStruct
     {
         public int InternalId { get; set; }
         public float Value { get; set; }

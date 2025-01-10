@@ -4,7 +4,7 @@ using System.Text;
 namespace ShaderCompiler
 {
     [StructLayout(LayoutKind.Sequential)]
-    struct DxcShaderHash(uint flags, byte[] hashDigest)
+    public struct ShaderHash(uint flags, byte[] hashDigest)
     {
         public uint Flags = flags;
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = 16)]

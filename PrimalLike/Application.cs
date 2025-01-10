@@ -1,10 +1,9 @@
-﻿using PrimalLike.EngineAPI;
-using PrimalLike.Graphics;
+﻿using PrimalLike.Graphics;
 using PrimalLike.Platform;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Threading.Tasks;
-using Utilities;
 
 namespace PrimalLike
 {
@@ -136,6 +135,8 @@ namespace PrimalLike
 
             platform.Run();
 
+            OnShutdown?.Invoke(this, EventArgs.Empty);
+
             Shutdown();
 
             Renderer.Shutdown();
@@ -230,6 +231,8 @@ namespace PrimalLike
         /// Shuts down the application.
         /// </summary>
         protected abstract void Shutdown();
+
+        public event EventHandler OnShutdown;
 
         /// <summary>
         /// Exits.

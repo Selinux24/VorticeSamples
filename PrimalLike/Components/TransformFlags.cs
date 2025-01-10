@@ -1,6 +1,8 @@
-﻿
+﻿using System;
+
 namespace PrimalLike.Components
 {
+    [Flags]
     public enum TransformFlags : uint
     {
         Rotation = 0x01,

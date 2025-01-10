@@ -1,10 +1,8 @@
 ﻿using PrimalLike.Common;
-using PrimalLike.Graphics;
-using System;
 using System.Numerics;
 using System.Runtime.InteropServices;
 
-namespace PrimalLike.EngineAPI
+namespace PrimalLike.Graphics
 {
     public class Camera
     {
@@ -25,14 +23,14 @@ namespace PrimalLike.EngineAPI
         private static T GetValue<T>(CameraId id, CameraParameters parameter) where T : unmanaged
         {
             int size = Marshal.SizeOf<T>();
-            IntPtr ptr = Marshal.AllocHGlobal(size);
+            nint ptr = Marshal.AllocHGlobal(size);
             Renderer.Gfx.GetParameter(id, parameter, ptr, size);
             return Marshal.PtrToStructure<T>(ptr);
         }
         private static void SetValue<T>(CameraId id, CameraParameters parameter, T value) where T : unmanaged
         {
             int size = Marshal.SizeOf<T>();
-            IntPtr ptr = Marshal.AllocHGlobal(size);
+            nint ptr = Marshal.AllocHGlobal(size);
             Marshal.StructureToPtr(value, ptr, false);
             Renderer.Gfx.SetParameter(id, parameter, ptr, size);
         }

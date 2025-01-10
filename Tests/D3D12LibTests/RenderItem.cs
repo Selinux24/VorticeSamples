@@ -1,0 +1,110 @@
+﻿using PrimalLike.Common;
+using PrimalLike.Components;
+using PrimalLike.Content;
+using ShaderCompiler;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Threading;
+
+namespace D3D12LibTests
+{
+    class RenderItem
+    {
+        private const string shadersSourcePath = "./Shaders/";
+
+        private static uint modelId = IdDetail.InvalidId;
+        private static uint vsId = IdDetail.InvalidId;
+        private static uint psId = IdDetail.InvalidId;
+
+        private static readonly Dictionary<uint, uint> renderItemEntityMap = [];
+
+        private static void LoadModel()
+        {
+            string modelPath = Path.GetFullPath("./Content/Model.model");
+            using var file = new MemoryStream(File.ReadAllBytes(modelPath));
+
+            modelId = ContentToEngine.CreateResource(file, AssetTypes.Mesh);
+            Debug.Assert(IdDetail.IsValid(modelId));
+        }
+        private static void LoadShaders()
+        {
+            // Let's say our material uses a vertex shader and a pixel shader.
+            ShaderFileInfo info = new("TestShader.hlsl", "TestShaderVS", ShaderStage.Vertex);
+
+            bool compiledVs = ShaderCompilation.Compile(shadersSourcePath, info, out var vertexShader);
+            Debug.Assert(compiledVs);
+
+            info = new ShaderFileInfo("TestShader.hlsl", "TestShaderPS", ShaderStage.Pixel);
+
+            bool compiledPs = ShaderCompilation.Compile(shadersSourcePath, info, out var pixelShader);
+            Debug.Assert(compiledPs);
+
+            vsId = ContentToEngine.AddShader(new PrimalLike.Content.CompiledShader()
+            {
+                ByteCodeSize = (ulong)vertexShader.ByteCode.Length,
+                ByteCode = vertexShader.ByteCode,
+                Hash = vertexShader.Hash.HashDigest
+            });
+
+            psId = ContentToEngine.AddShader(new PrimalLike.Content.CompiledShader()
+            {
+                ByteCodeSize = (ulong)pixelShader.ByteCode.Length,
+                ByteCode = pixelShader.ByteCode,
+                Hash = pixelShader.Hash.HashDigest
+            });
+        }
+
+        public static uint CreateRenderItem(uint entityId)
+        {
+            // load a model, pretend it belongs to entity_id
+            var _1 = new Thread(LoadModel);
+
+            // load a material:
+            // 1) load textures, oh nooooo we don't have any, but that's ok.
+            // 2) load shaders for that material
+            var _2 = new Thread(LoadShaders);
+
+            _1.Start();
+            _2.Start();
+
+            _1.Join();
+            _2.Join();
+            // add a render item using the model and its materials.
+
+            // TODO: add add_render_item in renderer.
+            uint itemId = 0;
+
+            renderItemEntityMap[itemId] = entityId;
+            return itemId;
+        }
+        public static void DestroyRenderItem(uint itemId)
+        {
+            // remove the render item from engine (also the game entity)
+            if (IdDetail.IsValid(itemId))
+            {
+                var pair = renderItemEntityMap[itemId];
+                GameEntity.Remove(pair);
+            }
+
+            // remove material
+
+            // remove shaders and textures
+            if (IdDetail.IsValid(vsId))
+            {
+                ContentToEngine.RemoveShader(vsId);
+            }
+
+            if (IdDetail.IsValid(psId))
+            {
+                ContentToEngine.RemoveShader(psId);
+            }
+
+            // remove model
+            if (IdDetail.IsValid(modelId))
+            {
+                ContentToEngine.DestroyResource(modelId, AssetTypes.Mesh);
+            }
+        }
+    }
+}

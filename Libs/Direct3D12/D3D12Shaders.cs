@@ -57,7 +57,7 @@ namespace Direct3D12
             engineShadersBlob = null;
         }
 
-        public static byte[] GetEngineShader(EngineShaders id)
+        public static ReadOnlyMemory<byte> GetEngineShader(EngineShaders id)
         {
             int egCount = Enum.GetValues(typeof(EngineShaders)).Length;
             Debug.Assert((int)id < egCount);

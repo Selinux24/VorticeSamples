@@ -15,7 +15,7 @@ namespace Direct3D12
         private CpuDescriptorHandle cpuStart;
         private GpuDescriptorHandle gpuStart;
         private uint[] freeHandles;
-        private int capacity = 0;
+        private uint capacity = 0;
         private int size = 0;
         private uint descriptorSize;
 
@@ -23,7 +23,7 @@ namespace Direct3D12
         public CpuDescriptorHandle CpuStart { get => cpuStart; }
         public GpuDescriptorHandle GpuStart { get => gpuStart; }
         public ID3D12DescriptorHeap Heap { get => heap; }
-        public int Capacity { get => capacity; }
+        public uint Capacity { get => capacity; }
         public int Size { get => size; }
         public int DescriptorSize { get => (int)descriptorSize; }
         public bool IsShaderVisible { get => gpuStart.Ptr != 0; }
@@ -67,7 +67,7 @@ namespace Direct3D12
             heap = null;
         }
 
-        public bool Initialize(int capacity, bool isShaderVisible)
+        public bool Initialize(uint capacity, bool isShaderVisible)
         {
             lock (mutex)
             {

@@ -1,5 +1,5 @@
 ﻿
-namespace PrimalLike.Content
+namespace PrimalLike.Graphics
 {
     public enum PrimitiveTopology : uint
     {

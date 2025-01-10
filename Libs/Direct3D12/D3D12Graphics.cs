@@ -18,7 +18,7 @@ namespace Direct3D12
     /// <summary>
     /// D3D12 graphics implementation.
     /// </summary>
-    public static class D3D12Graphics
+    static class D3D12Graphics
     {
         /// <summary>
         /// Gets or sets the number of frame buffers.
@@ -248,7 +248,7 @@ namespace Direct3D12
 
         private static IDXGIAdapter4 DetermineMainAdapter()
         {
-            for (int i = 0; D3D12Helpers.DxCall(dxgiFactory.EnumAdapterByGpuPreference(i, GpuPreference.HighPerformance, out IDXGIAdapter4 adapter)); i++)
+            for (uint i = 0; D3D12Helpers.DxCall(dxgiFactory.EnumAdapterByGpuPreference(i, GpuPreference.HighPerformance, out IDXGIAdapter4 adapter)); i++)
             {
                 if (D3D12Helpers.DxCall(D3D12.D3D12CreateDevice<D3D12Device>(adapter, MinimumFeatureLevel, out var tmpDevice)))
                 {
