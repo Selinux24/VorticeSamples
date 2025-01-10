@@ -6,7 +6,7 @@ using Vortice.Dxc;
 
 namespace ShaderCompiler
 {
-    public static class ShaderCompilation
+    public static class ShaderCompiler
     {
         public static DxcShaderModel DefaultShaderModel { get; set; } = DxcShaderModel.Model6_5;
         private static readonly IDxcCompiler3 compiler = DxcCompiler.Compiler;
@@ -32,7 +32,9 @@ namespace ShaderCompiler
             if (CompiledShadersAreUpToDate(shadersSourceDir, shadersOutputPath))
             {
                 Debug.WriteLine("Shader Compilation: [ Up to Date ]");
-                //return true;
+#if !DEBUG
+                return true;
+#endif
             }
 
             var shaders = new List<CompiledShader>();

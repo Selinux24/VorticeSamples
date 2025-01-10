@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
+[assembly: InternalsVisibleTo("UtilitiesTests")]
 namespace Utilities
 {
     /// <summary>

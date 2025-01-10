@@ -18,26 +18,14 @@ namespace D3D12LibTests
 {
     public class RendererTest
     {
-        class TestApp(IPlatformFactory platformFactory, IGraphicsPlatformFactory graphicsFactory) : Application(platformFactory, graphicsFactory)
+        class TestApp(IPlatformFactory platformFactory, IGraphicsPlatformFactory graphicsFactory)
+            : Application("Content/Game.bin", platformFactory, graphicsFactory)
         {
             public static TestApp Start<TPlatform, TGraphics>()
                 where TPlatform : IPlatformFactory, new()
                 where TGraphics : IGraphicsPlatformFactory, new()
             {
                 return new TestApp(new TPlatform(), new TGraphics());
-            }
-
-            protected override void Initialize()
-            {
-                Engine.EngineInitialize(gameBinFile);
-            }
-            protected override void Update(Time time)
-            {
-                Engine.EngineUpdate(time.DeltaTime);
-            }
-            protected override void Shutdown()
-            {
-                Engine.EngineShutdown();
             }
         }
 
@@ -57,7 +45,6 @@ namespace D3D12LibTests
 
         private const string shadersSourceDir = "../../../../../Libs/Direct3D12/Shaders/";
         private const string shadersOutputPath = "./Content/engineShaders.bin";
-        private const string gameBinFile = "./Content/Game.bin";
         private const string testModelFile = "./Content/Model.model";
 
         private static readonly EngineShaderInfo[] engineShaderFiles =
@@ -91,7 +78,7 @@ namespace D3D12LibTests
 
         private void InitializeApplication()
         {
-            var resCompile = ShaderCompilation.CompileShaders(engineShaderFiles, shadersSourceDir, shadersOutputPath);
+            var resCompile = ShaderCompiler.ShaderCompiler.CompileShaders(engineShaderFiles, shadersSourceDir, shadersOutputPath);
             Assert.That(resCompile, "Shader compilation error.");
 
             bool resRegister = GameEntity.RegisterScript<TestScript>();

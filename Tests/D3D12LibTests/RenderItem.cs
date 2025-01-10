@@ -32,12 +32,12 @@ namespace D3D12LibTests
             // Let's say our material uses a vertex shader and a pixel shader.
             ShaderFileInfo info = new("TestShader.hlsl", "TestShaderVS", ShaderStage.Vertex);
 
-            bool compiledVs = ShaderCompilation.Compile(shadersSourcePath, info, out var vertexShader);
+            bool compiledVs = ShaderCompiler.ShaderCompiler.Compile(shadersSourcePath, info, out var vertexShader);
             Debug.Assert(compiledVs);
 
             info = new ShaderFileInfo("TestShader.hlsl", "TestShaderPS", ShaderStage.Pixel);
 
-            bool compiledPs = ShaderCompilation.Compile(shadersSourcePath, info, out var pixelShader);
+            bool compiledPs = ShaderCompiler.ShaderCompiler.Compile(shadersSourcePath, info, out var pixelShader);
             Debug.Assert(compiledPs);
 
             vsId = ContentToEngine.AddShader(new PrimalLike.Content.CompiledShader()

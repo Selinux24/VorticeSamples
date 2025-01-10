@@ -1,10 +1,10 @@
-﻿using PrimalLike;
+﻿using NUnit.Framework;
 using PrimalLike.Common;
 using PrimalLike.Components;
-using NUnit.Framework;
+using PrimalLike.Content;
+using PrimalLike.EngineAPI;
 using System.IO;
 using System.Text;
-using PrimalLike.EngineAPI;
 
 namespace PrimalLikeTests.Content
 {
@@ -57,7 +57,7 @@ namespace PrimalLikeTests.Content
             //Register the script creator
             GameEntity.RegisterScript<TestScript>();
 
-            bool result = Engine.EngineInitialize(path);
+            bool result = ContentLoader.LoadGame(path);
 
             Assert.That(result);
         }

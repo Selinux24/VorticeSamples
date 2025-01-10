@@ -3,11 +3,13 @@ using PrimalLike.Platform;
 using SharpGen.Runtime;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using Utilities;
 using Vortice.Direct3D;
 using Vortice.Direct3D12;
 using Vortice.DXGI;
 
+[assembly: InternalsVisibleTo("D3D12LibTests")]
 namespace Direct3D12
 {
 #if DEBUG

@@ -8,6 +8,6 @@ namespace ShaderCompiler
         public string FileName { get; } = fileName ?? throw new ArgumentNullException(nameof(fileName));
         public string EntryPoint { get; } = entryPoint ?? throw new ArgumentNullException(nameof(entryPoint));
         public ShaderStage Stage { get; } = stage;
-        public string Profile { get; } = profile ?? DxcCompiler.GetShaderProfile((DxcShaderStage)stage, ShaderCompilation.DefaultShaderModel);
+        public string Profile { get; } = profile ?? DxcCompiler.GetShaderProfile((DxcShaderStage)stage, ShaderCompiler.DefaultShaderModel);
     }
 }

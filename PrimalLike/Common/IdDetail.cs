@@ -2,9 +2,11 @@
 global using IdType = uint;
 using System;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
 
+[assembly: InternalsVisibleTo("PrimalLikeTests")]
 namespace PrimalLike.Common
 {
     public static class IdDetail

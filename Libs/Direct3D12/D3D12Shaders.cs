@@ -20,7 +20,7 @@ namespace Direct3D12
         private static bool LoadEngineShaders()
         {
             Debug.Assert(engineShadersBlob == null);
-            bool result = Engine.LoadEngineShaders(out engineShadersBlob);
+            bool result = Application.LoadEngineShaders(out engineShadersBlob);
             Debug.Assert(engineShadersBlob != null && engineShadersBlob.Length > 0);
 
             int egCount = Enum.GetValues(typeof(EngineShaders)).Length;

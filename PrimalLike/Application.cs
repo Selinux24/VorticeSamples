@@ -1,8 +1,11 @@
-﻿using PrimalLike.Graphics;
+﻿using PrimalLike.Components;
+using PrimalLike.Content;
+using PrimalLike.Graphics;
 using PrimalLike.Platform;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.IO;
 using System.Threading.Tasks;
 
 namespace PrimalLike
@@ -36,6 +39,10 @@ namespace PrimalLike
         private readonly Time time = new();
         private readonly object tickLock = new();
         private readonly List<RenderSurface> renderSurfaces = [];
+        private readonly string contentFilename;
+
+        public event EventHandler OnInitialize;
+        public event EventHandler OnShutdown;
 
         /// <summary>
         /// Gets whether the application is running.
@@ -51,15 +58,26 @@ namespace PrimalLike
         /// </summary>
         /// <param name="platformFactory">Platform factory</param>
         /// <param name="graphicsFactory">Graphics factory</param>
-        protected Application(IPlatformFactory platformFactory, IGraphicsPlatformFactory graphicsFactory)
+        protected Application(string contentFilename, IPlatformFactory platformFactory, IGraphicsPlatformFactory graphicsFactory)
         {
+            this.contentFilename = contentFilename;
+
             platform = platformFactory.CreatePlatform();
 
             Renderer.Initialize(graphicsFactory);
 
             Current = this;
+        }
 
-            Initialize();
+        /// <summary>
+        /// Load engine shaders
+        /// </summary>
+        /// <param name="shadersBlob">Shaders blob</param>
+        public static bool LoadEngineShaders(out byte[] shadersBlob)
+        {
+            string path = Renderer.GetEngineShaderPath();
+
+            return ContentLoader.LoadEngineShaders(path, out shadersBlob);
         }
 
         /// <summary>
@@ -136,20 +154,16 @@ namespace PrimalLike
             platform.Run();
 
             OnShutdown?.Invoke(this, EventArgs.Empty);
-
-            Shutdown();
-
+            ContentLoader.UnloadGame(); 
             Renderer.Shutdown();
         }
-        /// <summary>
-        /// Initializes the application.
-        /// </summary>
-        protected abstract void Initialize();
         /// <summary>
         /// Loads content asynchronously.
         /// </summary>
         protected virtual Task LoadContentAsync()
         {
+            ContentLoader.LoadGame(contentFilename);
+
             return Task.CompletedTask;
         }
 
@@ -169,6 +183,8 @@ namespace PrimalLike
                 try
                 {
                     time.Update();
+
+                    Script.Update(time.DeltaTime);
 
                     Update(time);
 
@@ -198,7 +214,10 @@ namespace PrimalLike
         /// Updates the application.
         /// </summary>
         /// <param name="time">Time</param>
-        protected abstract void Update(Time time);
+        protected virtual void Update(Time time)
+        {
+
+        }
         /// <summary>
         /// Begins drawing.
         /// </summary>
@@ -226,13 +245,6 @@ namespace PrimalLike
         {
 
         }
-
-        /// <summary>
-        /// Shuts down the application.
-        /// </summary>
-        protected abstract void Shutdown();
-
-        public event EventHandler OnShutdown;
 
         /// <summary>
         /// Exits.

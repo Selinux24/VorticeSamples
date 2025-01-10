@@ -19,7 +19,7 @@ namespace DX12Windows
 
         static void Main()
         {
-            ShaderCompilation.CompileShaders(engineShaderFiles, shadersSourceDir, shadersOutputPath);
+            ShaderCompiler.ShaderCompiler.CompileShaders(engineShaderFiles, shadersSourceDir, shadersOutputPath);
 
             Win32WindowInfo windowInfo = new()
             {
