@@ -12,7 +12,7 @@ namespace Direct3D12
     {
         public enum GPassRootParameters : uint
         {
-            FrameConstants,
+            FrameConstants = 0,
 
             Count
         }
