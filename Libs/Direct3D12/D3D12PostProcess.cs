@@ -37,6 +37,7 @@ namespace Direct3D12
             parameters[RP_RootConstants] = D3D12Helpers.AsConstants(1, ShaderVisibility.Pixel, 1);
 
             var rootSignature = new D3D12RootSignatureDesc(parameters);
+            rootSignature.Flags &= ~RootSignatureFlags.DenyPixelShaderRootAccess;
             fxRootSig = rootSignature.Create();
             Debug.Assert(fxRootSig != null);
             D3D12Helpers.NameD3D12Object(fxRootSig, "Post-process FX Root Signature");

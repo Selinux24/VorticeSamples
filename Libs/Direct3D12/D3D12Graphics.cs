@@ -12,6 +12,7 @@ using Vortice.DXGI;
 [assembly: InternalsVisibleTo("D3D12LibTests")]
 namespace Direct3D12
 {
+    using System;
 #if DEBUG
     using Vortice.Direct3D12.Debug;
     using Vortice.DXGI.Debug;
@@ -75,6 +76,21 @@ namespace Direct3D12
         /// Gets the current frame index.
         /// </summary>
         public static int CurrentFrameIndex { get => gfxCommand.FrameIndex; }
+
+        public static bool IsWindows11OrGreater()
+        {
+            Debug.WriteLine(Environment.OSVersion);
+
+            //Detect windows 11
+            if (Environment.OSVersion.Version.Major >= 10 &&
+                Environment.OSVersion.Version.Minor >= 0 &&
+                Environment.OSVersion.Version.Build >= 22000)
+            {
+                return true;
+            }
+
+            return false;
+        }
 
         /// <summary>
         /// Sets the deferred releases flag.
@@ -223,8 +239,11 @@ namespace Direct3D12
             {
                 debugDevice = mainDevice.QueryInterfaceOrNull<ID3D12DebugDevice2>();
             }
-            mainDevice?.Dispose();
-            mainDevice = null;
+            if (!IsWindows11OrGreater())
+            {
+                mainDevice?.Dispose();
+                mainDevice = null;
+            }
 
             if (debugDevice != null)
             {
