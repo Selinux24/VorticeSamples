@@ -85,11 +85,21 @@ namespace PrimalLike.Graphics
         /// Adds a submesh.
         /// </summary>
         /// <param name="data">Submesh data</param>
-        SubmeshId AddSubmesh(ref IntPtr data);
+        IdType AddSubmesh(ref IntPtr data);
         /// <summary>
         /// Removes a submesh.
         /// </summary>
         /// <param name="id">Submesh id</param>
-        void RemoveSubmesh(SubmeshId id);
+        void RemoveSubmesh(IdType id);
+        /// <summary>
+        /// Adds a material.
+        /// </summary>
+        /// <param name="info">Material info</param>
+        IdType AddMaterial(MaterialInitInfo info);
+        /// <summary>
+        /// Removes a material.
+        /// </summary>
+        /// <param name="id">Material id</param>
+        void RemoveMaterial(IdType id);
     }
 }

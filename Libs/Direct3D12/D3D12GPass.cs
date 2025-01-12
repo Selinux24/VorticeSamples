@@ -10,8 +10,23 @@ namespace Direct3D12
 {
     static class D3D12GPass
     {
-        private const int RP_Count = 1;
-        private const int RP_RootConstants = 0;
+        public enum GPassRootParameters : uint
+        {
+            FrameConstants,
+
+            Count
+        }
+
+        public enum OpaqueRootParameter : uint
+        {
+            PerFrameData,
+            PositionBuffer,
+            ElementBuffer,
+            SrvIndices,
+            PerObjectData,
+
+            Count
+        }
 
         [StructLayout(LayoutKind.Sequential)]
         struct FrameConstants
@@ -124,11 +139,12 @@ namespace Direct3D12
             Debug.Assert(gpassRootSig == null && gpassPso == null);
 
             // Create GPass root signature
-            var parameters = new RootParameter1[RP_Count];
-            parameters[RP_RootConstants] = D3D12Helpers.AsConstants(3, ShaderVisibility.Pixel, 1);
+            var parameters = new RootParameter1[(uint)GPassRootParameters.Count];
+            parameters[(uint)GPassRootParameters.FrameConstants] = D3D12Helpers.AsConstants(3, ShaderVisibility.Pixel, 1);
 
-            var rootSignature = D3D12Helpers.AsRootSignatureDesc(parameters);
-            gpassRootSig = D3D12Helpers.CreateRootSignature(D3D12Graphics.Device, rootSignature);
+            var rootSignature = new D3D12RootSignatureDesc(parameters);
+            rootSignature.Flags &= ~RootSignatureFlags.DenyPixelShaderRootAccess;
+            gpassRootSig = rootSignature.Create();
             Debug.Assert(gpassRootSig != null);
             D3D12Helpers.NameD3D12Object(gpassRootSig, "GPass Root Signature");
 
@@ -191,7 +207,7 @@ namespace Direct3D12
             frameConstants.Width = info.SurfaceWidth;
             frameConstants.Height = info.SurfaceHeight;
             frameConstants.Frame++;
-            cmdList.SetGraphicsRoot32BitConstants(RP_RootConstants, frameConstants, 0);
+            cmdList.SetGraphicsRoot32BitConstants((uint)GPassRootParameters.FrameConstants, frameConstants, 0);
 
             cmdList.IASetPrimitiveTopology(PrimitiveTopology.TriangleList);
             cmdList.DrawInstanced(3, 1, 0, 0);

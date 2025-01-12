@@ -237,37 +237,18 @@ namespace Direct3D12
             return new(table, visibility);
         }
 
-        // Maximum 64 DWORDs (u32's) divided up amongst all root parameters.
-        // Root constants = 1 DWORD per 32-bit constant
-        // Root descriptor  (CBV, SRV or UAV) = 2 DWORDs each
-        // Descriptor table pointer = 1 DWORD
-        // Static samplers = 0 DWORDs (compiled into shader)
-        public static RootSignatureDescription1 AsRootSignatureDesc(
-            RootParameter1[] parameters,
-            StaticSamplerDescription[] staticSamplers = null,
-            RootSignatureFlags flags =
-                RootSignatureFlags.DenyVertexShaderRootAccess |
-                RootSignatureFlags.DenyHullShaderRootAccess |
-                RootSignatureFlags.DenyDomainShaderRootAccess |
-                RootSignatureFlags.DenyGeometryShaderRootAccess |
-                RootSignatureFlags.DenyAmplificationShaderRootAccess |
-                RootSignatureFlags.DenyMeshShaderRootAccess)
-        {
-            return new RootSignatureDescription1(flags, parameters, staticSamplers);
-        }
-
-        public static ID3D12RootSignature CreateRootSignature(D3D12Device device, RootSignatureDescription1 desc)
+        public static ID3D12RootSignature CreateRootSignature(RootSignatureDescription1 desc)
         {
             VersionedRootSignatureDescription versionedDesc = new(desc);
 
-            string error_msg = D3D12.D3D12SerializeVersionedRootSignature(versionedDesc, out var signature_blob);
-            if (!string.IsNullOrEmpty(error_msg))
+            string errorMsg = D3D12.D3D12SerializeVersionedRootSignature(versionedDesc, out var signatureBlob);
+            if (!string.IsNullOrEmpty(errorMsg))
             {
-                Debug.WriteLine(error_msg);
+                Debug.WriteLine(errorMsg);
                 return null;
             }
 
-            if (!DxCall(device.CreateRootSignature(0, signature_blob.BufferPointer, signature_blob.BufferSize, out ID3D12RootSignature signature)))
+            if (!DxCall(D3D12Graphics.Device.CreateRootSignature(0, signatureBlob.BufferPointer, signatureBlob.BufferSize, out ID3D12RootSignature signature)))
             {
                 signature.Dispose();
             }

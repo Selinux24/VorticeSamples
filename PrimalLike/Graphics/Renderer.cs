@@ -1,5 +1,4 @@
 ﻿global using CameraId = System.UInt32;
-global using SubmeshId = System.UInt32;
 global using SurfaceId = System.UInt32;
 using PrimalLike.Platform;
 using System;
@@ -75,13 +74,21 @@ namespace PrimalLike.Graphics
             gfx.GetParameter(id, parameter, data, size);
         }
 
-        public static SubmeshId AddSubmesh(ref IntPtr data)
+        public static IdType AddSubmesh(ref IntPtr data)
         {
             return gfx.AddSubmesh(ref data);
         }
-        public static void RemoveSubmesh(SubmeshId id)
+        public static void RemoveSubmesh(IdType id)
         {
             gfx.RemoveSubmesh(id);
+        }
+        public static IdType AddMaterial(MaterialInitInfo info)
+        {
+            return gfx.AddMaterial(info);
+        }
+        public static void RemoveMaterial(IdType id)
+        {
+            gfx.RemoveMaterial(id);
         }
     }
 }

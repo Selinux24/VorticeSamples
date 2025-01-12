@@ -7,9 +7,8 @@ namespace Direct3D12
 {
     static class D3D12PostProcess
     {
-        private const int RP_Count = 2;
+        private const int RP_Count = 1;
         private const int RP_RootConstants = 0;
-        private const int RP_DescriptorTable = 1;
 
         [StructLayout(LayoutKind.Sequential)]
         struct PipelineStateStream
@@ -34,19 +33,11 @@ namespace Direct3D12
             Debug.Assert(fxRootSig == null && fxPso == null);
 
             // Create FX root signature
-            var range = D3D12Helpers.Range(
-                DescriptorRangeType.ShaderResourceView,
-                D3D12.DescriptorRangeOffsetAppend,
-                0,
-                0,
-                DescriptorRangeFlags.DescriptorsVolatile);
-
             var parameters = new RootParameter1[RP_Count];
             parameters[RP_RootConstants] = D3D12Helpers.AsConstants(1, ShaderVisibility.Pixel, 1);
-            parameters[RP_DescriptorTable] = D3D12Helpers.AsDescriptorTable(ShaderVisibility.Pixel, [range]);
 
-            var rootSignature = D3D12Helpers.AsRootSignatureDesc(parameters);
-            fxRootSig = D3D12Helpers.CreateRootSignature(D3D12Graphics.Device, rootSignature);
+            var rootSignature = new D3D12RootSignatureDesc(parameters);
+            fxRootSig = rootSignature.Create();
             Debug.Assert(fxRootSig != null);
             D3D12Helpers.NameD3D12Object(fxRootSig, "Post-process FX Root Signature");
 
@@ -81,7 +72,6 @@ namespace Direct3D12
             cmdList.SetPipelineState(fxPso);
 
             cmdList.SetGraphicsRoot32BitConstant(RP_RootConstants, D3D12GPass.MainBuffer.Srv.Index, 0);
-            cmdList.SetGraphicsRootDescriptorTable(RP_DescriptorTable, D3D12Graphics.SrvHeap.GpuStart);
             cmdList.IASetPrimitiveTopology(PrimitiveTopology.TriangleList);
             // NOTE: we don't need to clear the render target, because each pixel will 
             //       be overwritten by pixels from gpass main buffer.

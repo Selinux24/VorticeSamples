@@ -8,7 +8,7 @@ namespace ShaderCompiler
 {
     public static class Compiler
     {
-        public static DxcShaderModel DefaultShaderModel { get; set; } = DxcShaderModel.Model6_5;
+        public static DxcShaderModel DefaultShaderModel { get; set; } = DxcShaderModel.Model6_6;
 
         public static bool CompileShaders(EngineShaderInfo[] engineShaderFiles, string shadersSourceDir, string shadersOutputPath, IEnumerable<string> extraArgs = null)
         {
@@ -85,36 +85,46 @@ namespace ShaderCompiler
             string shaderSource = File.ReadAllText(shadersSourcePath);
             var args = GetArgs(shadersSourceDir, info, DefaultShaderModel, extraArgs);
 
-            Debug.WriteLine($"Shader Compilation: {info.Stage} {info.Profile} - {info.EntryPoint} {info.FileName}");
-
-            using IDxcResult results = DxcCompiler.Compiler.Compile(shaderSource, args, null);
-            if (results.GetStatus().Failure)
+            if (!DxcCompiler.Utils.CreateDefaultIncludeHandler(out var includeHandler).Success)
             {
-                Debug.WriteLine(results.GetErrors());
+                Debug.WriteLine("Shader Compilation: Failed to create DXC include handler instance");
                 compiledShader = default;
                 return false;
             }
 
-            byte[] disassembly = null;
-            if (results.GetOutput(DxcOutKind.Disassembly, out IDxcBlob disassemblyBlob).Success)
+            using (includeHandler)
             {
-                disassembly = disassemblyBlob.AsBytes();
-            }
-            else
-            {
-                Debug.WriteLine("Shader Compilation: Failed to get disassembly");
-            }
+                Debug.WriteLine($"Shader Compilation: {info.Stage} {info.Profile} - {info.EntryPoint} {info.FileName}");
 
-            if (results.GetOutput(DxcOutKind.ShaderHash, out IDxcBlob hashBlob).Failure)
-            {
-                Debug.WriteLine("Shader Compilation: Failed to get shader hash");
-                compiledShader = default;
-                return false;
-            }
-            var shaderHash = Marshal.PtrToStructure<ShaderHash>(hashBlob.BufferPointer);
-            Debug.WriteLine($"Shader Compilation: HashDigest [{shaderHash.GetHashDigestString()}]");
+                using IDxcResult results = DxcCompiler.Compiler.Compile(shaderSource, args, includeHandler);
+                if (results.GetStatus().Failure)
+                {
+                    Debug.WriteLine(results.GetErrors());
+                    compiledShader = default;
+                    return false;
+                }
 
-            compiledShader = new(results.GetObjectBytecodeMemory(), shaderHash, disassembly);
+                byte[] disassembly = null;
+                if (results.GetOutput(DxcOutKind.Disassembly, out IDxcBlob disassemblyBlob).Success)
+                {
+                    disassembly = disassemblyBlob.AsBytes();
+                }
+                else
+                {
+                    Debug.WriteLine("Shader Compilation: Failed to get disassembly");
+                }
+
+                if (results.GetOutput(DxcOutKind.ShaderHash, out IDxcBlob hashBlob).Failure)
+                {
+                    Debug.WriteLine("Shader Compilation: Failed to get shader hash");
+                    compiledShader = default;
+                    return false;
+                }
+                var shaderHash = Marshal.PtrToStructure<ShaderHash>(hashBlob.BufferPointer);
+                Debug.WriteLine($"Shader Compilation: HashDigest [{shaderHash.GetHashDigestString()}]");
+
+                compiledShader = new(results.GetObjectBytecodeMemory(), shaderHash, disassembly);
+            }
 
             return true;
         }

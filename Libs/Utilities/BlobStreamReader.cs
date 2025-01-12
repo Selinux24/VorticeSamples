@@ -55,6 +55,20 @@ namespace Utilities
             return value;
         }
         /// <summary>
+        /// Reads 'count' elements of type T and returns them as an array.
+        /// </summary>
+        /// <typeparam name="T">Primitive type</typeparam>
+        /// <param name="count">Array size</param>
+        public T[] Read<T>(uint count) where T : unmanaged
+        {
+            T[] values = new T[count];
+            for (int i = 0; i < count; i++)
+            {
+                values[i] = Read<T>();
+            }
+            return values;
+        }
+        /// <summary>
         /// Reads 'length' bytes and returns them as a byte array.
         /// </summary>
         /// <param name="length">Buffer length</param>

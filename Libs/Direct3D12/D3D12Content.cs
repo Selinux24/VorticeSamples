@@ -1,5 +1,7 @@
 ﻿using PrimalLike.Graphics;
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using Utilities;
@@ -24,6 +26,106 @@ namespace Direct3D12
         static readonly FreeList<ID3D12Resource> submeshBuffers = new();
         static readonly FreeList<SubmeshView> submeshViews = new();
         static readonly object submeshMutex = new();
+
+        static readonly FreeList<D3D12Texture> textures = new();
+        static readonly object textureMutex = new();
+
+        static readonly List<ID3D12RootSignature> rootSignatures = [];
+        static readonly Dictionary<ulong, uint> mtlRsMap = []; // maps a material's type and shader flags to an index in the array of root signatures.
+        static readonly FreeList<IntPtr> materials = new();
+        static readonly object materialMutex = new();
+
+        public static bool Initialize()
+        {
+            return true;
+        }
+        public static void Shutdown()
+        {
+            foreach (var item in rootSignatures)
+            {
+                item.Dispose();
+            }
+        }
+
+        public static uint CreateRootSignature(MaterialTypes type, ShaderFlags flags)
+        {
+            Debug.Assert(type < MaterialTypes.Count);
+            Debug.Assert(sizeof(MaterialTypes) == sizeof(uint) && sizeof(ShaderFlags) == sizeof(uint));
+            ulong key = ((uint)type << 32) | (uint)flags;
+            if (mtlRsMap.TryGetValue(key, out uint value))
+            {
+                return value;
+            }
+
+            ID3D12RootSignature rootSignature = null;
+
+            switch (type)
+            {
+                case MaterialTypes.Opaque:
+                {
+                    RootParameter1[] parameters = new RootParameter1[(uint)D3D12GPass.OpaqueRootParameter.Count];
+                    parameters[(uint)D3D12GPass.OpaqueRootParameter.PerFrameData] = D3D12Helpers.AsCbv(ShaderVisibility.All, 0);
+
+                    ShaderVisibility bufferVisibility = new();
+                    ShaderVisibility dataVisibility = new();
+
+                    if (flags.HasFlag(ShaderFlags.Vertex))
+                    {
+                        bufferVisibility = ShaderVisibility.Vertex;
+                        dataVisibility = ShaderVisibility.Vertex;
+                    }
+                    else if (flags.HasFlag(ShaderFlags.Mesh))
+                    {
+                        bufferVisibility = ShaderVisibility.Mesh;
+                        dataVisibility = ShaderVisibility.Mesh;
+                    }
+
+                    if (flags.HasFlag(ShaderFlags.Hull) ||
+                        flags.HasFlag(ShaderFlags.Geometry) ||
+                        flags.HasFlag(ShaderFlags.Amplification))
+                    {
+                        bufferVisibility = ShaderVisibility.All;
+                        dataVisibility = ShaderVisibility.All;
+                    }
+
+                    if (flags.HasFlag(ShaderFlags.Pixel) ||
+                        flags.HasFlag(ShaderFlags.Compute))
+                    {
+                        dataVisibility = ShaderVisibility.All;
+                    }
+
+                    parameters[(uint)D3D12GPass.OpaqueRootParameter.PositionBuffer] = D3D12Helpers.AsSrv(bufferVisibility, 0);
+                    parameters[(uint)D3D12GPass.OpaqueRootParameter.ElementBuffer] = D3D12Helpers.AsSrv(bufferVisibility, 1);
+                    parameters[(uint)D3D12GPass.OpaqueRootParameter.SrvIndices] = D3D12Helpers.AsSrv(ShaderVisibility.Pixel, 2); // TODO: needs to be visible to any stages that need to sample textures.
+                    parameters[(uint)D3D12GPass.OpaqueRootParameter.PerObjectData] = D3D12Helpers.AsCbv(dataVisibility, 1);
+
+                    var rootSignatureDesc = new D3D12RootSignatureDesc(parameters, GetRootSignatureFlags(flags));
+                    rootSignature = rootSignatureDesc.Create();
+                    Debug.Assert(rootSignature != null);
+                }
+                break;
+            }
+
+            Debug.Assert(rootSignature != null);
+            uint id = (uint)rootSignatures.Count;
+            rootSignatures.Add(rootSignature);
+            mtlRsMap[key] = id;
+            D3D12Helpers.NameD3D12Object(rootSignature, (int)key, "GPass Root Signature - key");
+
+            return id;
+        }
+        private static RootSignatureFlags GetRootSignatureFlags(ShaderFlags flags)
+        {
+            RootSignatureFlags defaultFlags = D3D12RootSignatureDesc.DefaultFlags;
+            if (flags.HasFlag(ShaderFlags.Vertex)) defaultFlags &= ~RootSignatureFlags.DenyVertexShaderRootAccess;
+            if (flags.HasFlag(ShaderFlags.Hull)) defaultFlags &= ~RootSignatureFlags.DenyHullShaderRootAccess;
+            if (flags.HasFlag(ShaderFlags.Domain)) defaultFlags &= ~RootSignatureFlags.DenyDomainShaderRootAccess;
+            if (flags.HasFlag(ShaderFlags.Geometry)) defaultFlags &= ~RootSignatureFlags.DenyGeometryShaderRootAccess;
+            if (flags.HasFlag(ShaderFlags.Pixel)) defaultFlags &= ~RootSignatureFlags.DenyPixelShaderRootAccess;
+            if (flags.HasFlag(ShaderFlags.Amplification)) defaultFlags &= ~RootSignatureFlags.DenyAmplificationShaderRootAccess;
+            if (flags.HasFlag(ShaderFlags.Mesh)) defaultFlags &= ~RootSignatureFlags.DenyMeshShaderRootAccess;
+            return defaultFlags;
+        }
 
         private static D3DPrimitiveTopology GetD3DPrimitiveTopology(PrimitiveTopology type)
         {
@@ -111,7 +213,7 @@ namespace Direct3D12
         /// Removes the submesh from the list.
         /// </summary>
         /// <param name="id">Submesh id</param>
-        public static void Remove(uint id)
+        public static void RemoveSubmesh(uint id)
         {
             lock (submeshMutex)
             {
@@ -119,6 +221,44 @@ namespace Direct3D12
 
                 D3D12Graphics.DeferredRelease(submeshBuffers[(int)id]);
                 submeshBuffers.Remove((int)id);
+            }
+        }
+
+        public static uint AddTexture(ref IntPtr data)
+        {
+            return uint.MaxValue;
+        }
+        public static void RemoveTexture(uint id)
+        {
+
+        }
+        public static void GetTextureDescriptorIndices(uint[] textureIds, uint[] indices)
+        {
+            Debug.Assert(textureIds != null && indices != null);
+            lock (textureMutex)
+            {
+                for (int i = 0; i < textureIds.Length; i++)
+                {
+                    indices[i] = textures[i].Srv.Index;
+                }
+            }
+        }
+
+        public static uint AddMaterial(MaterialInitInfo info)
+        {
+            IntPtr buffer = IntPtr.Zero;
+            lock (materialMutex)
+            {
+                D3D12MaterialStream stream = new(buffer, info);
+                Debug.Assert(buffer != IntPtr.Zero);
+                return (uint)materials.Add(buffer);
+            }
+        }
+        public static void RemoveMaterial(uint id)
+        {
+            lock (materialMutex)
+            {
+                materials.Remove((int)id);
             }
         }
     }

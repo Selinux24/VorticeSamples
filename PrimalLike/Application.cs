@@ -5,7 +5,6 @@ using PrimalLike.Platform;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.IO;
 using System.Threading.Tasks;
 
 namespace PrimalLike
@@ -65,6 +64,8 @@ namespace PrimalLike
             platform = platformFactory.CreatePlatform();
 
             Renderer.Initialize(graphicsFactory);
+
+            OnInitialize?.Invoke(this, EventArgs.Empty);
 
             Current = this;
         }
@@ -154,7 +155,7 @@ namespace PrimalLike
             platform.Run();
 
             OnShutdown?.Invoke(this, EventArgs.Empty);
-            ContentLoader.UnloadGame(); 
+            ContentLoader.UnloadGame();
             Renderer.Shutdown();
         }
         /// <summary>

@@ -85,7 +85,17 @@ namespace Direct3D12
         /// <inheritdoc/>
         public void RemoveSubmesh(uint id)
         {
-            D3D12Content.Remove(id);
+            D3D12Content.RemoveSubmesh(id);
+        }
+        /// <inheritdoc/>
+        public uint AddMaterial(MaterialInitInfo data)
+        {
+            return D3D12Content.AddMaterial(data);
+        }
+        /// <inheritdoc/>
+        public void RemoveMaterial(uint id)
+        {
+            D3D12Content.RemoveMaterial(id);
         }
     }
 }

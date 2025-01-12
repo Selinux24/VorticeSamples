@@ -157,7 +157,8 @@ namespace Direct3D12
             if (!D3D12Shaders.Initialize() ||
                 !D3D12GPass.Initialize() ||
                 !D3D12PostProcess.Initialize() ||
-                !D3D12Upload.Initialize())
+                !D3D12Upload.Initialize() ||
+                !D3D12Content.Initialize())
             {
                 return FailedInit();
             }
@@ -176,6 +177,7 @@ namespace Direct3D12
             }
 
             // shutdown modules
+            D3D12Content.Shutdown();
             D3D12Upload.Shutdown();
             D3D12PostProcess.Shutdown();
             D3D12Shaders.Shutdown();

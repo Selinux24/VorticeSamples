@@ -24,6 +24,13 @@ namespace PrimalLike.Content
         private static readonly FreeList<IntPtr> shaders = new();
         private static readonly object shaderMutex = new();
 
+        public static uint CreateResource<T>(T data, AssetTypes assetType)
+        {
+            IntPtr ptr = Marshal.AllocHGlobal(Marshal.SizeOf(data));
+            Marshal.StructureToPtr(data, ptr, false);
+
+            return CreateResource(ptr, assetType);
+        }
         public static uint CreateResource(MemoryStream stream, AssetTypes assetType)
         {
             IntPtr data = IntPtr.Zero;
@@ -48,6 +55,7 @@ namespace PrimalLike.Content
             uint id = assetType switch
             {
                 AssetTypes.Mesh => CreateGeometryResource(data),
+                AssetTypes.Material => CreateMaterialResource(data),
                 _ => uint.MaxValue,
             };
 
@@ -60,6 +68,9 @@ namespace PrimalLike.Content
             {
                 case AssetTypes.Mesh:
                     DestroyGeometryResource(id);
+                    break;
+                case AssetTypes.Material:
+                    DestroyMaterialResource(id);
                     break;
                 default:
                     Debug.Assert(false);
@@ -233,10 +244,38 @@ namespace PrimalLike.Content
             return (IdType)((pointer >> shiftBits) & IdDetail.InvalidId);
         }
 
+        /// <summary>
+        /// Creates a material resource.
+        /// </summary>
+        /// <param name="data">Material data</param>
+        /// <remarks>
+        /// NOTE: expects data to contain
+        /// struct {
+        ///  material_type::type type,
+        ///  u32                 texture_count,
+        ///  id::id_type         shader_ids[shader_type::count],
+        ///  id::id_type*        texture_ids;
+        /// } material_init_info
+        /// </remarks>
+        private static IdType CreateMaterialResource(IntPtr data)
+        {
+            Debug.Assert(data != IntPtr.Zero);
+            var info = Marshal.PtrToStructure<MaterialInitInfo>(data);
+            return Renderer.AddMaterial(info);
+        }
+        /// <summary>
+        /// Destroys a material resource.
+        /// </summary>
+        /// <param name="id">Material id</param>
+        private static void DestroyMaterialResource(IdType id)
+        {
+            Renderer.RemoveMaterial(id);
+        }
+
         public static IdType AddShader(CompiledShader shader)
         {
             var shaderData = shader.GetData();
-            
+
             lock (shaderMutex)
             {
                 return (IdType)shaders.Add(shaderData);

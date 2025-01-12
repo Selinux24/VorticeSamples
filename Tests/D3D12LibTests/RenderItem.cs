@@ -1,6 +1,7 @@
 ﻿using PrimalLike.Common;
 using PrimalLike.Components;
 using PrimalLike.Content;
+using PrimalLike.Graphics;
 using ShaderCompiler;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -16,6 +17,7 @@ namespace D3D12LibTests
         private static uint modelId = IdDetail.InvalidId;
         private static uint vsId = IdDetail.InvalidId;
         private static uint psId = IdDetail.InvalidId;
+        private static uint mtlId = IdDetail.InvalidId;
 
         private static readonly Dictionary<uint, uint> renderItemEntityMap = [];
 
@@ -52,6 +54,14 @@ namespace D3D12LibTests
                 Hash = pixelShader.Hash.HashDigest
             });
         }
+        public static void CreateMaterial()
+        {
+            MaterialInitInfo info = new();
+            info.ShaderIds[(uint)ShaderTypes.Vertex] = vsId;
+            info.ShaderIds[(uint)ShaderTypes.Pixel] = psId;
+            info.Type = MaterialTypes.Opaque;
+            mtlId = ContentToEngine.CreateResource(info, AssetTypes.Material);
+        }
 
         public static uint CreateRenderItem(uint entityId)
         {
@@ -69,6 +79,7 @@ namespace D3D12LibTests
             _1.Join();
             _2.Join();
             // add a render item using the model and its materials.
+            CreateMaterial();
 
             // TODO: add add_render_item in renderer.
             uint itemId = 0;
@@ -86,6 +97,10 @@ namespace D3D12LibTests
             }
 
             // remove material
+            if (IdDetail.IsValid(mtlId))
+            {
+                ContentToEngine.DestroyResource(mtlId, AssetTypes.Material);
+            }
 
             // remove shaders and textures
             if (IdDetail.IsValid(vsId))
