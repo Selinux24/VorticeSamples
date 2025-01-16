@@ -37,47 +37,34 @@ namespace Direct3D12
 
             Initialize();
         }
-        public D3D12MaterialStream(IntPtr materialBuffer, MaterialInitInfo info)
+        public D3D12MaterialStream(ref IntPtr materialBuffer, MaterialInitInfo info)
         {
             Debug.Assert(materialBuffer == IntPtr.Zero);
 
-            int shaderCount = 0;
-            int flags = 0;
-            for (int i = 0; i < (int)ShaderTypes.Count; i++)
-            {
-                if (IdDetail.IsValid(info.ShaderIds[i]))
-                {
-                    shaderCount++;
-                    flags |= 1 << i;
-                }
-            }
-
-            Debug.Assert(shaderCount != 0 && flags != 0);
+            info.GetShaderFlags(out ShaderFlags shaderFlags, out int shaderCount);
+            Debug.Assert(shaderCount != 0 && shaderFlags != 0);
 
             int bufferSize =
                 sizeof(MaterialTypes) +                             // material type
                 sizeof(ShaderFlags) +                               // shader flags
                 sizeof(uint) +                                      // root signature id
                 sizeof(uint) +                                      // texture count
-                sizeof(uint) * shaderCount +                        // shader ids
-                (sizeof(uint) + sizeof(uint)) * info.TextureCount;  // texture ids and descriptor indices (maybe 0 if no textures used).
+                (sizeof(uint) * shaderCount) +                        // shader ids
+                ((sizeof(uint) + sizeof(uint)) * info.TextureCount);  // texture ids and descriptor indices (maybe 0 if no textures used).
 
-            materialBuffer = Marshal.AllocHGlobal(bufferSize);
-            BlobStreamWriter blob = new(materialBuffer, bufferSize);
+            buffer = materialBuffer = Marshal.AllocHGlobal(bufferSize);
+            BlobStreamWriter blob = new(buffer, bufferSize);
 
-            blob.Write(info.Type);
-            blob.Write(flags);
-            blob.Write(D3D12Content.CreateRootSignature(info.Type, (ShaderFlags)flags));
+            blob.Write((uint)info.Type);
+            blob.Write((uint)shaderFlags);
+            blob.Write(D3D12Content.CreateRootSignature(info.Type, shaderFlags));
             blob.Write(info.TextureCount);
-
-            buffer = materialBuffer;
-
-            Initialize();
 
             if (info.TextureCount > 0)
             {
-                Array.Copy(info.TextureIds, textureIds, info.TextureCount * sizeof(uint));
+                blob.Write(info.TextureIds);
                 D3D12Content.GetTextureDescriptorIndices(textureIds, descriptorIndices);
+                blob.Write(descriptorIndices);
             }
 
             uint shaderIndex = 0;
@@ -85,12 +72,14 @@ namespace Direct3D12
             {
                 if (IdDetail.IsValid(info.ShaderIds[i]))
                 {
-                    shaderIds[shaderIndex] = info.ShaderIds[i];
+                    blob.Write(info.ShaderIds[i]);
                     shaderIndex++;
                 }
             }
 
-            Debug.Assert(shaderIndex == (uint)shaderFlags);
+            Debug.Assert(shaderIndex == shaderCount);
+
+            Initialize();
         }
 
         private void Initialize()
@@ -104,9 +93,12 @@ namespace Direct3D12
             rootSignatureId = blob.Read<uint>();
             textureCount = blob.Read<uint>();
 
-            shaderIds = blob.Read<uint>((uint)ShaderTypes.Count);
-            //textureIds = textureCount > 0 ? shaderIds[(uint)shaderFlags] : null;
-            //descriptorIndices = textureCount > 0 ? textureIds[textureCount] : null;
+            //Get the number of flags set in shaderFlags
+            MaterialInitInfo.GetShaderFlagsCount(shaderFlags, out int shaderCount);
+
+            textureIds = textureCount > 0 ? blob.Read<uint>((int)textureCount) : null;
+            descriptorIndices = textureCount > 0 ? blob.Read<uint>((int)textureCount) : null;
+            shaderIds = blob.Read<uint>(shaderCount);
         }
     }
 }

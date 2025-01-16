@@ -249,7 +249,7 @@ namespace Direct3D12
             IntPtr buffer = IntPtr.Zero;
             lock (materialMutex)
             {
-                D3D12MaterialStream stream = new(buffer, info);
+                D3D12MaterialStream stream = new(ref buffer, info);
                 Debug.Assert(buffer != IntPtr.Zero);
                 return (uint)materials.Add(buffer);
             }

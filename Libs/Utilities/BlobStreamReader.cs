@@ -59,7 +59,7 @@ namespace Utilities
         /// </summary>
         /// <typeparam name="T">Primitive type</typeparam>
         /// <param name="count">Array size</param>
-        public T[] Read<T>(uint count) where T : unmanaged
+        public T[] Read<T>(int count) where T : unmanaged
         {
             T[] values = new T[count];
             for (int i = 0; i < count; i++)
