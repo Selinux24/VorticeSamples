@@ -62,7 +62,7 @@ namespace Direct3D12
                 }
 
                 uploadFrames[frameIndex].UploadBuffer = D3D12Helpers.CreateBuffer<byte>(null, alignedSize, true);
-                D3D12Helpers.NameD3D12Object(uploadFrames[frameIndex].UploadBuffer, (int)alignedSize, "Upload Buffer - size");
+                D3D12Helpers.NameD3D12Object(uploadFrames[frameIndex].UploadBuffer, alignedSize, "Upload Buffer - size");
 
                 fixed (void* cpuAddressBegin = &uploadFrames[frameIndex].CpuAddress)
                 {

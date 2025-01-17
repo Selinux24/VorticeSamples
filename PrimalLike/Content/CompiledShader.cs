@@ -12,6 +12,12 @@ namespace PrimalLike.Content
         public byte[] Hash;
         public ReadOnlyMemory<byte> ByteCode;
 
+        public CompiledShader(ReadOnlyMemory<byte> byteCode) : this()
+        {
+            ByteCodeSize = (ulong)byteCode.Length;
+            ByteCode = byteCode;
+        }
+
         public readonly bool IsValid()
         {
             return ByteCode.Length > 0;

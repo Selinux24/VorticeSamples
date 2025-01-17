@@ -1,6 +1,7 @@
 ﻿using PrimalLike.Common;
 using PrimalLike.Graphics;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -21,7 +22,7 @@ namespace PrimalLike.Content
         private static readonly FreeList<IntPtr> geometryHierarchies = new();
         private static readonly object geometryMutex = new();
 
-        private static readonly FreeList<IntPtr> shaders = new();
+        private static readonly FreeList<CompiledShader> shaders = new();
         private static readonly object shaderMutex = new();
 
         public static uint CreateResource<T>(T data, AssetTypes assetType)
@@ -111,7 +112,7 @@ namespace PrimalLike.Content
             IntPtr fakePointer = CreateGpuIdFakePointer(gpuId);
             lock (geometryMutex)
             {
-                return (uint)geometryHierarchies.Add(fakePointer);
+                return geometryHierarchies.Add(fakePointer);
             }
         }
         private static IntPtr CreateGpuIdFakePointer(uint gpuId)
@@ -163,7 +164,7 @@ namespace PrimalLike.Content
             Debug.Assert(Marshal.SizeOf(typeof(IntPtr)) > 2, "We need the least significant bit for the single mesh marker.");
             lock (geometryMutex)
             {
-                return (uint)geometryHierarchies.Add(stream.GetHierarchyBuffer());
+                return geometryHierarchies.Add(stream.GetHierarchyBuffer());
             }
         }
         private static int GetGeometryHierarchyBufferSize(IntPtr data)
@@ -173,6 +174,7 @@ namespace PrimalLike.Content
 
             uint lodCount = blob.Read<uint>();
             Debug.Assert(lodCount > 0);
+            // add size of  lod_count, thresholds and lod offsets to the size of hierarchy.
             int size = sizeof(uint) + (sizeof(float) + LodOffset.Stride) * (int)lodCount;
 
             for (var lodIdx = 0; lodIdx < lodCount; lodIdx++)
@@ -207,12 +209,63 @@ namespace PrimalLike.Content
 
             return true;
         }
+        public static void GetSubmeshGpuIds(IdType geometryContentId, uint idCount, ref IdType[] gpuIds)
+        {
+            lock (geometryMutex)
+            {
+                var pointer = geometryHierarchies[geometryContentId];
+                if ((pointer & SingleMeshMarker) != 0)
+                {
+                    Debug.Assert(idCount == 1);
+
+                    gpuIds = [GpuIdFromFakePointer(pointer)];
+                }
+                else
+                {
+                    GeometryHierarchyStream stream = new(pointer);
+                    Debug.Assert(ValidateLods(stream, idCount));
+
+                    gpuIds = [.. stream.GpuIds];
+                }
+            }
+        }
+        private static bool ValidateLods(GeometryHierarchyStream stream, uint idCount)
+        {
+            uint lodCount = stream.LodCount;
+            LodOffset lodOffset = stream.LodOffsets[(int)lodCount - 1];
+            uint gpuIdCount = lodOffset.Offset + (uint)lodOffset.Count;
+            return gpuIdCount == idCount;
+        }
+        public static void GetLodOffsets(IdType[] geometryIds, float[] thresholds, uint idCount, List<LodOffset> offsets)
+        {
+            Debug.Assert(geometryIds != null && thresholds != null && idCount != 0);
+            Debug.Assert(offsets.Count == 0);
+
+            lock (geometryMutex)
+            {
+                for (uint i = 0; i < idCount; i++)
+                {
+                    var pointer = geometryHierarchies[geometryIds[i]];
+                    if ((pointer & SingleMeshMarker) != 0)
+                    {
+                        Debug.Assert(idCount == 1);
+                        offsets.Add(new(0, 1));
+                    }
+                    else
+                    {
+                        GeometryHierarchyStream stream = new(pointer);
+                        uint lod = stream.LodFromThreshold(thresholds[i]);
+                        offsets.Add(stream.LodOffsets[(int)lod]);
+                    }
+                }
+            }
+        }
 
         private static void DestroyGeometryResource(uint id)
         {
             lock (geometryMutex)
             {
-                IntPtr pointer = geometryHierarchies[(int)id];
+                IntPtr pointer = geometryHierarchies[id];
                 if ((pointer & SingleMeshMarker) != 0)
                 {
                     IdType fakePointer = GpuIdFromFakePointer(pointer);
@@ -235,7 +288,7 @@ namespace PrimalLike.Content
                     Marshal.FreeHGlobal(pointer);
                 }
 
-                geometryHierarchies.Remove((int)id);
+                geometryHierarchies.Remove(id);
             }
         }
         private static IdType GpuIdFromFakePointer(IntPtr pointer)
@@ -274,11 +327,9 @@ namespace PrimalLike.Content
 
         public static IdType AddShader(CompiledShader shader)
         {
-            var shaderData = shader.GetData();
-
             lock (shaderMutex)
             {
-                return (IdType)shaders.Add(shaderData);
+                return shaders.Add(shader);
             }
         }
         public static void RemoveShader(IdType id)
@@ -286,16 +337,16 @@ namespace PrimalLike.Content
             lock (shaderMutex)
             {
                 Debug.Assert(IdDetail.IsValid(id));
-                shaders.Remove((int)id);
+                shaders.Remove(id);
             }
         }
-        public static IntPtr GetShader(IdType id)
+        public static CompiledShader GetShader(IdType id)
         {
             lock (shaderMutex)
             {
                 Debug.Assert(IdDetail.IsValid(id));
 
-                return shaders[(int)id];
+                return shaders[id];
             }
         }
     }

@@ -9,10 +9,6 @@ namespace Direct3D12
 {
     class D3D12MaterialStream
     {
-        const uint ShaderFlagsIndex = sizeof(MaterialTypes);
-        const uint RootSignatureIndex = ShaderFlagsIndex + sizeof(ShaderFlags);
-        const uint TextureCountIndex = RootSignatureIndex + sizeof(uint);
-
         private readonly IntPtr buffer;
 
         private uint[] textureIds;

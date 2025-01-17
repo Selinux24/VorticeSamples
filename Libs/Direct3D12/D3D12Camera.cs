@@ -52,14 +52,14 @@ namespace Direct3D12
 
         public static Camera Create(CameraInitInfo info)
         {
-            int id = cameras.Add(new D3D12Camera(info));
+            uint id = cameras.Add(new D3D12Camera(info));
 
-            return new Camera((uint)id);
+            return new Camera(id);
         }
         public static void Remove(uint id)
         {
             Debug.Assert(IdDetail.IsValid(id));
-            cameras.Remove((int)id);
+            cameras.Remove(id);
         }
         public static void SetParameter(uint id, CameraParameters parameter, IntPtr data, int dataSize)
         {
@@ -76,7 +76,7 @@ namespace Direct3D12
         public static D3D12Camera Get(uint id)
         {
             Debug.Assert(IdDetail.IsValid(id));
-            return cameras[(int)id];
+            return cameras[id];
         }
 
         private static void SetUpVector(D3D12Camera camera, IntPtr data, int size)

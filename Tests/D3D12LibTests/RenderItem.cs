@@ -1,4 +1,5 @@
-﻿using PrimalLike.Common;
+﻿using Direct3D12;
+using PrimalLike.Common;
 using PrimalLike.Components;
 using PrimalLike.Content;
 using PrimalLike.Graphics;
@@ -67,22 +68,22 @@ namespace D3D12LibTests
         {
             // load a model, pretend it belongs to entity_id
             var _1 = new Thread(LoadModel);
+            _1.Start();
 
             // load a material:
             // 1) load textures, oh nooooo we don't have any, but that's ok.
             // 2) load shaders for that material
             var _2 = new Thread(LoadShaders);
-
-            _1.Start();
             _2.Start();
 
             _1.Join();
             _2.Join();
             // add a render item using the model and its materials.
             CreateMaterial();
+            uint[] materials = [mtlId, mtlId, mtlId, mtlId, mtlId];
 
             // TODO: add add_render_item in renderer.
-            uint itemId = 0;
+            uint itemId = D3D12Content.AddRenderItem(0, modelId, (uint)materials.Length, materials);
 
             renderItemEntityMap[itemId] = entityId;
             return itemId;
@@ -92,6 +93,7 @@ namespace D3D12LibTests
             // remove the render item from engine (also the game entity)
             if (IdDetail.IsValid(itemId))
             {
+                D3D12Content.RemoveRenderItem(itemId);
                 var pair = renderItemEntityMap[itemId];
                 GameEntity.Remove(pair);
             }

@@ -73,13 +73,13 @@ namespace PrimalLike.Components
             Debug.Assert(c.IsValid() && Exists(c.Id));
             ScriptId id = c.Id;
             IdType index = idMapping[(int)IdDetail.Index(id)];
-            ScriptId last_id = entityScripts[^1].Id;
+            ScriptId lastId = entityScripts[^1].Id;
 
             //Erase unordered
             entityScripts[(int)index] = entityScripts[^1];
             entityScripts.RemoveAt(entityScripts.Count - 1);
 
-            idMapping[(int)IdDetail.Index(last_id)] = index;
+            idMapping[(int)IdDetail.Index(lastId)] = index;
             idMapping[(int)IdDetail.Index(id)] = IdDetail.InvalidId;
 
             if (generations[(int)index] < GenerationType.MaxValue)

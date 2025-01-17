@@ -2,10 +2,13 @@
 global using D3D12GraphicsCommandList = Vortice.Direct3D12.ID3D12GraphicsCommandList6;
 global using DXGIAdapter = Vortice.DXGI.IDXGIAdapter4;
 global using DXGIFactory = Vortice.DXGI.IDXGIFactory7;
+using System;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Vortice.Direct3D12;
 using Vortice.DXGI;
+using Vortice.Mathematics;
 
 namespace Direct3D12
 {
@@ -97,22 +100,40 @@ namespace Direct3D12
         {
             private static readonly DepthStencilDescription1 disabled = new(
                 false,
-                false,
-                ComparisonFunction.LessEqual,
-                false,
-                0,
-                0,
-                StencilOperation.Zero,
-                StencilOperation.Zero,
-                StencilOperation.Zero,
-                ComparisonFunction.None,
-                StencilOperation.Zero,
-                StencilOperation.Zero,
-                StencilOperation.Zero,
-                ComparisonFunction.None,
-                false);
+                DepthWriteMask.Zero,
+                ComparisonFunction.LessEqual);
+            private static readonly DepthStencilDescription1 enabled = new(
+                true,
+                DepthWriteMask.All,
+                ComparisonFunction.LessEqual);
+            private static readonly DepthStencilDescription1 enabledReadonly = new(
+                true,
+                DepthWriteMask.Zero,
+                ComparisonFunction.LessEqual);
+            private static readonly DepthStencilDescription1 reversed = new(
+                true,
+                DepthWriteMask.All,
+                ComparisonFunction.GreaterEqual);
+            private static readonly DepthStencilDescription1 reversedReadonly = new(
+                true,
+                DepthWriteMask.Zero,
+                ComparisonFunction.GreaterEqual);
 
             public static DepthStencilDescription1 Disabled { get => disabled; }
+            public static DepthStencilDescription1 Enabled { get => enabled; }
+            public static DepthStencilDescription1 EnabledReadonly { get => enabledReadonly; }
+            public static DepthStencilDescription1 Reversed { get => reversed; }
+            public static DepthStencilDescription1 ReversedReadonly { get => reversedReadonly; }
+        }
+        public readonly struct BlendStatesCollection()
+        {
+            private static readonly BlendDescription disabled = new(
+                Blend.SourceAlpha,
+                Blend.InverseSourceAlpha,
+                Blend.One,
+                Blend.One);
+
+            public static BlendDescription Disabled { get => disabled; }
         }
 
         #endregion
@@ -147,12 +168,35 @@ namespace Direct3D12
             obj.Name = name;
             Debug.WriteLine($"D3D12 Object Created: {name}");
         }
-        public static void NameD3D12Object(ID3D12Object obj, int index, string name)
+        public static void NameD3D12Object(ID3D12Object obj, ulong index, string name)
         {
             string fullName = $"{name}[{index}]";
             obj.Name = fullName;
             Debug.WriteLine($"D3D12 Object Created: {fullName}");
         }
+        public static void NameD3D12Object(ID3D12Object obj, long index, string name)
+        {
+            string fullName = $"{name}[{index}]";
+            obj.Name = fullName;
+            Debug.WriteLine($"D3D12 Object Created: {fullName}");
+        }
+        public static void NameD3D12Object(ID3D12Object obj, uint index, string name)
+        {
+            NameD3D12Object(obj, (ulong)index, name);
+        }
+        public static void NameD3D12Object(ID3D12Object obj, int index, string name)
+        {
+            NameD3D12Object(obj, (long)index, name);
+        }
+        public static void NameD3D12Object(ID3D12Object obj, ushort index, string name)
+        {
+            NameD3D12Object(obj, (ulong)index, name);
+        }
+        public static void NameD3D12Object(ID3D12Object obj, short index, string name)
+        {
+            NameD3D12Object(obj, (long)index, name);
+        }
+
         public static void NameDXGIObject(IDXGIObject obj, string name)
         {
             obj.DebugName = name;
@@ -343,6 +387,19 @@ namespace Direct3D12
         public static void DeferredRelease(ID3D12Resource resource)
         {
             D3D12Graphics.DeferredRelease(resource);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ulong CalcCrc32U64(IntPtr data, ulong size)
+        {
+            Debug.Assert(size >= sizeof(ulong));
+            ulong crc = 0;
+            ulong end = MathHelper.AlignDown(size, sizeof(ulong));
+            for (ulong i = 0; i < end; i += sizeof(ulong))
+            {
+                crc ^= (ulong)Marshal.ReadInt64(data, (int)i);
+            }
+            return crc;
         }
     }
 }

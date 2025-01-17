@@ -10,20 +10,9 @@ namespace Direct3D12
 {
     static class D3D12GPass
     {
-        public enum GPassRootParameters : uint
+        enum GPassRootParameters : uint
         {
             FrameConstants = 0,
-
-            Count
-        }
-
-        public enum OpaqueRootParameter : uint
-        {
-            PerFrameData,
-            PositionBuffer,
-            ElementBuffer,
-            SrvIndices,
-            PerObjectData,
 
             Count
         }
@@ -49,8 +38,8 @@ namespace Direct3D12
             public PipelineStateSubObjectTypeDepthStencil1 Depth;
         }
 
-        const Format mainBufferFormat = Format.R16G16B16A16_Float;
-        const Format depthBufferFormat = Format.D32_Float;
+        public const Format mainBufferFormat = Format.R16G16B16A16_Float;
+        public const Format depthBufferFormat = Format.D32_Float;
         static readonly SizeI initialDimensions = new() { Width = 100, Height = 100 };
 
         static D3D12RenderTexture gpassMainBuffer;

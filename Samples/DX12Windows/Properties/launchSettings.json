@@ -2,7 +2,7 @@
   "profiles": {
     "DX12Windows": {
       "commandName": "Project",
-      "nativeDebugging": true
+      "nativeDebugging": false
     }
   }
 }

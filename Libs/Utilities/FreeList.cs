@@ -13,19 +13,19 @@ namespace Utilities
     /// <typeparam name="T">Data type</typeparam>
     public class FreeList<T>
     {
-        private readonly List<int> indices;
+        private readonly List<uint> indices;
         private readonly List<T> array;
-        private int nextFreeIndex = -1;
-        private int size = 0;
+        private uint nextFreeIndex = uint.MaxValue;
+        private uint size = 0;
 
         /// <summary>
         /// Number of elements in the list.
         /// </summary>
-        public int Size => size;
+        public uint Size => size;
         /// <summary>
         /// Maximum number of elements that can be added to the list.
         /// </summary>
-        public int Capacity => array.Capacity;
+        public uint Capacity => (uint)array.Capacity;
         /// <summary>
         /// Indicates if the list is empty.
         /// </summary>
@@ -33,13 +33,13 @@ namespace Utilities
         /// <summary>
         /// Access an element by its index.
         /// </summary>
-        /// <param name="id"></param>
-        public T this[int id]
+        /// <param name="id">Index</param>
+        public T this[uint id]
         {
             get
             {
                 Debug.Assert(id < array.Count && !AlreadyRemoved(id));
-                return array[id];
+                return array[(int)id];
             }
         }
 
@@ -65,12 +65,12 @@ namespace Utilities
         /// Adds a new element to the list.
         /// </summary>
         /// <param name="value">Value</param>
-        public int Add(T value)
+        public uint Add(T value)
         {
-            int id;
-            if (nextFreeIndex == -1)
+            uint id;
+            if (nextFreeIndex == uint.MaxValue)
             {
-                id = array.Count;
+                id = (uint)array.Count;
                 array.Add(value);
                 indices.Add(id);
             }
@@ -78,9 +78,9 @@ namespace Utilities
             {
                 id = nextFreeIndex;
                 Debug.Assert(id < array.Count && AlreadyRemoved(id));
-                array[id] = value;
-                nextFreeIndex = indices[id];
-                indices[id] = id;
+                array[(int)id] = value;
+                nextFreeIndex = indices[(int)id];
+                indices[(int)id] = id;
             }
             size++;
             return id;
@@ -89,12 +89,12 @@ namespace Utilities
         /// Removes an element from the list.
         /// </summary>
         /// <param name="id">Id</param>
-        public void Remove(int id)
+        public void Remove(uint id)
         {
             Debug.Assert(id < array.Count && !AlreadyRemoved(id));
-            (array[id] as IDisposable)?.Dispose();
-            array[id] = default;
-            indices[id] = nextFreeIndex;
+            (array[(int)id] as IDisposable)?.Dispose();
+            array[(int)id] = default;
+            indices[(int)id] = nextFreeIndex;
             nextFreeIndex = id;
             size--;
         }
@@ -105,13 +105,13 @@ namespace Utilities
         {
             indices.Clear();
             array.Clear();
-            nextFreeIndex = -1;
+            nextFreeIndex = uint.MaxValue;
             size = 0;
         }
 
-        private bool AlreadyRemoved(int id)
+        private bool AlreadyRemoved(uint id)
         {
-            return indices[id] == -1;
+            return indices[(int)id] == uint.MaxValue;
         }
     }
 }

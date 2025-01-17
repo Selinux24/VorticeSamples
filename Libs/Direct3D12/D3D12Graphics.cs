@@ -350,7 +350,7 @@ namespace Direct3D12
         {
             var surface = new D3D12Surface(window);
             surface.CreateSwapChain(dxgiFactory, gfxCommand.CommandQueue);
-            surface.Id = (uint)surfaces.Add(surface);
+            surface.Id = surfaces.Add(surface);
 
             return surface;
         }
@@ -358,24 +358,24 @@ namespace Direct3D12
         public static void RemoveSurface(uint id)
         {
             gfxCommand.Flush();
-            surfaces[(int)id].Dispose();
-            surfaces.Remove((int)id);
+            surfaces[id].Dispose();
+            surfaces.Remove(id);
         }
         /// <inheritdoc/>
         public static void ResizeSurface(uint id, int width, int height)
         {
             gfxCommand.Flush();
-            surfaces[(int)id].Resize(width, height);
+            surfaces[id].Resize(width, height);
         }
         /// <inheritdoc/>
         public static int GetSurfaceWidth(uint id)
         {
-            return surfaces[(int)id].Width;
+            return surfaces[id].Width;
         }
         /// <inheritdoc/>
         public static int GetSurfaceHeight(uint id)
         {
-            return surfaces[(int)id].Height;
+            return surfaces[id].Height;
         }
         /// <inheritdoc/>
         public static void RenderSurface(uint id)
@@ -391,7 +391,7 @@ namespace Direct3D12
                 ProcessDeferredReleases(frameIdx);
             }
 
-            var surface = surfaces[(int)id];
+            var surface = surfaces[id];
 
             frameInfo.SurfaceHeight = surface.Height;
             frameInfo.SurfaceWidth = surface.Width;
