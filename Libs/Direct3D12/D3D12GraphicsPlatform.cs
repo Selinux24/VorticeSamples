@@ -98,9 +98,9 @@ namespace Direct3D12
             D3D12Content.RemoveMaterial(id);
         }
         /// <inheritdoc/>
-        public uint AddRenderItem(uint entityId, uint geometryContentId, uint materialCount, uint[] materialIds)
+        public uint AddRenderItem(uint entityId, uint geometryContentId, uint[] materialIds)
         {
-            return D3D12Content.AddRenderItem(entityId, geometryContentId, materialCount, materialIds);
+            return D3D12Content.AddRenderItem(entityId, geometryContentId, materialIds);
         }
         /// <inheritdoc/>
         public void RemoveRenderItem(uint id)

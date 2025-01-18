@@ -106,9 +106,8 @@ namespace PrimalLike.Graphics
         /// </summary>
         /// <param name="entityId">Entity id</param>
         /// <param name="geometryContentId">Geometry id</param>
-        /// <param name="materialCount">Material count</param>
         /// <param name="materialIds">Material id list</param>
-        IdType AddRenderItem(IdType entityId, IdType geometryContentId, uint materialCount, IdType[] materialIds);
+        IdType AddRenderItem(IdType entityId, IdType geometryContentId, IdType[] materialIds);
         /// <summary>
         /// Removes a render item.
         /// </summary>

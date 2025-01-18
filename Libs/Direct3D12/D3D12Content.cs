@@ -2,7 +2,6 @@
 using PrimalLike.Common;
 using PrimalLike.Content;
 using PrimalLike.Graphics;
-using SharpGen.Runtime;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -228,10 +227,7 @@ namespace Direct3D12
         private static uint CreatePsoIfNeeded<T>(T data, bool isDepth) where T : unmanaged
         {
             // calculate Crc32 hash of the data.
-            IntPtr streamPtr = Marshal.AllocHGlobal(Marshal.SizeOf<T>());
-            Marshal.StructureToPtr(data, streamPtr, false);
-            uint streamSize = (uint)Marshal.SizeOf<T>();
-            ulong key = D3D12Helpers.CalcCrc32U64(streamPtr, streamSize);
+            ulong key = (ulong)D3D12Helpers.GetStableHashCode(data);
 
             if (psoMap.TryGetValue(key, out uint pair))
             {
@@ -267,38 +263,42 @@ namespace Direct3D12
                 };
 
                 ShaderFlags flags = material.ShaderFlags;
-                ShaderBytecode[] shaders = new ShaderBytecode[(int)ShaderTypes.Count];
+                CompiledShader[] shaders = new CompiledShader[(int)ShaderTypes.Count];
                 uint shaderIndex = 0;
                 for (uint i = 0; i < (uint)ShaderTypes.Count; i++)
                 {
-                    if ((flags & (ShaderFlags)(1u << (int)i)) != 0)
+                    ShaderFlags shaderFlags = (ShaderFlags)(1u << (int)i);
+                    if (flags.HasFlag(shaderFlags))
                     {
-                        var shader = ContentToEngine.GetShader(material.ShaderIds[shaderIndex]);
+                        uint shaderId = material.ShaderIds[shaderIndex];
+                        var shader = ContentToEngine.GetShader(shaderId);
                         Debug.Assert(shader.ByteCodeSize > 0);
-                        shaders[i] = new ShaderBytecode(shader.ByteCode.ToArray());
+                        shaders[i] = shader;
                         shaderIndex++;
                     }
                 }
 
-                stream.Vs = new(shaders[(int)ShaderTypes.Vertex]?.Data);
-                stream.Ps = new(shaders[(int)ShaderTypes.Pixel]?.Data);
-                stream.Ds = new(shaders[(int)ShaderTypes.Domain]?.Data);
-                stream.Hs = new(shaders[(int)ShaderTypes.Hull]?.Data);
-                stream.Gs = new(shaders[(int)ShaderTypes.Geometry]?.Data);
-                stream.Cs = new(shaders[(int)ShaderTypes.Compute]?.Data);
-                stream.As = new(shaders[(int)ShaderTypes.Amplification]?.Data);
-                stream.Ms = new(shaders[(int)ShaderTypes.Mesh]?.Data);
+                stream.Vs = new(shaders[(int)ShaderTypes.Vertex].ByteCode.Span);
+                stream.Ps = new(shaders[(int)ShaderTypes.Pixel].ByteCode.Span);
+                stream.Ds = new(shaders[(int)ShaderTypes.Domain].ByteCode.Span);
+                stream.Hs = new(shaders[(int)ShaderTypes.Hull].ByteCode.Span);
+                stream.Gs = new(shaders[(int)ShaderTypes.Geometry].ByteCode.Span);
+                stream.Cs = new(shaders[(int)ShaderTypes.Compute].ByteCode.Span);
+                stream.As = new(shaders[(int)ShaderTypes.Amplification].ByteCode.Span);
+                stream.Ms = new(shaders[(int)ShaderTypes.Mesh].ByteCode.Span);
 
-                PsoId idPair = new();
+                uint gPassPsoId = CreatePsoIfNeeded(stream, false);
 
-                idPair.GpassPsoId = CreatePsoIfNeeded(stream, false);
-
-                stream.Ps = new(new ShaderBytecode().Data);
+                stream.Ps = new([]);
                 stream.DepthStencil1 = D3D12Helpers.DepthStatesCollection.Enabled;
 
-                idPair.DepthPsoId = CreatePsoIfNeeded(stream, true);
+                uint depthPsoId = CreatePsoIfNeeded(stream, true);
 
-                return idPair;
+                return new()
+                {
+                    GpassPsoId = gPassPsoId,
+                    DepthPsoId = depthPsoId
+                };
             }
         }
 
@@ -385,21 +385,27 @@ namespace Direct3D12
                 submeshBuffers.Remove(id);
             }
         }
-        public static void GetSubmeshViews(uint[] gpuIds, uint idCount, ref ViewsCache cache)
+        public static void GetSubmeshViews(uint[] gpuIds, out ViewsCache cache)
         {
-            Debug.Assert(gpuIds != null && idCount != 0);
-            Debug.Assert(
-                cache.PositionBuffers != null &&
-                cache.ElementBuffers != null &&
-                cache.IndexBufferViews != null &&
-                cache.PrimitiveTopologies != null &&
-                cache.ElementsTypes != null);
+            Debug.Assert(gpuIds != null);
+            uint idCount = (uint)gpuIds.Length;
+            Debug.Assert(idCount > 0);
 
             lock (submeshMutex)
             {
+                cache = new()
+                {
+                    PositionBuffers = new ulong[idCount],
+                    ElementBuffers = new ulong[idCount],
+                    IndexBufferViews = new IndexBufferView[idCount],
+                    PrimitiveTopologies = new D3DPrimitiveTopology[idCount],
+                    ElementsTypes = new uint[idCount],
+                };
+
                 for (uint i = 0; i < idCount; i++)
                 {
                     var view = submeshViews[gpuIds[i]];
+
                     cache.PositionBuffers[i] = view.PositionBufferView.BufferLocation;
                     cache.ElementBuffers[i] = view.ElementBufferView.BufferLocation;
                     cache.IndexBufferViews[i] = view.IndexBufferView;
@@ -471,23 +477,14 @@ namespace Direct3D12
         /// buffer[1 .. n] = submesh_gpu_ids (n is the number of submeshes which must also equal the number of material ids).
         /// buffer[n + 1] = id::invalid_id (this marks the end of submesh_gpu_id array).
         /// </remarks>
-        public static uint AddRenderItem(uint entityId, uint geometryContentId, uint materialCount, uint[] materialIds)
+        public static uint AddRenderItem(uint entityId, uint geometryContentId, uint[] materialIds)
         {
             Debug.Assert(IdDetail.IsValid(entityId) && IdDetail.IsValid(geometryContentId));
-            Debug.Assert(materialCount != 0 && materialIds != null);
-            uint[] gpuIds = new uint[materialCount];
-            ContentToEngine.GetSubmeshGpuIds(geometryContentId, materialCount, ref gpuIds);
+            uint materialCount = (uint)(materialIds?.Length ?? 0);
+            Debug.Assert(materialCount > 0);
+            ContentToEngine.GetSubmeshGpuIds(geometryContentId, materialCount, out uint[] gpuIds);
 
-            ViewsCache viewsCache = new()
-            {
-                PositionBuffers = new ulong[materialCount],
-                ElementBuffers = new ulong[materialCount],
-                IndexBufferViews = new IndexBufferView[materialCount],
-                PrimitiveTopologies = new D3DPrimitiveTopology[materialCount],
-                ElementsTypes = new uint[materialCount],
-            };
-
-            GetSubmeshViews(gpuIds, materialCount, ref viewsCache);
+            GetSubmeshViews(gpuIds, out var viewsCache);
 
             // NOTE: the list of ids starts with geomtery id and ends with an invalid id to mark the end of the list.
             uint[] items = new uint[1 + materialCount + 1];
@@ -496,7 +493,7 @@ namespace Direct3D12
 
             lock (renderItemMutex)
             {
-                for (int i = 0; i < materialCount; i++)
+                for (uint i = 0; i < materialCount; i++)
                 {
                     PsoId idPair = CreatePso(materialIds[i], viewsCache.PrimitiveTopologies[i], viewsCache.ElementsTypes[i]);
 

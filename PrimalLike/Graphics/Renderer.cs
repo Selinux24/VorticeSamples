@@ -90,9 +90,9 @@ namespace PrimalLike.Graphics
         {
             gfx.RemoveMaterial(id);
         }
-        public static IdType AddRenderItem(IdType entityId, IdType geometryContentId, uint materialCount, IdType[] materialIds)
+        public static IdType AddRenderItem(IdType entityId, IdType geometryContentId, IdType[] materialIds)
         {
-            return gfx.AddRenderItem(entityId, geometryContentId, materialCount, materialIds);
+            return gfx.AddRenderItem(entityId, geometryContentId, materialIds);
         }
         public static void RemoveRenderItem(IdType id)
         {

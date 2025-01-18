@@ -2,7 +2,7 @@
   "profiles": {
     "PrimalLikeTests": {
       "commandName": "Project",
-      "nativeDebugging": true
+      "nativeDebugging": false
     }
   }
 }

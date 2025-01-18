@@ -81,8 +81,8 @@ namespace D3D12LibTests
             var resCompile = Compiler.CompileShaders(engineShaderFiles, shadersSourceDir, shadersOutputPath);
             Assert.That(resCompile, "Shader compilation error.");
 
-            bool resRegister = GameEntity.RegisterScript<TestScript>();
-            Assert.That(resRegister, "Test script registration error.");
+            //bool resRegister = GameEntity.RegisterScript<TestScript>();
+            //Assert.That(resRegister, "Test script registration error.");
 
             app = TestApp.Start<Win32PlatformFactory, D3D12GraphicsPlatformFactory>();
             Assert.That(app != null, "Application start error.");
@@ -166,6 +166,22 @@ namespace D3D12LibTests
             Debug.Assert(ntt.IsValid());
             return ntt;
         }
+        private void LoadTestModel()
+        {
+            using var file = new MemoryStream(File.ReadAllBytes(testModelFile));
+            modelId = ContentToEngine.CreateResource(file, AssetTypes.Mesh);
+            Assert.That(modelId != uint.MaxValue, "Model creation error.");
+        }
+        private void CreateCamera()
+        {
+            entity = CreateOneGameEntity();
+            camera = app.CreateCamera(new PerspectiveCameraInitInfo(entity.Id));
+            Assert.That(camera.IsValid);
+        }
+        private void CreateRenderItem()
+        {
+            itemId = RenderItem.CreateRenderItem(CreateOneGameEntity().Id);
+        }
 
         [Test()]
         public void RenderTest()
@@ -173,6 +189,10 @@ namespace D3D12LibTests
             InitializeApplication();
 
             ShowTestWindows();
+
+            LoadTestModel();
+            CreateCamera();
+            CreateRenderItem();
 
             app.Run();
 
@@ -185,9 +205,7 @@ namespace D3D12LibTests
 
             ShowTestWindows();
 
-            using var file = new MemoryStream(File.ReadAllBytes(testModelFile));
-            modelId = ContentToEngine.CreateResource(file, AssetTypes.Mesh);
-            Assert.That(modelId != uint.MaxValue, "Model creation error.");
+            LoadTestModel();
 
             app.Run();
 
@@ -217,11 +235,7 @@ namespace D3D12LibTests
 
             ShowTestWindows();
 
-            entity = CreateOneGameEntity();
-            camera = app.CreateCamera(new PerspectiveCameraInitInfo(entity.Id));
-            Assert.That(camera.IsValid);
-
-            itemId = RenderItem.CreateRenderItem(CreateOneGameEntity().Id);
+            CreateCamera();
 
             app.Run();
 

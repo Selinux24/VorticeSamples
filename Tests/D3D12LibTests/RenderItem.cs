@@ -83,7 +83,7 @@ namespace D3D12LibTests
             uint[] materials = [mtlId, mtlId, mtlId, mtlId, mtlId];
 
             // TODO: add add_render_item in renderer.
-            uint itemId = D3D12Content.AddRenderItem(0, modelId, (uint)materials.Length, materials);
+            uint itemId = D3D12Content.AddRenderItem(0, modelId, materials);
 
             renderItemEntityMap[itemId] = entityId;
             return itemId;

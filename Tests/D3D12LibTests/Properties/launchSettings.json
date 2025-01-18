@@ -2,7 +2,7 @@
   "profiles": {
     "D3D12LibTests": {
       "commandName": "Project",
-      "nativeDebugging": true
+      "nativeDebugging": false
     }
   }
 }

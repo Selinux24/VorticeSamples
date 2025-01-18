@@ -209,7 +209,7 @@ namespace PrimalLike.Content
 
             return true;
         }
-        public static void GetSubmeshGpuIds(IdType geometryContentId, uint idCount, ref IdType[] gpuIds)
+        public static void GetSubmeshGpuIds(IdType geometryContentId, uint idCount, out IdType[] gpuIds)
         {
             lock (geometryMutex)
             {
@@ -297,29 +297,12 @@ namespace PrimalLike.Content
             return (IdType)((pointer >> shiftBits) & IdDetail.InvalidId);
         }
 
-        /// <summary>
-        /// Creates a material resource.
-        /// </summary>
-        /// <param name="data">Material data</param>
-        /// <remarks>
-        /// NOTE: expects data to contain
-        /// struct {
-        ///  material_type::type type,
-        ///  u32                 texture_count,
-        ///  id::id_type         shader_ids[shader_type::count],
-        ///  id::id_type*        texture_ids;
-        /// } material_init_info
-        /// </remarks>
         private static IdType CreateMaterialResource(IntPtr data)
         {
             Debug.Assert(data != IntPtr.Zero);
             var info = Marshal.PtrToStructure<MaterialInitInfo>(data);
             return Renderer.AddMaterial(info);
         }
-        /// <summary>
-        /// Destroys a material resource.
-        /// </summary>
-        /// <param name="id">Material id</param>
         private static void DestroyMaterialResource(IdType id)
         {
             Renderer.RemoveMaterial(id);

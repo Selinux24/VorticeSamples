@@ -4,11 +4,9 @@ global using DXGIAdapter = Vortice.DXGI.IDXGIAdapter4;
 global using DXGIFactory = Vortice.DXGI.IDXGIFactory7;
 using System;
 using System.Diagnostics;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Vortice.Direct3D12;
 using Vortice.DXGI;
-using Vortice.Mathematics;
 
 namespace Direct3D12
 {
@@ -389,17 +387,33 @@ namespace Direct3D12
             D3D12Graphics.DeferredRelease(resource);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ulong CalcCrc32U64(IntPtr data, ulong size)
+        const int HASH_OFFSET = 5381;
+        const int HASH_MULTIPLIER = 1566083941;
+        public static int GetStableHashCode<T>(T data) where T : unmanaged
         {
-            Debug.Assert(size >= sizeof(ulong));
-            ulong crc = 0;
-            ulong end = MathHelper.AlignDown(size, sizeof(ulong));
-            for (ulong i = 0; i < end; i += sizeof(ulong))
+            // Get byte array from data struct
+            IntPtr ptr = Marshal.AllocHGlobal(Marshal.SizeOf<T>());
+            Marshal.StructureToPtr(data, ptr, false);
+            byte[] byteArray = new byte[Marshal.SizeOf<T>()];
+            Marshal.Copy(ptr, byteArray, 0, Marshal.SizeOf<T>());
+
+            unchecked
             {
-                crc ^= (ulong)Marshal.ReadInt64(data, (int)i);
+                int hash1 = HASH_OFFSET;
+                int hash2 = HASH_OFFSET;
+
+                for (int i = 0; i < byteArray.Length; i += 2)
+                {
+                    hash1 = ((hash1 << 5) + hash1) ^ byteArray[i];
+                    if (i == byteArray.Length - 1)
+                    {
+                        break;
+                    }
+                    hash2 = ((hash2 << 5) + hash2) ^ byteArray[i + 1];
+                }
+
+                return hash1 + (hash2 * HASH_MULTIPLIER);
             }
-            return crc;
         }
     }
 }
