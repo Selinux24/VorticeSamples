@@ -2,7 +2,7 @@
 
 namespace PrimalLike.Components
 {
-    struct TransformCache
+    public struct TransformCache
     {
         public Quaternion Rotation { get; set; }
         public Vector3 Orientation { get; set; }

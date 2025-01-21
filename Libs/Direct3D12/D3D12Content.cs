@@ -18,19 +18,31 @@ namespace Direct3D12
 
     static class D3D12Content
     {
-        public struct PsoId()
+        struct PsoId()
         {
             public uint GpassPsoId = uint.MaxValue;
             public uint DepthPsoId = uint.MaxValue;
         }
-
-        public struct SubmeshView
+        struct SubmeshView
         {
             public VertexBufferView PositionBufferView;
             public VertexBufferView ElementBufferView;
             public IndexBufferView IndexBufferView;
             public D3DPrimitiveTopology PrimitiveTopology;
             public uint ElementsType;
+        }
+        struct D3D12RenderItem
+        {
+            public uint EntityId;
+            public uint SubmeshGpuId;
+            public uint MaterialId;
+            public uint PsoId;
+            public uint DepthPsoId;
+        }
+        struct FrameCache()
+        {
+            public List<LodOffset> LodOffsets = [];
+            public List<uint> GeometryIds = [];
         }
 
         public struct ViewsCache
@@ -41,36 +53,18 @@ namespace Direct3D12
             public D3DPrimitiveTopology[] PrimitiveTopologies;
             public uint[] ElementsTypes;
         }
-
         public struct MaterialsCache
         {
             public ID3D12RootSignature[] RootSignatures;
             public MaterialTypes[] MaterialTypes;
         }
-
-        public struct D3D12RenderItem
-        {
-            public uint EntityId;
-            public uint SubmeshGpuId;
-            public uint MaterialId;
-            public uint PsoId;
-            public uint DepthPsoId;
-        }
-
         public struct ItemsCache
         {
             public uint[] EntityIds;
             public uint[] SubmeshGpuIds;
             public uint[] MaterialIds;
-            public ID3D12PipelineState[] Psos;
+            public ID3D12PipelineState[] GPassPsos;
             public ID3D12PipelineState[] DepthPsos;
-        }
-
-        struct FrameCache()
-        {
-            public List<LodOffset> LodOffsets = [];
-            public List<uint> GeometryIds = [];
-            public List<float> Thresholds = [];
         }
 
         static readonly FreeList<ID3D12Resource> submeshBuffers = new();
@@ -138,7 +132,7 @@ namespace Direct3D12
                 case MaterialTypes.Opaque:
                 {
                     RootParameter1[] parameters = new RootParameter1[(uint)OpaqueRootParameter.Count];
-                    parameters[(uint)OpaqueRootParameter.PerFrameData] = D3D12Helpers.AsCbv(ShaderVisibility.All, 0);
+                    parameters[(uint)OpaqueRootParameter.GlobalShaderData] = D3D12Helpers.AsCbv(ShaderVisibility.All, 0);
 
                     ShaderVisibility bufferVisibility = new();
                     ShaderVisibility dataVisibility = new();
@@ -360,7 +354,7 @@ namespace Direct3D12
             }
 
             view.IndexBufferView.BufferLocation = resource.GPUVirtualAddress + alignedPositionBufferSize + alignedElementBufferSize;
-            view.IndexBufferView.SizeInBytes = positionBufferSize;
+            view.IndexBufferView.SizeInBytes = indexBufferSize;
             view.IndexBufferView.Format = indexSize == sizeof(ushort) ? Format.R16_UInt : Format.R32_UInt;
             view.PrimitiveTopology = GetD3DPrimitiveTopology((PrimitiveTopology)primitiveTopology);
             view.ElementsType = elementsType;
@@ -385,7 +379,7 @@ namespace Direct3D12
                 submeshBuffers.Remove(id);
             }
         }
-        public static void GetSubmeshViews(uint[] gpuIds, out ViewsCache cache)
+        public static void GetSubmeshViews(uint[] gpuIds, ref ViewsCache cache)
         {
             Debug.Assert(gpuIds != null);
             uint idCount = (uint)gpuIds.Length;
@@ -393,14 +387,11 @@ namespace Direct3D12
 
             lock (submeshMutex)
             {
-                cache = new()
-                {
-                    PositionBuffers = new ulong[idCount],
-                    ElementBuffers = new ulong[idCount],
-                    IndexBufferViews = new IndexBufferView[idCount],
-                    PrimitiveTopologies = new D3DPrimitiveTopology[idCount],
-                    ElementsTypes = new uint[idCount],
-                };
+                cache.PositionBuffers = new ulong[idCount];
+                cache.ElementBuffers = new ulong[idCount];
+                cache.IndexBufferViews = new IndexBufferView[idCount];
+                cache.PrimitiveTopologies = new D3DPrimitiveTopology[idCount];
+                cache.ElementsTypes = new uint[idCount];
 
                 for (uint i = 0; i < idCount; i++)
                 {
@@ -474,7 +465,7 @@ namespace Direct3D12
         /// </summary>
         /// <remarks>
         /// buffer[0] = geometry_content_id
-        /// buffer[1 .. n] = submesh_gpu_ids (n is the number of submeshes which must also equal the number of material ids).
+        /// buffer[1 .. n] = d3d12_render_item_ids (n is the number of low-level render item ids which must also equal the number of submeshes/material ids).
         /// buffer[n + 1] = id::invalid_id (this marks the end of submesh_gpu_id array).
         /// </remarks>
         public static uint AddRenderItem(uint entityId, uint geometryContentId, uint[] materialIds)
@@ -484,7 +475,8 @@ namespace Direct3D12
             Debug.Assert(materialCount > 0);
             ContentToEngine.GetSubmeshGpuIds(geometryContentId, materialCount, out uint[] gpuIds);
 
-            GetSubmeshViews(gpuIds, out var viewsCache);
+            ViewsCache viewsCache = new();
+            GetSubmeshViews(gpuIds, ref viewsCache);
 
             // NOTE: the list of ids starts with geomtery id and ends with an invalid id to mark the end of the list.
             uint[] items = new uint[1 + materialCount + 1];
@@ -531,14 +523,13 @@ namespace Direct3D12
                 renderItemIds.Remove(id);
             }
         }
-        public static void GetD3D12RenderItemIds(ref FrameInfo info, uint[] d3d12RenderItemIds)
+        public static void GetD3D12RenderItemIds(ref FrameInfo info, ref uint[] d3d12RenderItemIds)
         {
             Debug.Assert(info.RenderItemIds != null && info.Thresholds != null && info.RenderItemCount != 0);
-            Debug.Assert(d3d12RenderItemIds.Length > 0);
+            Debug.Assert(d3d12RenderItemIds.Length == 0);
 
             frameCache.LodOffsets.Clear();
             frameCache.GeometryIds.Clear();
-            frameCache.Thresholds.Clear();
             uint count = info.RenderItemCount;
 
             lock (renderItemMutex)
@@ -547,10 +538,9 @@ namespace Direct3D12
                 {
                     var buffer = renderItemIds[info.RenderItemIds[i]];
                     frameCache.GeometryIds.Add(buffer[0]);
-                    frameCache.Thresholds.Add(info.Thresholds[i]);
                 }
 
-                ContentToEngine.GetLodOffsets([.. frameCache.GeometryIds], [.. frameCache.Thresholds], count, frameCache.LodOffsets);
+                ContentToEngine.GetLodOffsets([.. frameCache.GeometryIds], info.Thresholds, count, frameCache.LodOffsets);
                 Debug.Assert(frameCache.LodOffsets.Count == count);
 
                 uint d3d12RenderItemCount = 0;
@@ -583,7 +573,7 @@ namespace Direct3D12
                 cache.EntityIds != null &&
                 cache.SubmeshGpuIds != null &&
                 cache.MaterialIds != null &&
-                cache.Psos != null &&
+                cache.GPassPsos != null &&
                 cache.DepthPsos != null);
 
             lock (renderItemMutex)
@@ -594,7 +584,7 @@ namespace Direct3D12
                     cache.EntityIds[i] = item.EntityId;
                     cache.SubmeshGpuIds[i] = item.SubmeshGpuId;
                     cache.MaterialIds[i] = item.MaterialId;
-                    cache.Psos[i] = pipelineStates[(int)item.PsoId];
+                    cache.GPassPsos[i] = pipelineStates[(int)item.PsoId];
                     cache.DepthPsos[i] = pipelineStates[(int)item.DepthPsoId];
                 }
             }

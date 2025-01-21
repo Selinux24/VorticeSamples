@@ -51,9 +51,9 @@ namespace Direct3D12
             return D3D12Graphics.GetSurfaceHeight(id);
         }
         /// <inheritdoc/>
-        public void RenderSurface(uint id)
+        public void RenderSurface(uint id, FrameInfo info)
         {
-            D3D12Graphics.RenderSurface(id);
+            D3D12Graphics.RenderSurface(id, info);
         }
 
         /// <inheritdoc/>

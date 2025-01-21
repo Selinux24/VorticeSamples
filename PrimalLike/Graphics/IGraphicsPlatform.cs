@@ -52,7 +52,8 @@ namespace PrimalLike.Graphics
         /// Renders a surface.
         /// </summary>
         /// <param name="id">Surface id</param>
-        void RenderSurface(SurfaceId id);
+        /// <param name="info">Frame info</param>
+        void RenderSurface(SurfaceId id, FrameInfo info);
 
         /// <summary>
         /// Creates a camera.

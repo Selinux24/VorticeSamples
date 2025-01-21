@@ -191,7 +191,7 @@ namespace PrimalLike
 
                     if (BeginDraw())
                     {
-                        Draw(time);
+                        Draw(time, new FrameInfo() { CameraId = 0, Thresholds = [10], RenderItemCount = 1, RenderItemIds = [0] });
                     }
                 }
                 finally
@@ -230,12 +230,12 @@ namespace PrimalLike
         /// Draws the application.
         /// </summary>
         /// <param name="time">Time</param>
-        protected virtual void Draw(Time time)
+        protected virtual void Draw(Time time, FrameInfo info)
         {
             FpsTimer.Begin();
             foreach (var rs in renderSurfaces)
             {
-                Renderer.RenderSurface(rs.Surface.Id);
+                Renderer.RenderSurface(rs.Surface.Id, info);
             }
             FpsTimer.End();
         }

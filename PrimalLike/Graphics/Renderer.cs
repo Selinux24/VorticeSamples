@@ -52,9 +52,9 @@ namespace PrimalLike.Graphics
         {
             return gfx.GetSurfaceHeight(id);
         }
-        public static void RenderSurface(SurfaceId id)
+        public static void RenderSurface(SurfaceId id, FrameInfo info)
         {
-            gfx.RenderSurface(id);
+            gfx.RenderSurface(id, info);
         }
 
         public static Camera CreateCamera(CameraInitInfo info)

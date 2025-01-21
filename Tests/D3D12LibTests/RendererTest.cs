@@ -44,20 +44,25 @@ namespace D3D12LibTests
         }
 
         private const string shadersSourceDir = "../../../../../Libs/Direct3D12/Shaders/";
+        private const string shadersIncludeDir = "../../../../../Libs/Direct3D12/Shaders/";
         private const string shadersOutputPath = "./Content/engineShaders.bin";
         private const string testModelFile = "./Content/Model.model";
 
         private static readonly EngineShaderInfo[] engineShaderFiles =
         [
-            new ((int)EngineShaders.FullScreenTriangleVs, new ("FullScreenTriangle.hlsl", "FullScreenTriangleVS", ShaderStage.Vertex)),
-            new ((int)EngineShaders.FillColorPs, new ("FillColor.hlsl", "FillColorPS", ShaderStage.Pixel)),
-            new ((int)EngineShaders.PostProcessPs, new ("PostProcess.hlsl", "PostProcessPS", ShaderStage.Pixel)),
+            new ((int)EngineShaders.FullScreenTriangleVs, new (Path.Combine(shadersSourceDir, "FullScreenTriangle.hlsl"), "FullScreenTriangleVS", ShaderStage.Vertex)),
+            new ((int)EngineShaders.FillColorPs, new (Path.Combine(shadersSourceDir, "FillColor.hlsl"), "FillColorPS", ShaderStage.Pixel)),
+            new ((int)EngineShaders.PostProcessPs, new (Path.Combine(shadersSourceDir, "PostProcess.hlsl"), "PostProcessPS", ShaderStage.Pixel)),
         ];
 
         private TestApp app;
 
-        private Entity entity;
-        private Camera camera;
+        private struct CameraSurface
+        {
+            public Entity Entity;
+            public Camera Camera;
+        }
+        private CameraSurface[] surfaces = new CameraSurface[4];
 
         private uint itemId = IdDetail.InvalidId;
         private uint modelId = IdDetail.InvalidId;
@@ -78,7 +83,7 @@ namespace D3D12LibTests
 
         private void InitializeApplication()
         {
-            var resCompile = Compiler.CompileShaders(engineShaderFiles, shadersSourceDir, shadersOutputPath);
+            var resCompile = Compiler.CompileShaders(engineShaderFiles, shadersIncludeDir, shadersOutputPath);
             Assert.That(resCompile, "Shader compilation error.");
 
             //bool resRegister = GameEntity.RegisterScript<TestScript>();
@@ -152,14 +157,22 @@ namespace D3D12LibTests
             }
         }
 
-        private static Entity CreateOneGameEntity()
+        private static Entity CreateOneGameEntity(bool isCamera)
         {
+            TransformInfo transform = new()
+            {
+                Rotation = Quaternion.CreateFromYawPitchRoll(0, isCamera ? 3.14f : 0f, 0)
+            };
+
+            if (isCamera)
+            {
+                transform.Position.Y = 1f;
+                transform.Position.Z = 3f;
+            }
+
             EntityInfo entityInfo = new()
             {
-                Transform = new()
-                {
-                    Rotation = Quaternion.CreateFromYawPitchRoll(0, 3.14f, 0)
-                }
+                Transform = transform,
             };
 
             Entity ntt = GameEntity.Create(entityInfo);
@@ -174,13 +187,23 @@ namespace D3D12LibTests
         }
         private void CreateCamera()
         {
-            entity = CreateOneGameEntity();
-            camera = app.CreateCamera(new PerspectiveCameraInitInfo(entity.Id));
+            for (uint i = 0; i < surfaces.Length; i++)
+            {
+                surfaces[i] = new();
+                CreateCameraSurface(ref surfaces[i]);
+            }
+        }
+        private void CreateCameraSurface(ref CameraSurface cameraSurface)
+        {
+            var entity = CreateOneGameEntity(true);
+            var camera = app.CreateCamera(new PerspectiveCameraInitInfo(entity.Id));
+            cameraSurface.Entity = entity;
+            cameraSurface.Camera = camera;
             Assert.That(camera.IsValid);
         }
         private void CreateRenderItem()
         {
-            itemId = RenderItem.CreateRenderItem(CreateOneGameEntity().Id);
+            itemId = RenderItem.CreateRenderItem(CreateOneGameEntity(false).Id);
         }
 
         [Test()]
@@ -234,7 +257,6 @@ namespace D3D12LibTests
             InitializeApplication();
 
             ShowTestWindows();
-
             CreateCamera();
 
             app.Run();
@@ -251,13 +273,16 @@ namespace D3D12LibTests
                 ContentToEngine.DestroyResource(modelId, AssetTypes.Mesh);
             }
 
-            if (camera?.IsValid ?? false)
+            for (int i = 0; i < surfaces.Length; i++)
             {
-                app.RemoveCamera(camera.Id);
-            }
-            if (entity?.IsValid() ?? false)
-            {
-                GameEntity.Remove(entity.Id);
+                if (surfaces[i].Camera?.IsValid ?? false)
+                {
+                    app.RemoveCamera(surfaces[i].Camera.Id);
+                }
+                if (surfaces[i].Entity?.IsValid() ?? false)
+                {
+                    GameEntity.Remove(surfaces[i].Entity.Id);
+                }
             }
         }
     }

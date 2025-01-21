@@ -233,6 +233,8 @@ namespace Direct3D12
         public Matrix4x4 InverseProjection { get => inverseProjection; }
         public Matrix4x4 ViewProjection { get => viewProjection; }
         public Matrix4x4 InverseViewProjection { get => inverseViewProjection; }
+        public Vector3 Position { get; private set; }
+        public Vector3 Direction { get; private set; }
         public Vector3 Up
         {
             get => up; set
@@ -324,9 +326,9 @@ namespace Direct3D12
         public void Update()
         {
             Entity entity = new(entityId);
-            Vector3 position = entity.Transform.Position;
-            Vector3 direction = entity.Transform.Orientation;
-            view = Matrix4x4.CreateLookTo(position, direction, up);
+            Position = entity.Transform.Position;
+            Direction = entity.Transform.Orientation;
+            view = Matrix4x4.CreateLookTo(Position, Direction, up);
 
             if (isDirty)
             {

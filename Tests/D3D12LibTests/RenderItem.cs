@@ -14,6 +14,7 @@ namespace D3D12LibTests
     class RenderItem
     {
         private const string shadersSourcePath = "./Shaders/";
+        private const string shadersIncludeDir = "../../../../../Libs/Direct3D12/Shaders/";
 
         private static uint modelId = IdDetail.InvalidId;
         private static uint vsId = IdDetail.InvalidId;
@@ -33,12 +34,12 @@ namespace D3D12LibTests
         private static void LoadShaders()
         {
             // Let's say our material uses a vertex shader and a pixel shader.
-            ShaderFileInfo info = new("TestShader.hlsl", "TestShaderVS", ShaderStage.Vertex);
-            bool compiledVs = Compiler.Compile(shadersSourcePath, info, out var vertexShader);
+            ShaderFileInfo info = new(Path.Combine(shadersSourcePath, "TestShader.hlsl"), "TestShaderVS", ShaderStage.Vertex);
+            bool compiledVs = Compiler.Compile(info, shadersIncludeDir, out var vertexShader);
             Debug.Assert(compiledVs);
 
-            info = new ShaderFileInfo("TestShader.hlsl", "TestShaderPS", ShaderStage.Pixel);
-            bool compiledPs = Compiler.Compile(shadersSourcePath, info, out var pixelShader);
+            info = new ShaderFileInfo(Path.Combine(shadersSourcePath, "TestShader.hlsl"), "TestShaderPS", ShaderStage.Pixel);
+            bool compiledPs = Compiler.Compile(info, shadersIncludeDir, out var pixelShader);
             Debug.Assert(compiledPs);
 
             vsId = ContentToEngine.AddShader(new PrimalLike.Content.CompiledShader()
@@ -83,7 +84,7 @@ namespace D3D12LibTests
             uint[] materials = [mtlId, mtlId, mtlId, mtlId, mtlId];
 
             // TODO: add add_render_item in renderer.
-            uint itemId = D3D12Content.AddRenderItem(0, modelId, materials);
+            uint itemId = D3D12Content.AddRenderItem(entityId, modelId, materials);
 
             renderItemEntityMap[itemId] = entityId;
             return itemId;

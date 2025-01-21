@@ -71,7 +71,7 @@ namespace Direct3D12
             fxPso = null;
         }
 
-        public static void PostProcess(ID3D12GraphicsCommandList cmdList, CpuDescriptorHandle targetRtv)
+        public static void PostProcess(ID3D12GraphicsCommandList cmdList, D3D12FrameInfo info, CpuDescriptorHandle targetRtv)
         {
             cmdList.SetGraphicsRootSignature(fxRootSig);
             cmdList.SetPipelineState(fxPso);

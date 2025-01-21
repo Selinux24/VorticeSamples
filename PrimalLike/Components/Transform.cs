@@ -7,7 +7,7 @@ using System.Numerics;
 
 namespace PrimalLike.Components
 {
-    static class Transform
+    public static class Transform
     {
         private static readonly List<Matrix4x4> toWorld = [];
         private static readonly List<Matrix4x4> invWorld = [];

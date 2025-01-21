@@ -1,6 +1,8 @@
-﻿using PrimalLike.Graphics;
+﻿using Direct3D12.Shaders;
+using PrimalLike.Graphics;
 using PrimalLike.Platform;
 using SharpGen.Runtime;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -12,7 +14,6 @@ using Vortice.DXGI;
 [assembly: InternalsVisibleTo("D3D12LibTests")]
 namespace Direct3D12
 {
-    using System;
 #if DEBUG
     using Vortice.Direct3D12.Debug;
     using Vortice.DXGI.Debug;
@@ -40,6 +41,7 @@ namespace Direct3D12
         private static D3D12Command gfxCommand;
         private static readonly FreeList<D3D12Surface> surfaces = new();
         private static readonly D3D12ResourceBarrier resourceBarriers = new();
+        private static readonly ConstantBuffer[] constantBuffers = new ConstantBuffer[FrameBufferCount];
 
         private static readonly D3D12DescriptorHeap rtvDescHeap = new(DescriptorHeapType.RenderTargetView);
         private static readonly D3D12DescriptorHeap dsvDescHeap = new(DescriptorHeapType.DepthStencilView);
@@ -49,8 +51,6 @@ namespace Direct3D12
         private static readonly List<IUnknown>[] deferredReleases = new List<IUnknown>[FrameBufferCount];
         private static readonly bool[] deferredReleasesFlags = new bool[FrameBufferCount];
         private static readonly object deferredReleasesMutex = new();
-
-        private static D3D12FrameInfo frameInfo = new();
 
         /// <summary>
         /// Gets the main D3D12 device.
@@ -72,6 +72,10 @@ namespace Direct3D12
         /// Gets the UAV descriptor heap.
         /// </summary>
         internal static D3D12DescriptorHeap UavHeap { get => uavDescHeap; }
+        /// <summary>
+        /// Gets the constant buffer.
+        /// </summary>
+        internal static ConstantBuffer CBuffer { get => constantBuffers[CurrentFrameIndex]; }
         /// <summary>
         /// Gets the current frame index.
         /// </summary>
@@ -163,6 +167,12 @@ namespace Direct3D12
             D3D12Helpers.NameD3D12Object(srvDescHeap.Heap, "SRV Descriptor Heap");
             D3D12Helpers.NameD3D12Object(uavDescHeap.Heap, "UAV Descriptor Heap");
 
+            for (uint i = 0; i < FrameBufferCount; i++)
+            {
+                constantBuffers[i] = new ConstantBuffer(ConstantBuffer.GetDefaultInitInfo(1024 * 1024));
+                D3D12Helpers.NameD3D12Object(constantBuffers[i].Buffer, i, "Global Constant Buffer");
+            }
+
             gfxCommand = new(CommandListType.Direct);
             if (gfxCommand.CommandQueue == null)
             {
@@ -201,6 +211,11 @@ namespace Direct3D12
 
             dxgiFactory?.Dispose();
             dxgiFactory = null;
+
+            for (uint i = 0; i < FrameBufferCount; i++)
+            {
+                constantBuffers[i].Dispose();
+            }
 
             // NOTE: some modules free their descriptors when they shutdown.
             //       We process those by calling process_deferred_free once more.
@@ -345,6 +360,39 @@ namespace Direct3D12
             }
         }
 
+        private static D3D12FrameInfo GetD3D12FrameInfo(FrameInfo info, ConstantBuffer cbuffer, D3D12Surface surface, uint frameIdx, float deltaTime)
+        {
+            var camera = D3D12Camera.Get(info.CameraId);
+            camera.Update();
+
+            GlobalShaderData data = new()
+            {
+                View = camera.View,
+                Projection = camera.Projection,
+                InvProjection = camera.InverseProjection,
+                ViewProjection = camera.ViewProjection,
+                InvViewProjection = camera.InverseViewProjection,
+                CameraPosition = camera.Position,
+                CameraDirection = camera.Direction,
+                ViewWidth = (uint)surface.Width,
+                ViewHeight = (uint)surface.Height,
+                DeltaTime = deltaTime
+            };
+
+            D3D12FrameInfo d3d12Info = new()
+            {
+                FrameInfo = info,
+                Camera = camera,
+                GlobalShaderData = cbuffer.Write(data),
+                SurfaceWidth = data.ViewWidth,
+                SurfaceHeight = data.ViewHeight,
+                FrameIndex = frameIdx,
+                DeltaTime = deltaTime
+            };
+
+            return d3d12Info;
+        }
+
         /// <inheritdoc/>
         public static ISurface CreateSurface(PlatformWindow window)
         {
@@ -378,7 +426,7 @@ namespace Direct3D12
             return surfaces[id].Height;
         }
         /// <inheritdoc/>
-        public static void RenderSurface(uint id)
+        public static void RenderSurface(uint id, FrameInfo info)
         {
             // Wait for the GPU to finish with the command allocator and
             // reset the allocator once the GPU is done with it.
@@ -386,17 +434,22 @@ namespace Direct3D12
             var cmdList = gfxCommand.BeginFrame();
 
             int frameIdx = CurrentFrameIndex;
+
+            // Reset (clear) the global constant buffer for the current frame.
+            var cbuffer = constantBuffers[frameIdx];
+            cbuffer.Clear();
+
             if (deferredReleasesFlags[frameIdx])
             {
                 ProcessDeferredReleases(frameIdx);
             }
 
             var surface = surfaces[id];
+            var d3d12Info = GetD3D12FrameInfo(info, cbuffer, surface, (uint)frameIdx, 16.7f);
 
-            frameInfo.SurfaceHeight = surface.Height;
-            frameInfo.SurfaceWidth = surface.Width;
-
-            D3D12GPass.SetSize(new(frameInfo.SurfaceWidth, frameInfo.SurfaceHeight));
+            D3D12GPass.SetSize(new(surface.Width, surface.Height));
+            d3d12Info.SurfaceHeight = (uint)surface.Height;
+            d3d12Info.SurfaceWidth = (uint)surface.Width;
 
             // Record commands
             cmdList.SetDescriptorHeaps([srvDescHeap.Heap]);
@@ -414,13 +467,13 @@ namespace Direct3D12
             D3D12GPass.AddTransitionsForDepthPrePass(resourceBarriers);
             resourceBarriers.Apply(cmdList);
             D3D12GPass.SetRenderTargetsForDepthPrePass(cmdList);
-            D3D12GPass.DepthPrePass(cmdList, frameInfo);
+            D3D12GPass.DepthPrePass(cmdList, d3d12Info);
 
             // Geometry and lighting pass
             D3D12GPass.AddTransitionsForGPass(resourceBarriers);
             resourceBarriers.Apply(cmdList);
             D3D12GPass.SetRenderTargetsForGPass(cmdList);
-            D3D12GPass.Render(cmdList, frameInfo);
+            D3D12GPass.Render(cmdList, d3d12Info);
 
             // Post-process
             resourceBarriers.AddTransitionBarrier(
@@ -432,7 +485,7 @@ namespace Direct3D12
             resourceBarriers.Apply(cmdList);
 
             // Will write to the current back buffer, so back buffer is a render target
-            D3D12PostProcess.PostProcess(cmdList, surface.Rtv);
+            D3D12PostProcess.PostProcess(cmdList, d3d12Info, surface.Rtv);
 
             // after post process
             cmdList.ResourceBarrierTransition(

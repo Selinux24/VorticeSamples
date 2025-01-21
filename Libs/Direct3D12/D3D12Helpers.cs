@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Vortice.Direct3D12;
 using Vortice.DXGI;
+using Vortice.Mathematics;
 
 namespace Direct3D12
 {
@@ -414,6 +415,17 @@ namespace Direct3D12
 
                 return hash1 + (hash2 * HASH_MULTIPLIER);
             }
+        }
+
+
+        public static ulong AlignSizeForConstantBuffer(ulong size)
+        {
+            return MathHelper.AlignUp(size, D3D12.ConstantBufferDataPlacementAlignment);
+        }
+
+        public static ulong AlignSizeForTexture(ulong size)
+        {
+            return MathHelper.AlignUp(size, D3D12.TextureDataPlacementAlignment);
         }
     }
 }
