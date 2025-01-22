@@ -84,7 +84,7 @@ namespace D3D12LibTests
             uint[] materials = [mtlId, mtlId, mtlId, mtlId, mtlId];
 
             // TODO: add add_render_item in renderer.
-            uint itemId = D3D12Content.AddRenderItem(entityId, modelId, materials);
+            uint itemId = Direct3D12.Content.RenderItem.Add(entityId, modelId, materials);
 
             renderItemEntityMap[itemId] = entityId;
             return itemId;
@@ -94,7 +94,7 @@ namespace D3D12LibTests
             // remove the render item from engine (also the game entity)
             if (IdDetail.IsValid(itemId))
             {
-                D3D12Content.RemoveRenderItem(itemId);
+                Direct3D12.Content.RenderItem.Remove(itemId);
                 var pair = renderItemEntityMap[itemId];
                 GameEntity.Remove(pair);
             }

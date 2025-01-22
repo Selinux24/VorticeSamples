@@ -1,10 +1,11 @@
-﻿using Direct3D12.Materials;
+﻿using Direct3D12.Content;
 using Direct3D12.Shaders;
 using PrimalLike.Components;
 using PrimalLike.Graphics;
 using System;
 using System.Diagnostics;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Vortice.Direct3D12;
 using Vortice.DXGI;
@@ -39,70 +40,52 @@ namespace Direct3D12
 
         struct GPassCache()
         {
-            public uint[] d3d12RenderItemIds = [];
+            private byte[] buffer = [];
+
+            public uint[] D3D12RenderItemIds = [];
 
             // NOTE: when adding new arrays, make sure to update resize() and struct_size.
-            public uint[] entityIds = null;
-            public uint[] submeshGpuIds = null;
-            public uint[] materialIds = null;
-            public ID3D12PipelineState[] gpassPipelineStates = null;
-            public ID3D12PipelineState[] depthPipelineStates = null;
-            public ID3D12RootSignature[] rootSignatures = null;
-            public MaterialTypes[] materialTypes = null;
-            public ulong[] positionBuffers = null;
-            public ulong[] elementBuffers = null;
-            public IndexBufferView[] indexBufferViews = null;
-            public D3D12PrimitiveTopology[] primitiveTopologies = null;
-            public uint[] elementsTypes = null;
-            public ulong[] perObjectData = null;
+            public uint[] EntityIds = null;
+            public uint[] SubmeshGpuIds = null;
+            public uint[] MaterialIds = null;
+            public ID3D12PipelineState[] GPassPipelineStates = null;
+            public ID3D12PipelineState[] DepthPipelineStates = null;
+            public ID3D12RootSignature[] RootSignatures = null;
+            public MaterialTypes[] MaterialTypes = null;
+            public ulong[] PositionBuffers = null;
+            public ulong[] ElementBuffers = null;
+            public IndexBufferView[] IndexBufferViews = null;
+            public D3D12PrimitiveTopology[] PrimitiveTopologies = null;
+            public uint[] ElementsTypes = null;
+            public ulong[] PerObjectData = null;
 
-            public D3D12Content.ItemsCache ItemsCache()
-            {
-                return new()
-                {
-                    EntityIds = entityIds,
-                    SubmeshGpuIds = submeshGpuIds,
-                    MaterialIds = materialIds,
-                    GPassPsos = gpassPipelineStates,
-                    DepthPsos = depthPipelineStates,
-                };
-            }
-
-            public D3D12Content.ViewsCache ViewsCache()
-            {
-                return new()
-                {
-                    PositionBuffers = positionBuffers,
-                    ElementBuffers = elementBuffers,
-                    IndexBufferViews = indexBufferViews,
-                    PrimitiveTopologies = primitiveTopologies,
-                    ElementsTypes = elementsTypes
-                };
-            }
-
-            public D3D12Content.MaterialsCache MaterialsCache()
-            {
-                return new()
-                {
-                    RootSignatures = rootSignatures,
-                    MaterialTypes = materialTypes
-                };
-            }
+            static readonly int StructSize =
+                sizeof(uint) +                      // entity_ids
+                sizeof(uint) +                      // submesh_gpu_ids
+                sizeof(uint) +                      // material_ids
+                Marshal.SizeOf<IntPtr>() +          // gpass_pipeline_states
+                Marshal.SizeOf<IntPtr>() +          // depth_pipeline_states
+                Marshal.SizeOf<IntPtr>() +          // root_signatures
+                sizeof(MaterialTypes) +             // material_types
+                sizeof(ulong) +                     // position_buffers
+                sizeof(ulong) +                     // element_buffers
+                Marshal.SizeOf<IndexBufferView>() + // index_buffer_views
+                sizeof(D3D12PrimitiveTopology) +    // primitive_topologies
+                sizeof(uint) +                      // elements_types
+                sizeof(ulong);                      // per_object_data
 
             public readonly uint Size()
             {
-                return (uint)d3d12RenderItemIds.Length;
+                return (uint)D3D12RenderItemIds.Length;
             }
-
             public void Clear()
             {
-                Array.Resize(ref d3d12RenderItemIds, 0);
+                Array.Resize(ref D3D12RenderItemIds, 0);
             }
-
             public void Resize()
             {
-                ulong itemsCount = (ulong)d3d12RenderItemIds.Length;
-                ulong newBufferSize = itemsCount * (ulong)structSize;
+                ulong itemsCount = (ulong)D3D12RenderItemIds.Length;
+                ulong newBufferSize = itemsCount * (ulong)StructSize;
                 ulong oldBufferSize = (ulong)buffer.Length;
                 if (newBufferSize > oldBufferSize)
                 {
@@ -111,62 +94,73 @@ namespace Direct3D12
 
                 if (newBufferSize != oldBufferSize)
                 {
-                    entityIds = new uint[itemsCount];
-                    submeshGpuIds = new uint[itemsCount];
-                    materialIds = new uint[itemsCount];
-                    gpassPipelineStates = new ID3D12PipelineState[itemsCount];
-                    depthPipelineStates = new ID3D12PipelineState[itemsCount];
-                    rootSignatures = new ID3D12RootSignature[itemsCount];
-                    materialTypes = new MaterialTypes[itemsCount];
-                    positionBuffers = new ulong[itemsCount];
-                    elementBuffers = new ulong[itemsCount];
-                    indexBufferViews = new IndexBufferView[itemsCount];
-                    primitiveTopologies = new D3D12PrimitiveTopology[itemsCount];
-                    elementsTypes = new uint[itemsCount];
-                    perObjectData = new ulong[itemsCount];
+                    EntityIds = new uint[itemsCount];
+                    SubmeshGpuIds = new uint[itemsCount];
+                    MaterialIds = new uint[itemsCount];
+                    GPassPipelineStates = new ID3D12PipelineState[itemsCount];
+                    DepthPipelineStates = new ID3D12PipelineState[itemsCount];
+                    RootSignatures = new ID3D12RootSignature[itemsCount];
+                    MaterialTypes = new MaterialTypes[itemsCount];
+                    PositionBuffers = new ulong[itemsCount];
+                    ElementBuffers = new ulong[itemsCount];
+                    IndexBufferViews = new IndexBufferView[itemsCount];
+                    PrimitiveTopologies = new D3D12PrimitiveTopology[itemsCount];
+                    ElementsTypes = new uint[itemsCount];
+                    PerObjectData = new ulong[itemsCount];
                 }
             }
 
-            static readonly int structSize =
-                sizeof(uint) +                                  // entity_ids
-                sizeof(uint) +                                  // submesh_gpu_ids
-                sizeof(uint) +                                  // material_ids
-                Marshal.SizeOf<IntPtr>() +         // gpass_pipeline_states
-                Marshal.SizeOf<IntPtr>() +         // depth_pipeline_states
-                Marshal.SizeOf<IntPtr>() +         // root_signatures
-                sizeof(MaterialTypes) +                         // material_types
-                sizeof(ulong) +                                 // position_buffers
-                sizeof(ulong) +                                 // element_buffers
-                Marshal.SizeOf<IndexBufferView>() +             // index_buffer_views
-                sizeof(D3D12PrimitiveTopology) +                // primitive_topologies
-                sizeof(uint) +                                  // elements_types
-                sizeof(ulong)                                   // per_object_data
-                ;
-
-            byte[] buffer = [];
-
-            public readonly void SetItems(D3D12Content.ItemsCache itemsCache)
+            public ItemsCache ItemsCache()
             {
-                Array.Copy(itemsCache.EntityIds, entityIds, itemsCache.EntityIds.Length);
-                Array.Copy(itemsCache.SubmeshGpuIds, submeshGpuIds, itemsCache.SubmeshGpuIds.Length);
-                Array.Copy(itemsCache.MaterialIds, materialIds, itemsCache.MaterialIds.Length);
-                Array.Copy(itemsCache.GPassPsos, gpassPipelineStates, itemsCache.GPassPsos.Length);
-                Array.Copy(itemsCache.DepthPsos, depthPipelineStates, itemsCache.DepthPsos.Length);
+                return new()
+                {
+                    EntityIds = EntityIds,
+                    SubmeshGpuIds = SubmeshGpuIds,
+                    MaterialIds = MaterialIds,
+                    GPassPsos = GPassPipelineStates,
+                    DepthPsos = DepthPipelineStates,
+                };
+            }
+            public ViewsCache ViewsCache()
+            {
+                return new()
+                {
+                    PositionBuffers = PositionBuffers,
+                    ElementBuffers = ElementBuffers,
+                    IndexBufferViews = IndexBufferViews,
+                    PrimitiveTopologies = PrimitiveTopologies,
+                    ElementsTypes = ElementsTypes
+                };
+            }
+            public MaterialsCache MaterialsCache()
+            {
+                return new()
+                {
+                    RootSignatures = RootSignatures,
+                    MaterialTypes = MaterialTypes
+                };
             }
 
-            public readonly void SetViews(D3D12Content.ViewsCache viewsCache)
+            public readonly void SetItems(ItemsCache itemsCache)
             {
-                Array.Copy(viewsCache.PositionBuffers, positionBuffers, viewsCache.PositionBuffers.Length);
-                Array.Copy(viewsCache.ElementBuffers, elementBuffers, viewsCache.ElementBuffers.Length);
-                Array.Copy(viewsCache.IndexBufferViews, indexBufferViews, viewsCache.IndexBufferViews.Length);
-                Array.Copy(viewsCache.PrimitiveTopologies, primitiveTopologies, viewsCache.PrimitiveTopologies.Length);
-                Array.Copy(viewsCache.ElementsTypes, elementsTypes, viewsCache.ElementsTypes.Length);
+                Array.Copy(itemsCache.EntityIds, EntityIds, itemsCache.EntityIds.Length);
+                Array.Copy(itemsCache.SubmeshGpuIds, SubmeshGpuIds, itemsCache.SubmeshGpuIds.Length);
+                Array.Copy(itemsCache.MaterialIds, MaterialIds, itemsCache.MaterialIds.Length);
+                Array.Copy(itemsCache.GPassPsos, GPassPipelineStates, itemsCache.GPassPsos.Length);
+                Array.Copy(itemsCache.DepthPsos, DepthPipelineStates, itemsCache.DepthPsos.Length);
             }
-
-            public readonly void SetMaterials(D3D12Content.MaterialsCache materialsCache)
+            public readonly void SetViews(ViewsCache viewsCache)
             {
-                Array.Copy(materialsCache.RootSignatures, rootSignatures, materialsCache.RootSignatures.Length);
-                Array.Copy(materialsCache.MaterialTypes, materialTypes, materialsCache.MaterialTypes.Length);
+                Array.Copy(viewsCache.PositionBuffers, PositionBuffers, viewsCache.PositionBuffers.Length);
+                Array.Copy(viewsCache.ElementBuffers, ElementBuffers, viewsCache.ElementBuffers.Length);
+                Array.Copy(viewsCache.IndexBufferViews, IndexBufferViews, viewsCache.IndexBufferViews.Length);
+                Array.Copy(viewsCache.PrimitiveTopologies, PrimitiveTopologies, viewsCache.PrimitiveTopologies.Length);
+                Array.Copy(viewsCache.ElementsTypes, ElementsTypes, viewsCache.ElementsTypes.Length);
+            }
+            public readonly void SetMaterials(MaterialsCache materialsCache)
+            {
+                Array.Copy(materialsCache.RootSignatures, RootSignatures, materialsCache.RootSignatures.Length);
+                Array.Copy(materialsCache.MaterialTypes, MaterialTypes, materialsCache.MaterialTypes.Length);
             }
         }
 
@@ -259,9 +253,9 @@ namespace Direct3D12
 
             for (uint i = 0; i < renderItemsCount; i++)
             {
-                if (currentEntityId != frameCache.entityIds[i])
+                if (currentEntityId != frameCache.EntityIds[i])
                 {
-                    currentEntityId = frameCache.entityIds[i];
+                    currentEntityId = frameCache.EntityIds[i];
                     PerObjectData data = new();
                     Transform.GetTransformMatrices(currentEntityId, out data.World, out data.InvWorld);
                     var world = data.World;
@@ -272,21 +266,21 @@ namespace Direct3D12
                 }
 
                 Debug.Assert(currentGpuAddress != 0);
-                frameCache.perObjectData[i] = currentGpuAddress;
+                frameCache.PerObjectData[i] = currentGpuAddress;
             }
         }
         private static void SetRootParameters(ID3D12GraphicsCommandList cmdList, uint cacheIndex)
         {
             Debug.Assert(cacheIndex < frameCache.Size());
 
-            MaterialTypes mtlType = frameCache.materialTypes[cacheIndex];
+            MaterialTypes mtlType = frameCache.MaterialTypes[cacheIndex];
             switch (mtlType)
             {
                 case MaterialTypes.Opaque:
                 {
-                    cmdList.SetGraphicsRootShaderResourceView((uint)OpaqueRootParameter.PositionBuffer, frameCache.positionBuffers[cacheIndex]);
-                    cmdList.SetGraphicsRootShaderResourceView((uint)OpaqueRootParameter.ElementBuffer, frameCache.elementBuffers[cacheIndex]);
-                    cmdList.SetGraphicsRootConstantBufferView((uint)OpaqueRootParameter.PerObjectData, frameCache.perObjectData[cacheIndex]);
+                    cmdList.SetGraphicsRootShaderResourceView((uint)OpaqueRootParameter.PositionBuffer, frameCache.PositionBuffers[cacheIndex]);
+                    cmdList.SetGraphicsRootShaderResourceView((uint)OpaqueRootParameter.ElementBuffer, frameCache.ElementBuffers[cacheIndex]);
+                    cmdList.SetGraphicsRootConstantBufferView((uint)OpaqueRootParameter.PerObjectData, frameCache.PerObjectData[cacheIndex]);
                 }
                 break;
             }
@@ -295,21 +289,21 @@ namespace Direct3D12
         {
             Debug.Assert(d3d12Info.Camera != null);
             Debug.Assert(d3d12Info.FrameInfo.RenderItemIds != null && d3d12Info.FrameInfo.RenderItemCount > 0);
+            
             frameCache.Clear();
-
-            D3D12Content.GetD3D12RenderItemIds(ref d3d12Info.FrameInfo, ref frameCache.d3d12RenderItemIds);
+            RenderItem.GetD3D12RenderItemIds(ref d3d12Info.FrameInfo, ref frameCache.D3D12RenderItemIds);
             frameCache.Resize();
-            uint itemsCount = frameCache.Size();
-            D3D12Content.ItemsCache itemsCache = frameCache.ItemsCache();
-            D3D12Content.GetItems(frameCache.d3d12RenderItemIds, itemsCount, ref itemsCache);
+
+            var itemsCache = frameCache.ItemsCache();
+            RenderItem.GetItems(frameCache.D3D12RenderItemIds, ref itemsCache);
             frameCache.SetItems(itemsCache);
 
-            D3D12Content.ViewsCache viewsCache = frameCache.ViewsCache();
-            D3D12Content.GetSubmeshViews(itemsCache.SubmeshGpuIds, ref viewsCache);
+            var viewsCache = frameCache.ViewsCache();
+            Submesh.GetViews(itemsCache.SubmeshGpuIds, ref viewsCache);
             frameCache.SetViews(viewsCache);
 
-            D3D12Content.MaterialsCache materialsCache = frameCache.MaterialsCache();
-            D3D12Content.GetMaterials(itemsCache.MaterialIds, itemsCount, ref materialsCache);
+            var materialsCache = frameCache.MaterialsCache();
+            Material.GetMaterials(itemsCache.MaterialIds, ref materialsCache);
             frameCache.SetMaterials(materialsCache);
         }
 
@@ -349,26 +343,26 @@ namespace Direct3D12
 
             for (uint i = 0; i < itemsCount; i++)
             {
-                if (currentRootSignature != frameCache.rootSignatures[i])
+                if (currentRootSignature != frameCache.RootSignatures[i])
                 {
-                    currentRootSignature = frameCache.rootSignatures[i];
+                    currentRootSignature = frameCache.RootSignatures[i];
                     cmdList.SetGraphicsRootSignature(currentRootSignature);
                     cmdList.SetGraphicsRootConstantBufferView((uint)OpaqueRootParameter.GlobalShaderData, d3d12Info.GlobalShaderData);
                 }
 
-                if (currentPipelineState != frameCache.depthPipelineStates[i])
+                if (currentPipelineState != frameCache.DepthPipelineStates[i])
                 {
-                    currentPipelineState = frameCache.depthPipelineStates[i];
+                    currentPipelineState = frameCache.DepthPipelineStates[i];
                     cmdList.SetPipelineState(currentPipelineState);
                 }
 
                 SetRootParameters(cmdList, i);
 
-                IndexBufferView ibv = frameCache.indexBufferViews[i];
+                IndexBufferView ibv = frameCache.IndexBufferViews[i];
                 uint indexCount = ibv.SizeInBytes >> (ibv.Format == Format.R16_UInt ? 1 : 2);
 
                 cmdList.IASetIndexBuffer(ibv);
-                cmdList.IASetPrimitiveTopology(frameCache.primitiveTopologies[i]);
+                cmdList.IASetPrimitiveTopology(frameCache.PrimitiveTopologies[i]);
                 cmdList.DrawIndexedInstanced(indexCount, 1, 0, 0, 0);
             }
         }
@@ -382,26 +376,26 @@ namespace Direct3D12
 
             for (uint i = 0; i < itemsCount; i++)
             {
-                if (currentRootSignature != frameCache.rootSignatures[i])
+                if (currentRootSignature != frameCache.RootSignatures[i])
                 {
-                    currentRootSignature = frameCache.rootSignatures[i];
+                    currentRootSignature = frameCache.RootSignatures[i];
                     cmdList.SetGraphicsRootSignature(currentRootSignature);
                     cmdList.SetGraphicsRootConstantBufferView((uint)OpaqueRootParameter.GlobalShaderData, d3d12Info.GlobalShaderData);
                 }
 
-                if (currentPipelineState != frameCache.gpassPipelineStates[i])
+                if (currentPipelineState != frameCache.GPassPipelineStates[i])
                 {
-                    currentPipelineState = frameCache.gpassPipelineStates[i];
+                    currentPipelineState = frameCache.GPassPipelineStates[i];
                     cmdList.SetPipelineState(currentPipelineState);
                 }
 
                 SetRootParameters(cmdList, i);
 
-                IndexBufferView ibv = frameCache.indexBufferViews[i];
+                IndexBufferView ibv = frameCache.IndexBufferViews[i];
                 uint indexCount = ibv.SizeInBytes >> (ibv.Format == Format.R16_UInt ? 1 : 2);
 
                 cmdList.IASetIndexBuffer(ibv);
-                cmdList.IASetPrimitiveTopology(frameCache.primitiveTopologies[i]);
+                cmdList.IASetPrimitiveTopology(frameCache.PrimitiveTopologies[i]);
                 cmdList.DrawIndexedInstanced(indexCount, 1, 0, 0, 0);
             }
         }

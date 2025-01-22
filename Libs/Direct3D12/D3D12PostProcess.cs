@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using Direct3D12.Shaders;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Vortice.Direct3D;
 using Vortice.Direct3D12;

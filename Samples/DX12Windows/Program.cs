@@ -1,4 +1,5 @@
 ﻿using Direct3D12;
+using Direct3D12.Shaders;
 using PrimalLike.Components;
 using ShaderCompiler;
 using System;

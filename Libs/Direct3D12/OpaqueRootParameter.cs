@@ -1,7 +1,7 @@
 ﻿
-namespace Direct3D12.Materials
+namespace Direct3D12
 {
-    enum OpaqueRootParameter : uint
+    public enum OpaqueRootParameter : uint
     {
         GlobalShaderData,
         PositionBuffer,

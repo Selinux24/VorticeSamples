@@ -1,4 +1,5 @@
-﻿using PrimalLike.Graphics;
+﻿using Direct3D12.Content;
+using PrimalLike.Graphics;
 using PrimalLike.Platform;
 using System;
 
@@ -80,32 +81,32 @@ namespace Direct3D12
         /// <inheritdoc/>
         public uint AddSubmesh(ref IntPtr data)
         {
-            return D3D12Content.AddSubmesh(ref data);
+            return Submesh.Add(ref data);
         }
         /// <inheritdoc/>
         public void RemoveSubmesh(uint id)
         {
-            D3D12Content.RemoveSubmesh(id);
+            Submesh.Remove(id);
         }
         /// <inheritdoc/>
         public uint AddMaterial(MaterialInitInfo data)
         {
-            return D3D12Content.AddMaterial(data);
+            return Material.Add(data);
         }
         /// <inheritdoc/>
         public void RemoveMaterial(uint id)
         {
-            D3D12Content.RemoveMaterial(id);
+            Material.Remove(id);
         }
         /// <inheritdoc/>
         public uint AddRenderItem(uint entityId, uint geometryContentId, uint[] materialIds)
         {
-            return D3D12Content.AddRenderItem(entityId, geometryContentId, materialIds);
+            return RenderItem.Add(entityId, geometryContentId, materialIds);
         }
         /// <inheritdoc/>
         public void RemoveRenderItem(uint id)
         {
-            D3D12Content.RemoveRenderItem(id);
+            RenderItem.Remove(id);
         }
     }
 }

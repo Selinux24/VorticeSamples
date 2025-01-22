@@ -5,11 +5,11 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Utilities;
 
-namespace Direct3D12
+namespace Direct3D12.Content
 {
     class D3D12MaterialStream
     {
-        private readonly IntPtr buffer;
+        private readonly nint buffer;
 
         private uint[] textureIds;
         private uint[] descriptorIndices;
@@ -27,15 +27,15 @@ namespace Direct3D12
         public uint[] DescriptorIndices { get => descriptorIndices; }
         public uint[] ShaderIds { get => shaderIds; }
 
-        public D3D12MaterialStream(IntPtr materialBuffer)
+        public D3D12MaterialStream(nint materialBuffer)
         {
             buffer = materialBuffer;
 
             Initialize();
         }
-        public D3D12MaterialStream(ref IntPtr materialBuffer, MaterialInitInfo info)
+        public D3D12MaterialStream(ref nint materialBuffer, MaterialInitInfo info)
         {
-            Debug.Assert(materialBuffer == IntPtr.Zero);
+            Debug.Assert(materialBuffer == nint.Zero);
 
             info.GetShaderFlags(out ShaderFlags shaderFlags, out int shaderCount);
             Debug.Assert(shaderCount != 0 && shaderFlags != 0);
@@ -45,21 +45,21 @@ namespace Direct3D12
                 sizeof(ShaderFlags) +                               // shader flags
                 sizeof(uint) +                                      // root signature id
                 sizeof(uint) +                                      // texture count
-                (sizeof(uint) * shaderCount) +                        // shader ids
-                ((sizeof(uint) + sizeof(uint)) * info.TextureCount);  // texture ids and descriptor indices (maybe 0 if no textures used).
+                sizeof(uint) * shaderCount +                        // shader ids
+                (sizeof(uint) + sizeof(uint)) * info.TextureCount;  // texture ids and descriptor indices (maybe 0 if no textures used).
 
             buffer = materialBuffer = Marshal.AllocHGlobal(bufferSize);
             BlobStreamWriter blob = new(buffer, bufferSize);
 
             blob.Write((uint)info.Type);
             blob.Write((uint)shaderFlags);
-            blob.Write(D3D12Content.CreateRootSignature(info.Type, shaderFlags));
+            blob.Write(Material.CreateRootSignature(info.Type, shaderFlags));
             blob.Write(info.TextureCount);
 
             if (info.TextureCount > 0)
             {
                 blob.Write(info.TextureIds);
-                D3D12Content.GetTextureDescriptorIndices(textureIds, descriptorIndices);
+                Texture.GetDescriptorIndices(textureIds, descriptorIndices);
                 blob.Write(descriptorIndices);
             }
 
@@ -80,7 +80,7 @@ namespace Direct3D12
 
         private void Initialize()
         {
-            Debug.Assert(buffer != IntPtr.Zero);
+            Debug.Assert(buffer != nint.Zero);
 
             BlobStreamReader blob = new(buffer);
 
