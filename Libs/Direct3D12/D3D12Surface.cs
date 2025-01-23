@@ -1,5 +1,4 @@
-﻿using PrimalLike.Graphics;
-using PrimalLike.Platform;
+﻿using PrimalLike.Platform;
 using System;
 using System.Diagnostics;
 using Vortice.Direct3D12;
@@ -11,7 +10,7 @@ namespace Direct3D12
     /// <summary>
     /// Represents a D3D12 surface.
     /// </summary>
-    class D3D12Surface : ISurface
+    class D3D12Surface
     {
         public const Format DefaultBackBufferFormat = Format.R8G8B8A8_UNorm_SRgb;
         const int BufferCount = 3;
@@ -24,7 +23,7 @@ namespace Direct3D12
 
         private IDXGISwapChain4 swapChain;
         private readonly RenderTargetData[] renderTargetData = new RenderTargetData[BufferCount];
-        private readonly PlatformWindow window;
+        private readonly Window window;
         private uint currentBbIndex = 0;
         private readonly uint allowTearing = 0;
         private PresentFlags presentFlags = 0;
@@ -32,8 +31,6 @@ namespace Direct3D12
         private RectI scissorRect;
         private Format format = DefaultBackBufferFormat;
 
-        /// <inheritdoc/>
-        public uint Id { get; set; }
         /// <inheritdoc/>
         public int Width { get => (int)viewport.Width; }
         /// <inheritdoc/>
@@ -47,7 +44,7 @@ namespace Direct3D12
         /// Creates a new instance of the <see cref="D3D12Surface"/> class.
         /// </summary>
         /// <param name="window">Platform window</param>
-        public D3D12Surface(PlatformWindow window)
+        public D3D12Surface(Window window)
         {
             Debug.Assert(window != null && window.Handle != 0);
             this.window = window;
@@ -192,7 +189,7 @@ namespace Direct3D12
         }
 
         /// <inheritdoc/>
-        public void Resize(int width, int height)
+        public void Resize()
         {
             uint frameBufferCount = BufferCount;
 

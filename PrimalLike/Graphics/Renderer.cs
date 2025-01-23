@@ -1,7 +1,7 @@
-﻿global using CameraId = System.UInt32;
-global using SurfaceId = System.UInt32;
+﻿using PrimalLike.Common;
 using PrimalLike.Platform;
 using System;
+using System.Diagnostics;
 
 namespace PrimalLike.Graphics
 {
@@ -32,29 +32,14 @@ namespace PrimalLike.Graphics
             return gfx.GetEngineShaderPath();
         }
 
-        public static ISurface CreateSurface(PlatformWindow window)
+        public static Surface CreateSurface(Window window)
         {
             return gfx.CreateSurface(window);
         }
         public static void RemoveSurface(SurfaceId id)
         {
+            Debug.Assert(IdDetail.IsValid(id));
             gfx.RemoveSurface(id);
-        }
-        public static void ResizeSurface(SurfaceId id, int width, int height)
-        {
-            gfx.ResizeSurface(id, width, height);
-        }
-        public static int GetSurfaceWidth(SurfaceId id)
-        {
-            return gfx.GetSurfaceWidth(id);
-        }
-        public static int GetSurfaceHeight(SurfaceId id)
-        {
-            return gfx.GetSurfaceHeight(id);
-        }
-        public static void RenderSurface(SurfaceId id, FrameInfo info)
-        {
-            gfx.RenderSurface(id, info);
         }
 
         public static Camera CreateCamera(CameraInitInfo info)

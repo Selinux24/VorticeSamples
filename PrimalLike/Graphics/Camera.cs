@@ -1,4 +1,5 @@
-﻿using PrimalLike.Common;
+﻿global using CameraId = System.UInt32;
+using PrimalLike.Common;
 using System.Numerics;
 using System.Runtime.InteropServices;
 

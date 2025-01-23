@@ -25,7 +25,7 @@ namespace PrimalLike.Graphics
         /// Creates a surface.
         /// </summary>
         /// <param name="window">Window</param>
-        ISurface CreateSurface(PlatformWindow window);
+        Surface CreateSurface(Window window);
         /// <summary>
         /// Removes a surface.
         /// </summary>
@@ -37,17 +37,17 @@ namespace PrimalLike.Graphics
         /// <param name="id">Surface id</param>
         /// <param name="width">New width</param>
         /// <param name="height">New height</param>
-        void ResizeSurface(SurfaceId id, int width, int height);
+        void ResizeSurface(SurfaceId id, uint width, uint height);
         /// <summary>
         /// Gets the surface width.
         /// </summary>
         /// <param name="id">Surface id</param>
-        int GetSurfaceWidth(SurfaceId id);
+        uint GetSurfaceWidth(SurfaceId id);
         /// <summary>
         /// Gets the surface height.
         /// </summary>
         /// <param name="id">Surface id</param>
-        int GetSurfaceHeight(SurfaceId id);
+        uint GetSurfaceHeight(SurfaceId id);
         /// <summary>
         /// Renders a surface.
         /// </summary>

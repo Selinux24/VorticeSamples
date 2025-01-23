@@ -1,5 +1,4 @@
-﻿using System.Drawing;
-
+﻿
 namespace PrimalLike.Platform
 {
     /// <summary>
@@ -14,7 +13,7 @@ namespace PrimalLike.Platform
         /// <summary>
         /// Gets or sets the client area of the window.
         /// </summary>
-        Rectangle ClientArea { get; set; }
+        ClientArea ClientArea { get; set; }
         /// <summary>
         /// Gets or sets a value indicating whether the window is full screen.
         /// </summary>

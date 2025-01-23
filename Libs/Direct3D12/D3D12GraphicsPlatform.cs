@@ -27,7 +27,7 @@ namespace Direct3D12
         }
 
         /// <inheritdoc/>
-        public ISurface CreateSurface(PlatformWindow window)
+        public Surface CreateSurface(Window window)
         {
             return D3D12Graphics.CreateSurface(window);
         }
@@ -37,17 +37,17 @@ namespace Direct3D12
             D3D12Graphics.RemoveSurface(id);
         }
         /// <inheritdoc/>
-        public void ResizeSurface(uint id, int width, int height)
+        public void ResizeSurface(uint id, uint width, uint height)
         {
-            D3D12Graphics.ResizeSurface(id, width, height);
+            D3D12Graphics.ResizeSurface(id);
         }
         /// <inheritdoc/>
-        public int GetSurfaceWidth(uint id)
+        public uint GetSurfaceWidth(uint id)
         {
             return D3D12Graphics.GetSurfaceWidth(id);
         }
         /// <inheritdoc/>
-        public int GetSurfaceHeight(uint id)
+        public uint GetSurfaceHeight(uint id)
         {
             return D3D12Graphics.GetSurfaceHeight(id);
         }

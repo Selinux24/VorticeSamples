@@ -3,9 +3,9 @@ using PrimalLike.Platform;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Drawing;
 using System.Linq;
 using System.Runtime.InteropServices;
+using Utilities;
 using static WindowsPlatform.Native.Ole32;
 using static WindowsPlatform.Native.User32;
 
@@ -29,19 +29,12 @@ namespace WindowsPlatform
         const WindowStyles FULL_SCREEN_STYLE = WindowStyles.WS_OVERLAPPED;
         const WindowStyles WINDOWED_STYLE = WindowStyles.WS_OVERLAPPEDWINDOW;
 
-        private static readonly Dictionary<IntPtr, Win32Window> windows = [];
+        private static readonly FreeList<Win32Window> windows = new();
+        private static readonly Dictionary<IntPtr, uint> windowsDict = [];
 
         private readonly WndProcDelegate delegWndProc = InternalWndProc;
         private readonly IntPtr hInstance = Marshal.GetHINSTANCE(typeof(Win32Platform).Module);
         private Win32Window mainWindow;
-
-        public PlatformWindow MainWindow
-        {
-            get
-            {
-                return mainWindow;
-            }
-        }
 
         public Win32Platform() : base()
         {
@@ -76,7 +69,7 @@ namespace WindowsPlatform
             }
         }
 
-        public PlatformWindow CreateWindow(IPlatformWindowInfo info, bool setDefault = true)
+        public Window CreateWindow(IPlatformWindowInfo info, bool setDefault = true)
         {
             if (info is not Win32WindowInfo win32Info)
             {
@@ -84,15 +77,16 @@ namespace WindowsPlatform
             }
 
             nint hwnd = CreateWindowInternal(win32Info);
-            var wnd = new Win32Window(hwnd);
-            windows.Add(wnd.Handle, wnd);
+            var wnd = new Win32Window(hwnd, info.ClientArea);
 
             if (mainWindow == null || setDefault)
             {
                 mainWindow = wnd;
             }
 
-            return wnd;
+            uint id = windows.Add(wnd);
+            windowsDict.Add(hwnd, id);
+            return new Window(id);
         }
         private nint CreateWindowInternal(Win32WindowInfo info)
         {
@@ -103,8 +97,8 @@ namespace WindowsPlatform
 
             RECT rect = new()
             {
-                Left = clientArea.X,
-                Top = clientArea.Y,
+                Left = clientArea.Left,
+                Top = clientArea.Top,
                 Right = clientArea.Right,
                 Bottom = clientArea.Bottom,
             };
@@ -146,21 +140,58 @@ namespace WindowsPlatform
             return hwnd;
         }
 
-        public void RemoveWindow(PlatformWindow window)
+        public void RemoveWindow(uint id)
         {
-            windows.Remove(window.Handle);
-            if (mainWindow == window)
+            var window = windows[id];
+            windows.Remove(id);
+            if (mainWindow.Id == id)
             {
-                mainWindow = windows.Count != 0 ? windows.First().Value : null;
+                mainWindow = windows.Size > 0 ? windows[0] : null;
             }
             DestroyWindow(window.Handle);
+            windowsDict.Remove(window.Handle);
         }
+
+
+        public nint GetWindowHandle(uint id)
+        {
+            return windows[id].Handle;
+        }
+        public void SetFullscreen(uint id, bool isFullscreen)
+        {
+            windows[id].SetFullscreen(isFullscreen);
+        }
+        public bool IsWindoFullscreen(uint id)
+        {
+            return windows[id].IsFullscreen;
+        }
+        public void SetCaption(uint id, string caption)
+        {
+            windows[id].SetCaption(caption);
+        }
+        public void Resize(uint id, uint width, uint height)
+        {
+            windows[id].Resize(width, height);
+        }
+        public uint GetWindowWidth(uint id)
+        {
+            return windows[id].Width;
+        }
+        public uint GetWindowHeight(uint id)
+        {
+            return windows[id].Height;
+        }
+        public bool IsWindowClosed(uint id)
+        {
+            return windows[id].IsClosed;
+        }
+
 
         public static void SetWindowTitle(IntPtr hwnd, string title)
         {
             SetWindowTextW(hwnd, title);
         }
-        public static void SetWindowBounds(IntPtr hwnd, Rectangle bounds)
+        public static void SetWindowBounds(IntPtr hwnd, ClientArea bounds)
         {
             var windowRect = new RECT
             {
@@ -233,21 +264,24 @@ namespace WindowsPlatform
                 }
             }
 
-            var windowsToRemove = windows.Values.ToArray();
-            foreach (var wnd in windowsToRemove)
+            var windowsToRemove = windowsDict.Values.ToArray();
+            foreach (var id in windowsToRemove)
             {
-                Application.Current.RemoveWindow(wnd);
+                Application.Current.RemoveWindow(id);
             }
-            Debug.Assert(windows.Count == 0);
+            windowsDict.Clear();
+            Debug.Assert(windowsDict.Count == 0);
 
             CoUninitialize();
         }
         private static IntPtr InternalWndProc(IntPtr hwnd, uint msg, IntPtr wParam, IntPtr lParam)
         {
-            if (!windows.TryGetValue(hwnd, out var wnd))
+            if (!windowsDict.TryGetValue(hwnd, out var id))
             {
                 return DefWindowProcW(hwnd, msg, wParam, lParam);
             }
+
+            var wnd = windows[id];
 
             bool toggleFullscreen = false;
             switch (msg)
@@ -255,7 +289,7 @@ namespace WindowsPlatform
                 case WM_DESTROY:
                     Debug.WriteLine($"Destroying window {hwnd}");
                     wnd.IsClosed = true;
-                    if (!windows.Any(w => !w.Value.IsClosed))
+                    if (!windowsDict.Any(w => !windows[w.Value].IsClosed))
                     {
                         return PostQuitMessage(0);
                     }
@@ -263,7 +297,7 @@ namespace WindowsPlatform
                 case WM_SIZE:
                     if (SetResized(hwnd, wParam != SIZE_MINIMIZED, out var clientArea))
                     {
-                        Application.Current.ResizeWindow(wnd, clientArea);
+                        wnd.Resized(clientArea);
                     }
                     break;
                 case WM_SYSCHAR:
@@ -281,7 +315,7 @@ namespace WindowsPlatform
 
             if (toggleFullscreen)
             {
-                wnd.FullScreen = !wnd.FullScreen;
+                wnd.IsFullscreen = !wnd.IsFullscreen;
             }
 
             if (msg == WM_SYSCOMMAND && wParam == SC_KEYMENU)
@@ -302,7 +336,7 @@ namespace WindowsPlatform
         {
             return (ushort)((l >> 16) & 0xffff);
         }
-        private static bool SetResized(IntPtr hwnd, bool resized, out Rectangle clientArea)
+        private static bool SetResized(IntPtr hwnd, bool resized, out ClientArea clientArea)
         {
             if (!resized)
             {
@@ -320,7 +354,7 @@ namespace WindowsPlatform
                 true);
 
             GetClientRect(hwnd, out var area);
-            clientArea = new Rectangle(
+            clientArea = new ClientArea(
                 area.Left,
                 area.Top,
                 area.GetWidth(),

@@ -40,10 +40,10 @@ namespace WindowsPlatform.Native
             [MarshalAs(UnmanagedType.LPWStr)] string lpClassName,
             [MarshalAs(UnmanagedType.LPWStr)] string lpWindowName,
             WindowStyles dwStyle,
-            int x,
-            int y,
-            int nWidth,
-            int nHeight,
+            uint x,
+            uint y,
+            uint nWidth,
+            uint nHeight,
             IntPtr hWndParent,
             IntPtr hMenu,
             IntPtr hInstance,
@@ -89,7 +89,7 @@ namespace WindowsPlatform.Native
 
         [DllImport("user32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        public static extern bool MoveWindow(IntPtr hWnd, int X, int Y, int nWidth, int nHeight, bool bRepaint);
+        public static extern bool MoveWindow(IntPtr hWnd, uint X, uint Y, uint nWidth, uint nHeight, bool bRepaint);
 
         [DllImport("user32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -143,16 +143,16 @@ namespace WindowsPlatform.Native
         [StructLayout(LayoutKind.Sequential)]
         public struct RECT
         {
-            public int Left;
-            public int Top;
-            public int Right;
-            public int Bottom;
+            public uint Left;
+            public uint Top;
+            public uint Right;
+            public uint Bottom;
 
-            public readonly int GetWidth()
+            public readonly uint GetWidth()
             {
                 return Right - Left;
             }
-            public readonly int GetHeight()
+            public readonly uint GetHeight()
             {
                 return Bottom - Top;
             }

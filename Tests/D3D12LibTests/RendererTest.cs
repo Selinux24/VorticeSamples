@@ -100,25 +100,25 @@ namespace D3D12LibTests
             Win32WindowInfo windowInfo1 = new()
             {
                 Title = "DX12 for Windows 1",
-                ClientArea = new System.Drawing.Rectangle(100, 100, 400, 800),
+                ClientArea = new(100, 100, 400, 800),
                 IsFullScreen = false,
             };
             Win32WindowInfo windowInfo2 = new()
             {
                 Title = "DX12 for Windows 2",
-                ClientArea = new System.Drawing.Rectangle(150, 150, 800, 400),
+                ClientArea = new(150, 150, 800, 400),
                 IsFullScreen = false,
             };
             Win32WindowInfo windowInfo3 = new()
             {
                 Title = "DX12 for Windows 3",
-                ClientArea = new System.Drawing.Rectangle(200, 200, 400, 400),
+                ClientArea = new(200, 200, 400, 400),
                 IsFullScreen = false,
             };
             Win32WindowInfo windowInfo4 = new()
             {
                 Title = "DX12 for Windows 4",
-                ClientArea = new System.Drawing.Rectangle(250, 250, 800, 600),
+                ClientArea = new(250, 250, 800, 600),
                 IsFullScreen = false,
             };
 

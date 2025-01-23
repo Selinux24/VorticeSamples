@@ -4,7 +4,6 @@ using PrimalLike.Graphics;
 using PrimalLike.Platform;
 using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Threading.Tasks;
 
 namespace PrimalLike
@@ -22,11 +21,11 @@ namespace PrimalLike
             /// <summary>
             /// Window
             /// </summary>
-            public PlatformWindow Window;
+            public Window Window;
             /// <summary>
             /// Surface
             /// </summary>
-            public ISurface Surface;
+            public Surface Surface;
         }
 
         /// <summary>
@@ -34,7 +33,6 @@ namespace PrimalLike
         /// </summary>
         public static Application Current { get; private set; }
 
-        private readonly IPlatform platform;
         private readonly Time time = new();
         private readonly object tickLock = new();
         private readonly List<RenderSurface> renderSurfaces = [];
@@ -61,7 +59,7 @@ namespace PrimalLike
         {
             this.contentFilename = contentFilename;
 
-            platform = platformFactory.CreatePlatform();
+            PlatformBase.Initialize(platformFactory);
 
             Renderer.Initialize(graphicsFactory);
 
@@ -86,9 +84,9 @@ namespace PrimalLike
         /// </summary>
         /// <param name="info">Initialization info</param>
         /// <returns>Returns the create window</returns>
-        public PlatformWindow CreateWindow(IPlatformWindowInfo info)
+        public Window CreateWindow(IPlatformWindowInfo info)
         {
-            var wnd = platform.CreateWindow(info);
+            var wnd = PlatformBase.CreateWindow(info);
             var surface = Renderer.CreateSurface(wnd);
             renderSurfaces.Add(new() { Window = wnd, Surface = surface });
 
@@ -98,26 +96,13 @@ namespace PrimalLike
         /// Removes a window.
         /// </summary>
         /// <param name="window">Window to remove</param>
-        public void RemoveWindow(PlatformWindow window)
+        public void RemoveWindow(uint id)
         {
-            var rs = renderSurfaces.Find(x => x.Window == window);
+            var rs = renderSurfaces.Find(x => x.Window.Id == id);
             renderSurfaces.Remove(rs);
 
             Renderer.RemoveSurface(rs.Surface.Id);
-            rs.Surface.Dispose();
-            platform.RemoveWindow(window);
-        }
-        /// <summary>
-        /// Resizes a window.
-        /// </summary>
-        /// <param name="window">Window to resize</param>
-        /// <param name="clientArea">Client area</param>
-        public void ResizeWindow(PlatformWindow window, Rectangle clientArea)
-        {
-            window.Resized(clientArea);
-
-            var surface = renderSurfaces.Find(x => x.Window == window);
-            Renderer.ResizeSurface(surface.Surface.Id, clientArea.Width, clientArea.Height);
+            PlatformBase.RemoveWindow(id);
         }
 
         /// <summary>
@@ -152,7 +137,7 @@ namespace PrimalLike
 
             time.Update();
 
-            platform.Run();
+            PlatformBase.Run();
 
             OnShutdown?.Invoke(this, EventArgs.Empty);
             ContentLoader.UnloadGame();
@@ -235,7 +220,7 @@ namespace PrimalLike
             FpsTimer.Begin();
             foreach (var rs in renderSurfaces)
             {
-                Renderer.RenderSurface(rs.Surface.Id, info);
+                rs.Surface.Render(info);
             }
             FpsTimer.End();
         }

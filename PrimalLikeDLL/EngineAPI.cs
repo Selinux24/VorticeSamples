@@ -17,11 +17,11 @@ namespace PrimalLikeDLL
             /// <summary>
             /// Window
             /// </summary>
-            public PlatformWindow Window { get; set; }
+            public Window Window { get; set; }
             /// <summary>
             /// Surface
             /// </summary>
-            public ISurface Surface { get; set; }
+            public Surface Surface { get; set; }
         }
 
         private delegate IntPtr ScriptCreatorDelegate(string name);
@@ -135,7 +135,7 @@ namespace PrimalLikeDLL
         {
             ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(id, surfaces.Count);
 
-            surfaces[id].Window.Resized(new(0, 0, 0, 0));
+            surfaces[id].Window.Resize(0, 0);
         }
     }
 }

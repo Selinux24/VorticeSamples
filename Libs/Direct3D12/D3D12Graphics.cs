@@ -394,36 +394,33 @@ namespace Direct3D12
         }
 
         /// <inheritdoc/>
-        public static ISurface CreateSurface(PlatformWindow window)
+        public static Surface CreateSurface(Window window)
         {
-            var surface = new D3D12Surface(window);
-            surface.CreateSwapChain(dxgiFactory, gfxCommand.CommandQueue);
-            surface.Id = surfaces.Add(surface);
-
-            return surface;
+            uint id = surfaces.Add(new D3D12Surface(window));
+            surfaces[id].CreateSwapChain(dxgiFactory, gfxCommand.CommandQueue);
+            return new Surface(id);
         }
         /// <inheritdoc/>
         public static void RemoveSurface(uint id)
         {
             gfxCommand.Flush();
-            surfaces[id].Dispose();
             surfaces.Remove(id);
         }
         /// <inheritdoc/>
-        public static void ResizeSurface(uint id, int width, int height)
+        public static void ResizeSurface(uint id)
         {
             gfxCommand.Flush();
-            surfaces[id].Resize(width, height);
+            surfaces[id].Resize();
         }
         /// <inheritdoc/>
-        public static int GetSurfaceWidth(uint id)
+        public static uint GetSurfaceWidth(uint id)
         {
-            return surfaces[id].Width;
+            return (uint)surfaces[id].Width;
         }
         /// <inheritdoc/>
-        public static int GetSurfaceHeight(uint id)
+        public static uint GetSurfaceHeight(uint id)
         {
-            return surfaces[id].Height;
+            return (uint)surfaces[id].Height;
         }
         /// <inheritdoc/>
         public static void RenderSurface(uint id, FrameInfo info)
@@ -501,6 +498,7 @@ namespace Direct3D12
             PrintDebugMessage();
 #endif
         }
+
 
 #if DEBUG
 
