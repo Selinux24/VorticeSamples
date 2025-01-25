@@ -91,7 +91,7 @@ namespace WindowsPlatform
         private nint CreateWindowInternal(Win32WindowInfo info)
         {
             bool fullScreen = info.IsFullScreen;
-            var title = info.Title;
+            var caption = info.Caption;
             var clientArea = info.ClientArea;
             var style = fullScreen ? FULL_SCREEN_STYLE : WINDOWED_STYLE;
 
@@ -111,7 +111,7 @@ namespace WindowsPlatform
             nint hwnd = CreateWindowExW(
                 WindowStylesEx.WS_EX_LEFT,
                 WINDOWCLASSNAME,
-                title,
+                caption,
                 style,
                 clientArea.Left,
                 clientArea.Top,
@@ -144,9 +144,9 @@ namespace WindowsPlatform
         {
             var window = windows[id];
             windows.Remove(id);
-            if (mainWindow.Id == id)
+            if (mainWindow.Id == id && windows.First(out var wnd))
             {
-                mainWindow = windows.Size > 0 ? windows[0] : null;
+                mainWindow = wnd;
             }
             DestroyWindow(window.Handle);
             windowsDict.Remove(window.Handle);
@@ -263,14 +263,6 @@ namespace WindowsPlatform
                     }
                 }
             }
-
-            var windowsToRemove = windowsDict.Values.ToArray();
-            foreach (var id in windowsToRemove)
-            {
-                Application.Current.RemoveWindow(id);
-            }
-            windowsDict.Clear();
-            Debug.Assert(windowsDict.Count == 0);
 
             CoUninitialize();
         }

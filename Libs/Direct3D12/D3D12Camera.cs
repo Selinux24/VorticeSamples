@@ -4,7 +4,6 @@ using PrimalLike.Graphics;
 using System;
 using System.Diagnostics;
 using System.Numerics;
-using System.Runtime.InteropServices;
 using Utilities;
 
 namespace Direct3D12
@@ -13,8 +12,8 @@ namespace Direct3D12
     {
         private static readonly FreeList<D3D12Camera> cameras = new();
 
-        delegate void SetFunction(D3D12Camera camera, IntPtr data, int size);
-        delegate void GetFunction(D3D12Camera camera, IntPtr data, int size);
+        delegate void SetFunction(D3D12Camera camera, object value);
+        delegate object GetFunction(D3D12Camera camera);
         private static readonly SetFunction[] setFunctions =
         [
             SetUpVector,
@@ -61,17 +60,15 @@ namespace Direct3D12
             Debug.Assert(IdDetail.IsValid(id));
             cameras.Remove(id);
         }
-        public static void SetParameter(uint id, CameraParameters parameter, IntPtr data, int dataSize)
+        public static void SetParameter<T>(uint id, CameraParameters parameter, T value) where T : unmanaged
         {
-            Debug.Assert(data != IntPtr.Zero && dataSize > 0);
             D3D12Camera camera = Get(id);
-            setFunctions[(int)parameter](camera, data, dataSize);
+            setFunctions[(int)parameter](camera, value);
         }
-        public static void GetParameter(uint id, CameraParameters parameter, IntPtr data, int dataSize)
+        public static void GetParameter<T>(uint id, CameraParameters parameter, out T value) where T : unmanaged
         {
-            Debug.Assert(data != IntPtr.Zero && dataSize > 0);
             D3D12Camera camera = Get(id);
-            getFunctions[(int)parameter](camera, data, dataSize);
+            value = (T)getFunctions[(int)parameter](camera);
         }
         public static D3D12Camera Get(uint id)
         {
@@ -79,137 +76,104 @@ namespace Direct3D12
             return cameras[id];
         }
 
-        private static void SetUpVector(D3D12Camera camera, IntPtr data, int size)
+        private static void SetUpVector(D3D12Camera camera, object value)
         {
-            //Read the up vector from the data pointer
-            Vector3 upVector = Vector3.Zero;
-            Marshal.PtrToStructure(data, upVector);
-            Debug.Assert(Marshal.SizeOf(upVector) == size);
-            camera.Up = upVector;
+            Debug.Assert(value is Vector3);
+            camera.Up = (Vector3)value;
         }
-        private static void SetFieldOfView(D3D12Camera camera, IntPtr data, int size)
+        private static void SetFieldOfView(D3D12Camera camera, object value)
         {
-            Debug.Assert(camera.ProjectionType == CameraProjectionTypes.Perspective);
-            float fov = 0f;
-            Marshal.PtrToStructure(data, fov);
-            Debug.Assert(Marshal.SizeOf(fov) == size);
-            camera.FieldOfView = fov;
+            Debug.Assert(value is float);
+            camera.FieldOfView = (float)value;
         }
-        private static void SetAspectRatio(D3D12Camera camera, IntPtr data, int size)
+        private static void SetAspectRatio(D3D12Camera camera, object value)
         {
-            Debug.Assert(camera.ProjectionType == CameraProjectionTypes.Perspective);
-            float aspectRatio = 0f;
-            Marshal.PtrToStructure(data, aspectRatio);
-            Debug.Assert(Marshal.SizeOf(aspectRatio) == size);
-            camera.AspectRatio = aspectRatio;
+            Debug.Assert(value is float);
+            camera.AspectRatio = (float)value;
         }
-        private static void SetViewWidth(D3D12Camera camera, IntPtr data, int size)
+        private static void SetViewWidth(D3D12Camera camera, object value)
         {
-            Debug.Assert(camera.ProjectionType == CameraProjectionTypes.Orthographic);
-            float viewWidth = 0f;
-            Marshal.PtrToStructure(data, viewWidth);
-            Debug.Assert(Marshal.SizeOf(viewWidth) == size);
-            camera.ViewWidth = viewWidth;
+            Debug.Assert(value is float);
+            camera.ViewWidth = (float)value;
         }
-        private static void SetViewHeight(D3D12Camera camera, IntPtr data, int size)
+        private static void SetViewHeight(D3D12Camera camera, object value)
         {
-            Debug.Assert(camera.ProjectionType == CameraProjectionTypes.Orthographic);
-            float viewHeight = 0f;
-            Marshal.PtrToStructure(data, viewHeight);
-            Debug.Assert(Marshal.SizeOf(viewHeight) == size);
-            camera.ViewHeight = viewHeight;
+            Debug.Assert(value is float);
+            camera.ViewHeight = (float)value;
         }
-        private static void SetNearZ(D3D12Camera camera, IntPtr data, int size)
+        private static void SetNearZ(D3D12Camera camera, object value)
         {
-            float nearZ = 0f;
-            Marshal.PtrToStructure(data, nearZ);
-            Debug.Assert(Marshal.SizeOf(nearZ) == size);
-            camera.NearZ = nearZ;
+            Debug.Assert(value is float);
+            camera.NearZ = (float)value;
         }
-        private static void SetFarZ(D3D12Camera camera, IntPtr data, int size)
+        private static void SetFarZ(D3D12Camera camera, object value)
         {
-            float farZ = 0f;
-            Marshal.PtrToStructure(data, farZ);
-            Debug.Assert(Marshal.SizeOf(farZ) == size);
-            camera.FarZ = farZ;
+            Debug.Assert(value is float);
+            camera.FarZ = (float)value;
         }
 
-        private static void GetView(D3D12Camera camera, IntPtr data, int size)
+        private static object GetView(D3D12Camera camera)
         {
-            Marshal.StructureToPtr(camera.View, data, false);
-            Debug.Assert(Marshal.SizeOf(typeof(Matrix4x4)) == size);
+            return camera.View;
         }
-        private static void GetProjection(D3D12Camera camera, IntPtr data, int size)
+        private static object GetProjection(D3D12Camera camera)
         {
-            Marshal.StructureToPtr(camera.Projection, data, false);
-            Debug.Assert(Marshal.SizeOf(typeof(Matrix4x4)) == size);
+            return camera.Projection;
         }
-        private static void GetInverseProjection(D3D12Camera camera, IntPtr data, int size)
+        private static object GetInverseProjection(D3D12Camera camera)
         {
-            Marshal.StructureToPtr(camera.InverseProjection, data, false);
-            Debug.Assert(Marshal.SizeOf(typeof(Matrix4x4)) == size);
+            return camera.InverseProjection;
         }
-        private static void GetViewProjection(D3D12Camera camera, IntPtr data, int size)
+        private static object GetViewProjection(D3D12Camera camera)
         {
-            Marshal.StructureToPtr(camera.ViewProjection, data, false);
-            Debug.Assert(Marshal.SizeOf(typeof(Matrix4x4)) == size);
+            return camera.ViewProjection;
         }
-        private static void GetInverseViewProjection(D3D12Camera camera, IntPtr data, int size)
+        private static object GetInverseViewProjection(D3D12Camera camera)
         {
-            Marshal.StructureToPtr(camera.InverseViewProjection, data, false);
-            Debug.Assert(Marshal.SizeOf(typeof(Matrix4x4)) == size);
+            return camera.InverseViewProjection;
         }
-        private static void GetUpVector(D3D12Camera camera, IntPtr data, int size)
+        private static object GetUpVector(D3D12Camera camera)
         {
-            Marshal.StructureToPtr(camera.Up, data, false);
-            Debug.Assert(Marshal.SizeOf(typeof(Vector3)) == size);
+            return camera.Up;
         }
-        private static void GetFieldOfView(D3D12Camera camera, IntPtr data, int size)
+        private static object GetFieldOfView(D3D12Camera camera)
         {
             Debug.Assert(camera.ProjectionType == CameraProjectionTypes.Perspective);
-            Marshal.StructureToPtr(camera.FieldOfView, data, false);
-            Debug.Assert(sizeof(float) == size);
+            return camera.FieldOfView;
         }
-        private static void GetAspectRatio(D3D12Camera camera, IntPtr data, int size)
+        private static object GetAspectRatio(D3D12Camera camera)
         {
             Debug.Assert(camera.ProjectionType == CameraProjectionTypes.Perspective);
-            Marshal.StructureToPtr(camera.AspectRatio, data, false);
-            Debug.Assert(sizeof(float) == size);
+            return camera.AspectRatio;
         }
-        private static void GetViewWidth(D3D12Camera camera, IntPtr data, int size)
+        private static object GetViewWidth(D3D12Camera camera)
         {
             Debug.Assert(camera.ProjectionType == CameraProjectionTypes.Orthographic);
-            Marshal.StructureToPtr(camera.ViewWidth, data, false);
-            Debug.Assert(sizeof(float) == size);
+            return camera.ViewWidth;
         }
-        private static void GetViewHeight(D3D12Camera camera, IntPtr data, int size)
+        private static object GetViewHeight(D3D12Camera camera)
         {
             Debug.Assert(camera.ProjectionType == CameraProjectionTypes.Orthographic);
-            Marshal.StructureToPtr(camera.ViewHeight, data, false);
-            Debug.Assert(sizeof(float) == size);
+            return camera.ViewHeight;
         }
-        private static void GetNearZ(D3D12Camera camera, IntPtr data, int size)
+        private static object GetNearZ(D3D12Camera camera)
         {
-            Marshal.StructureToPtr(camera.NearZ, data, false);
-            Debug.Assert(sizeof(float) == size);
+            return camera.NearZ;
         }
-        private static void GetFarZ(D3D12Camera camera, IntPtr data, int size)
+        private static object GetFarZ(D3D12Camera camera)
         {
-            Marshal.StructureToPtr(camera.FarZ, data, false);
-            Debug.Assert(sizeof(float) == size);
+            return camera.FarZ;
         }
-        private static void GetProjectionType(D3D12Camera camera, IntPtr data, int size)
+        private static object GetProjectionType(D3D12Camera camera)
         {
-            Marshal.StructureToPtr((uint)camera.ProjectionType, data, false);
-            Debug.Assert(sizeof(CameraProjectionTypes) == size);
+            return (uint)camera.ProjectionType;
         }
-        private static void GetEntityId(D3D12Camera camera, IntPtr data, int size)
+        private static object GetEntityId(D3D12Camera camera)
         {
-            Marshal.StructureToPtr(camera.EntityId, data, false);
-            Debug.Assert(sizeof(uint) == size);
+            return camera.EntityId;
         }
 
-        private static void DummySet(D3D12Camera camera, IntPtr data, int size)
+        private static void DummySet(D3D12Camera camera, object value)
         {
 
         }

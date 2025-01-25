@@ -10,7 +10,7 @@ namespace Direct3D12
     /// <summary>
     /// Represents a D3D12 surface.
     /// </summary>
-    class D3D12Surface
+    class D3D12Surface : IDisposable
     {
         public const Format DefaultBackBufferFormat = Format.R8G8B8A8_UNorm_SRgb;
         const int BufferCount = 3;

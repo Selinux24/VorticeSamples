@@ -1,5 +1,6 @@
 ﻿using Direct3D12;
 using Direct3D12.Shaders;
+using PrimalLike;
 using PrimalLike.Components;
 using ShaderCompiler;
 using System;
@@ -21,7 +22,7 @@ namespace DX12Windows
 
         static void Main()
         {
-            if (!GameEntity.RegisterScript<TestScript>())
+            if (!Application.RegisterScript<TestScript>())
             {
                 Console.WriteLine("Failed to register TestScript");
             }
@@ -35,11 +36,11 @@ namespace DX12Windows
 
             Win32WindowInfo windowInfo = new()
             {
-                Title = "DX12 for Windows",
+                Caption = "DX12 for Windows",
                 ClientArea = new(50, 50, 800, 600),
                 IsFullScreen = false,
             };
-            app.CreateWindow(windowInfo);
+            Application.CreateWindow(windowInfo);
 
             app.Run();
         }

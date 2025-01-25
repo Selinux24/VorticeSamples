@@ -1,13 +1,12 @@
 ﻿global using EntityId = uint;
 using PrimalLike.Common;
 using PrimalLike.EngineAPI;
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace PrimalLike.Components
 {
-    public static class GameEntity
+    static class GameEntity
     {
         private static readonly List<GenerationType> generations = [];
         private static readonly Queue<EntityId> freeIds = [];
@@ -94,15 +93,6 @@ namespace PrimalLike.Components
             return generations[(int)index] ==
                 IdDetail.Generation(id) &&
                 Transforms[(int)index].IsValid();
-        }
-
-        public static bool RegisterScript<T>() where T : EntityScript
-        {
-            return Script.RegisterScript(IdDetail.StringHash<T>(), CreateScript<T>);
-        }
-        private static T CreateScript<T>(Entity entity) where T : EntityScript
-        {
-            return (T)Activator.CreateInstance(typeof(T), [entity]);
         }
     }
 }

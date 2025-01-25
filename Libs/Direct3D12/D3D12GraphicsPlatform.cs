@@ -68,14 +68,14 @@ namespace Direct3D12
             D3D12Camera.Remove(id);
         }
         /// <inheritdoc/>
-        public void SetParameter(uint id, CameraParameters parameter, IntPtr data, int size)
+        public void SetParameter<T>(uint id, CameraParameters parameter, T value) where T : unmanaged
         {
-            D3D12Camera.SetParameter(id, parameter, data, size);
+            D3D12Camera.SetParameter(id, parameter, value);
         }
         /// <inheritdoc/>
-        public void GetParameter(uint id, CameraParameters parameter, IntPtr data, int size)
+        public void GetParameter<T>(uint id, CameraParameters parameter, out T value) where T : unmanaged
         {
-            D3D12Camera.GetParameter(id, parameter, data, size);
+            D3D12Camera.GetParameter(id, parameter, out value);
         }
 
         /// <inheritdoc/>

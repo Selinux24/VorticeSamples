@@ -1,41 +1,50 @@
-﻿using PrimalLike.Components;
+﻿using PrimalLike.Common;
+using PrimalLike.Components;
 using PrimalLike.Content;
+using PrimalLike.EngineAPI;
 using PrimalLike.Graphics;
 using PrimalLike.Platform;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading.Tasks;
 
 namespace PrimalLike
 {
+    public abstract class RenderComponent(IPlatformWindowInfo info)
+    {
+        protected IPlatformWindowInfo Info { get; private set; } = info;
+
+        public RenderSurface Surface { get; protected set; }
+        
+        public abstract FrameInfo GetFrameInfo();
+        public void Render()
+        {
+            if (!Surface.Surface.IsValid)
+            {
+                return;
+            }
+
+            var info = GetFrameInfo();
+            Surface.Surface.Render(info);
+        }
+        public abstract void Remove();
+    }
+
     /// <summary>
     /// Application base class.
     /// </summary>
     public abstract class Application
     {
         /// <summary>
-        /// Render surface structure.
-        /// </summary>
-        struct RenderSurface
-        {
-            /// <summary>
-            /// Window
-            /// </summary>
-            public Window Window;
-            /// <summary>
-            /// Surface
-            /// </summary>
-            public Surface Surface;
-        }
-
-        /// <summary>
         /// Gets the current application.
         /// </summary>
         public static Application Current { get; private set; }
 
+        private static readonly List<RenderComponent> renderSurfaces = [];
+
         private readonly Time time = new();
         private readonly object tickLock = new();
-        private readonly List<RenderSurface> renderSurfaces = [];
         private readonly string contentFilename;
 
         public event EventHandler OnInitialize;
@@ -79,37 +88,93 @@ namespace PrimalLike
             return ContentLoader.LoadEngineShaders(path, out shadersBlob);
         }
 
+        public static T CreateRenderComponent<T>(IPlatformWindowInfo info) where T : RenderComponent
+        {
+            T renderComponent = (T)Activator.CreateInstance(typeof(T), info);
+
+            renderSurfaces.Add(renderComponent);
+
+            return renderComponent;
+        }
+        public static void RemoveRenderComponent(RenderComponent renderComponent)
+        {
+            renderComponent.Remove();
+            renderSurfaces.Remove(renderComponent);
+        }
+
+        /// <summary>
+        /// Creates a render surface.
+        /// </summary>
+        /// <param name="info">Window init info</param>
+        public static RenderSurface CreateRenderSurface(IPlatformWindowInfo info)
+        {
+            var window = CreateWindow(info);
+            var surface = CreateSurface(window);
+
+            return new RenderSurface()
+            {
+                Window = window,
+                Surface = surface
+            };
+        }
+        /// <summary>
+        /// Removes a render surface.
+        /// </summary>
+        /// <param name="renderSurface">Render surface</param>
+        public static void RemoveRenderSurface(RenderSurface renderSurface)
+        {
+            if (renderSurface.Surface.IsValid)
+            {
+                RemoveSurface(renderSurface.Surface.Id);
+            }
+            if (renderSurface.Window.IsValid)
+            {
+                RemoveWindow(renderSurface.Window.Id);
+            }
+        }
+
         /// <summary>
         /// Creates a new window.
         /// </summary>
         /// <param name="info">Initialization info</param>
         /// <returns>Returns the create window</returns>
-        public Window CreateWindow(IPlatformWindowInfo info)
+        public static Window CreateWindow(IPlatformWindowInfo info)
         {
-            var wnd = PlatformBase.CreateWindow(info);
-            var surface = Renderer.CreateSurface(wnd);
-            renderSurfaces.Add(new() { Window = wnd, Surface = surface });
-
-            return wnd;
+            return PlatformBase.CreateWindow(info);
         }
         /// <summary>
         /// Removes a window.
         /// </summary>
         /// <param name="window">Window to remove</param>
-        public void RemoveWindow(uint id)
+        public static void RemoveWindow(uint id)
         {
-            var rs = renderSurfaces.Find(x => x.Window.Id == id);
-            renderSurfaces.Remove(rs);
-
-            Renderer.RemoveSurface(rs.Surface.Id);
+            Debug.Assert(IdDetail.IsValid(id));
             PlatformBase.RemoveWindow(id);
+        }
+
+        /// <summary>
+        /// Creates a surface.
+        /// </summary>
+        /// <param name="window">Window</param>
+        public static Surface CreateSurface(Window window)
+        {
+            return Renderer.CreateSurface(window);
+        }
+        /// <summary>
+        /// Removes a surface.
+        /// </summary>
+        /// <param name="id">Surface id</param>
+        public static void RemoveSurface(SurfaceId id)
+        {
+            Debug.Assert(IdDetail.IsValid(id));
+            Renderer.RemoveSurface(id);
         }
 
         /// <summary>
         /// Creates a camera
         /// </summary>
         /// <param name="info">Camera initialization info</param>
-        public Camera CreateCamera(CameraInitInfo info)
+        public static Camera CreateCamera(CameraInitInfo info)
         {
             return Renderer.CreateCamera(info);
         }
@@ -117,9 +182,46 @@ namespace PrimalLike
         /// Removes a camera.
         /// </summary>
         /// <param name="id">Camera id</param>
-        public void RemoveCamera(CameraId id)
+        public static void RemoveCamera(CameraId id)
         {
+            Debug.Assert(IdDetail.IsValid(id));
             Renderer.RemoveCamera(id);
+        }
+
+        /// <summary>
+        /// Creates a game entity
+        /// </summary>
+        /// <param name="info">Entity info</param>
+        public static Entity CreateEntity(EntityInfo info)
+        {
+            return GameEntity.Create(info);
+        }
+        /// <summary>
+        /// Removes a game entity.
+        /// </summary>
+        /// <param name="id">Entity id</param>
+        public static void RemoveEntity(EntityId id)
+        {
+            Debug.Assert(IdDetail.IsValid(id));
+            GameEntity.Remove(id);
+        }
+
+        /// <summary>
+        /// Registers a script.
+        /// </summary>
+        /// <typeparam name="T">Script type</typeparam>
+        public static bool RegisterScript<T>() where T : EntityScript
+        {
+            return Script.RegisterScript(IdDetail.StringHash<T>(), CreateScript<T>);
+        }
+        /// <summary>
+        /// Creates a script.
+        /// </summary>
+        /// <typeparam name="T">Script type</typeparam>
+        /// <param name="entity">Entity</param>
+        private static T CreateScript<T>(Entity entity) where T : EntityScript
+        {
+            return (T)Activator.CreateInstance(typeof(T), [entity]);
         }
 
         /// <summary>
@@ -176,7 +278,7 @@ namespace PrimalLike
 
                     if (BeginDraw())
                     {
-                        Draw(time, new FrameInfo() { CameraId = 0, Thresholds = [10], RenderItemCount = 1, RenderItemIds = [0] });
+                        Draw(time);
                     }
                 }
                 finally
@@ -215,12 +317,12 @@ namespace PrimalLike
         /// Draws the application.
         /// </summary>
         /// <param name="time">Time</param>
-        protected virtual void Draw(Time time, FrameInfo info)
+        protected virtual void Draw(Time time)
         {
             FpsTimer.Begin();
             foreach (var rs in renderSurfaces)
             {
-                rs.Surface.Render(info);
+                rs.Render();
             }
             FpsTimer.End();
         }

@@ -1,4 +1,5 @@
 ﻿using Direct3D12;
+using PrimalLike;
 using PrimalLike.Common;
 using PrimalLike.Components;
 using PrimalLike.Content;
@@ -96,7 +97,7 @@ namespace D3D12LibTests
             {
                 Direct3D12.Content.RenderItem.Remove(itemId);
                 var pair = renderItemEntityMap[itemId];
-                GameEntity.Remove(pair);
+                Application.RemoveEntity(pair);
             }
 
             // remove material

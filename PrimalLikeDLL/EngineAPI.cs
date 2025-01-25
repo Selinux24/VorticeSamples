@@ -9,21 +9,6 @@ namespace PrimalLikeDLL
 {
     public partial class EngineAPI
     {
-        /// <summary>
-        /// Render surface structure.
-        /// </summary>
-        struct RenderSurface
-        {
-            /// <summary>
-            /// Window
-            /// </summary>
-            public Window Window { get; set; }
-            /// <summary>
-            /// Surface
-            /// </summary>
-            public Surface Surface { get; set; }
-        }
-
         private delegate IntPtr ScriptCreatorDelegate(string name);
         private delegate string[] GetScriptNamesDelegate();
 

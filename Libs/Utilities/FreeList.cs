@@ -109,6 +109,22 @@ namespace Utilities
             size = 0;
         }
 
+
+        public bool First(out T first)
+        {
+            for (uint i = 0; i < indices.Count; i++)
+            {
+                if (!AlreadyRemoved(i))
+                {
+                    first = array[(int)indices[(int)i]];
+                    return true;
+                }
+            }
+
+            first = default;
+            return false;
+        }
+
         private bool AlreadyRemoved(uint id)
         {
             return indices[(int)id] == uint.MaxValue;

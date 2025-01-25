@@ -50,13 +50,13 @@ namespace PrimalLike.Graphics
         {
             gfx.RemoveCamera(id);
         }
-        public static void SetParameter(CameraId id, CameraParameters parameter, IntPtr data, int size)
+        public static void SetParameter<T>(CameraId id, CameraParameters parameter, T value) where T : unmanaged
         {
-            gfx.SetParameter(id, parameter, data, size);
+            gfx.SetParameter(id, parameter, value);
         }
-        public static void GetParameter(CameraId id, CameraParameters parameter, IntPtr data, int size)
+        public static void GetParameter<T>(CameraId id, CameraParameters parameter, out T value) where T : unmanaged
         {
-            gfx.GetParameter(id, parameter, data, size);
+            gfx.GetParameter(id, parameter, out value);
         }
 
         public static IdType AddSubmesh(ref IntPtr data)

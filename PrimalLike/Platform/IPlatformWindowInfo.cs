@@ -7,9 +7,9 @@ namespace PrimalLike.Platform
     public interface IPlatformWindowInfo
     {
         /// <summary>
-        /// Gets or sets the title of the window.
+        /// Gets or sets the caption of the window.
         /// </summary>
-        string Title { get; set; }
+        string Caption { get; set; }
         /// <summary>
         /// Gets or sets the client area of the window.
         /// </summary>

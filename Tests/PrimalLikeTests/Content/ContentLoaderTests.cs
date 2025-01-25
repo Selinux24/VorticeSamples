@@ -1,4 +1,5 @@
 ﻿using NUnit.Framework;
+using PrimalLike;
 using PrimalLike.Common;
 using PrimalLike.Components;
 using PrimalLike.Content;
@@ -103,7 +104,7 @@ namespace PrimalLikeTests.Content
             string path = CreateWithScripts();
 
             //Register the script creator
-            GameEntity.RegisterScript<TestScript>();
+            Application.RegisterScript<TestScript>();
 
             bool result = ContentLoader.LoadGame(path);
 

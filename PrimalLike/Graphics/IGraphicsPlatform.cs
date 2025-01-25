@@ -72,7 +72,7 @@ namespace PrimalLike.Graphics
         /// <param name="parameter">Parameter to set</param>
         /// <param name="data">Data to read-from the parameter value</param>
         /// <param name="size">Size of data</param>
-        void SetParameter(CameraId id, CameraParameters parameter, IntPtr data, int size);
+        void SetParameter<T>(CameraId id, CameraParameters parameter, T data) where T : unmanaged;
         /// <summary>
         /// Gets a camera parameter.
         /// </summary>
@@ -80,7 +80,7 @@ namespace PrimalLike.Graphics
         /// <param name="parameter">Parameter to get</param>
         /// <param name="data">Data to write-in the parameter value</param>
         /// <param name="size">Size of data</param>
-        void GetParameter(CameraId id, CameraParameters parameter, IntPtr data, int size);
+        void GetParameter<T>(CameraId id, CameraParameters parameter, out T data) where T : unmanaged;
 
         /// <summary>
         /// Adds a submesh.
