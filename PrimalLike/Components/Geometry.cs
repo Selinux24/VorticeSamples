@@ -28,7 +28,7 @@ namespace PrimalLike.Components
 
         public static GeometryComponent Create(GeometryInfo info, Entity entity)
         {
-            Debug.Assert(entity.IsValid());
+            Debug.Assert(entity.IsValid);
             Debug.Assert(IdDetail.IsValid(info.GeometryContentId) && info.MaterialIds.Length > 0);
 
             GeometryId id;

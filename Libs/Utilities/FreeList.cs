@@ -109,7 +109,9 @@ namespace Utilities
             size = 0;
         }
 
-
+        /// <summary>
+        /// Gets the first alive element in the list.
+        /// </summary>
         public bool First(out T first)
         {
             for (uint i = 0; i < indices.Count; i++)
@@ -125,6 +127,10 @@ namespace Utilities
             return false;
         }
 
+        /// <summary>
+        /// Gets whether the specified index element has already been removed.
+        /// </summary>
+        /// <param name="id">Id</param>
         private bool AlreadyRemoved(uint id)
         {
             return indices[(int)id] == uint.MaxValue;

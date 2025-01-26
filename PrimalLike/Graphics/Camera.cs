@@ -1,17 +1,16 @@
 ﻿global using CameraId = System.UInt32;
 using PrimalLike.Common;
 using System.Numerics;
-using System.Runtime.InteropServices;
 
 namespace PrimalLike.Graphics
 {
     public class Camera
     {
-        private readonly CameraId id = CameraId.MaxValue;
+        private readonly CameraId id;
 
         public Camera()
         {
-
+            id = CameraId.MaxValue;
         }
         public Camera(CameraId id)
         {
@@ -20,16 +19,6 @@ namespace PrimalLike.Graphics
 
         public CameraId Id { get => id; }
         public bool IsValid { get => IdDetail.IsValid(id); }
-
-        private static T GetValue<T>(CameraId id, CameraParameters parameter) where T : unmanaged
-        {
-            Renderer.Gfx.GetParameter<T>(id, parameter, out T value);
-            return value;
-        }
-        private static void SetValue<T>(CameraId id, CameraParameters parameter, T value) where T : unmanaged
-        {
-            Renderer.Gfx.SetParameter(id, parameter, value);
-        }
 
         public Vector3 Up
         {
@@ -157,6 +146,16 @@ namespace PrimalLike.Graphics
             {
                 return GetValue<EntityId>(id, CameraParameters.EntityId);
             }
+        }
+
+        private static T GetValue<T>(CameraId id, CameraParameters parameter) where T : unmanaged
+        {
+            Renderer.Gfx.GetParameter(id, parameter, out T value);
+            return value;
+        }
+        private static void SetValue<T>(CameraId id, CameraParameters parameter, T value) where T : unmanaged
+        {
+            Renderer.Gfx.SetParameter(id, parameter, value);
         }
     }
 }

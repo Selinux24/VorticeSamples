@@ -56,7 +56,7 @@ namespace PrimalLike.Content
                 }
 
                 var entity = GameEntity.Create(info);
-                if (!entity.IsValid())
+                if (!entity.IsValid)
                 {
                     return false;
                 }

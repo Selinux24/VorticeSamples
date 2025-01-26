@@ -179,7 +179,7 @@ namespace D3D12LibTests
             };
 
             Entity ntt = Application.CreateEntity(entityInfo);
-            Debug.Assert(ntt.IsValid());
+            Debug.Assert(ntt.IsValid);
             return ntt;
         }
         private void CreateCameras()
@@ -243,10 +243,12 @@ namespace D3D12LibTests
         {
             InitializeApplication();
 
+            LoadTestModel();
+            CreateRenderItem();
+            CreateCameras();
+
             // Congifure worker threads
             InitTestWorkers();
-
-            CreateCameras();
 
             app.Run();
 

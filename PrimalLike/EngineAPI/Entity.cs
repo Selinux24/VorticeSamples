@@ -6,7 +6,19 @@ namespace PrimalLike.EngineAPI
 {
     public class Entity
     {
-        public EntityId Id { get; private set; }
+        private readonly EntityId id;
+
+        public Entity()
+        {
+            id = EntityId.MaxValue;
+        }
+        public Entity(EntityId id)
+        {
+            this.id = id;
+        }
+
+        public EntityId Id { get => id; }
+        public bool IsValid { get => IdDetail.IsValid(id); }
 
         public TransformComponent Transform
         {
@@ -31,20 +43,6 @@ namespace PrimalLike.EngineAPI
                 Debug.Assert(GameEntity.IsAlive(Id), $"The geometry's entity id {Id} is not alive.");
                 return GameEntity.Geometries[(int)IdDetail.Index(Id)];
             }
-        }
-
-        public Entity()
-        {
-            Id = EntityId.MaxValue;
-        }
-        public Entity(EntityId id)
-        {
-            Id = id;
-        }
-
-        public bool IsValid()
-        {
-            return IdDetail.IsValid(Id);
         }
     }
 }

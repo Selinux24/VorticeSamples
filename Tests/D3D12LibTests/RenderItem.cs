@@ -1,7 +1,5 @@
-﻿using Direct3D12;
-using PrimalLike;
+﻿using PrimalLike;
 using PrimalLike.Common;
-using PrimalLike.Components;
 using PrimalLike.Content;
 using PrimalLike.Graphics;
 using ShaderCompiler;

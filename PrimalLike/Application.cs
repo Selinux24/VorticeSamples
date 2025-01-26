@@ -11,26 +11,6 @@ using System.Threading.Tasks;
 
 namespace PrimalLike
 {
-    public abstract class RenderComponent(IPlatformWindowInfo info)
-    {
-        protected IPlatformWindowInfo Info { get; private set; } = info;
-
-        public RenderSurface Surface { get; protected set; }
-        
-        public abstract FrameInfo GetFrameInfo();
-        public void Render()
-        {
-            if (!Surface.Surface.IsValid)
-            {
-                return;
-            }
-
-            var info = GetFrameInfo();
-            Surface.Surface.Render(info);
-        }
-        public abstract void Remove();
-    }
-
     /// <summary>
     /// Application base class.
     /// </summary>
@@ -88,6 +68,11 @@ namespace PrimalLike
             return ContentLoader.LoadEngineShaders(path, out shadersBlob);
         }
 
+        /// <summary>
+        /// Creates a render component.
+        /// </summary>
+        /// <typeparam name="T">Render component type</typeparam>
+        /// <param name="info">Window info</param>
         public static T CreateRenderComponent<T>(IPlatformWindowInfo info) where T : RenderComponent
         {
             T renderComponent = (T)Activator.CreateInstance(typeof(T), info);
@@ -96,6 +81,10 @@ namespace PrimalLike
 
             return renderComponent;
         }
+        /// <summary>
+        /// Removes a render component.
+        /// </summary>
+        /// <param name="renderComponent">Render component to remove</param>
         public static void RemoveRenderComponent(RenderComponent renderComponent)
         {
             renderComponent.Remove();
@@ -212,16 +201,9 @@ namespace PrimalLike
         /// <typeparam name="T">Script type</typeparam>
         public static bool RegisterScript<T>() where T : EntityScript
         {
-            return Script.RegisterScript(IdDetail.StringHash<T>(), CreateScript<T>);
-        }
-        /// <summary>
-        /// Creates a script.
-        /// </summary>
-        /// <typeparam name="T">Script type</typeparam>
-        /// <param name="entity">Entity</param>
-        private static T CreateScript<T>(Entity entity) where T : EntityScript
-        {
-            return (T)Activator.CreateInstance(typeof(T), [entity]);
+            return Script.RegisterScript(
+                IdDetail.StringHash<T>(), 
+                (entity) => (T)Activator.CreateInstance(typeof(T), [entity]));
         }
 
         /// <summary>

@@ -84,9 +84,9 @@ namespace WindowsPlatform
                 mainWindow = wnd;
             }
 
-            uint id = windows.Add(wnd);
-            windowsDict.Add(hwnd, id);
-            return new Window(id);
+            wnd.Id = windows.Add(wnd);
+            windowsDict.Add(hwnd, wnd.Id);
+            return new Window(wnd.Id);
         }
         private nint CreateWindowInternal(Win32WindowInfo info)
         {

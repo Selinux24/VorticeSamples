@@ -49,7 +49,7 @@ namespace PrimalLikeTests.Components
             {
                 ++added;
                 Entity entity = GameEntity.Create(entityInfo);
-                Assert.That(entity.IsValid(), Is.EqualTo(IdDetail.IsValid(entity.Id)), "The entity id is not valid");
+                Assert.That(entity.IsValid, Is.EqualTo(IdDetail.IsValid(entity.Id)), "The entity id is not valid");
                 entities.Add(entity);
                 Assert.That(GameEntity.IsAlive(entity.Id), Is.True, "The entity is not alive");
                 --count;
@@ -67,8 +67,8 @@ namespace PrimalLikeTests.Components
             {
                 int index = rand.Next() % entities.Count;
                 Entity entity = entities[index];
-                Assert.That(entity.IsValid(), Is.EqualTo(IdDetail.IsValid(entity.Id)), "The entity id is not valid");
-                if (entity.IsValid())
+                Assert.That(entity.IsValid, Is.EqualTo(IdDetail.IsValid(entity.Id)), "The entity id is not valid");
+                if (entity.IsValid)
                 {
                     GameEntity.Remove(entity.Id);
                     entities.RemoveAt(index);

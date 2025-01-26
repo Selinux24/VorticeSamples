@@ -24,7 +24,7 @@ namespace PrimalLike.Components
             return IdDetail.IsValid(idMapping[(int)index]) &&
                 generations[(int)index] == IdDetail.Generation(id) &&
                 entityScripts[(int)idMapping[(int)index]] != null &&
-                entityScripts[(int)idMapping[(int)index]].IsValid();
+                entityScripts[(int)idMapping[(int)index]].IsValid;
         }
 
         public static bool RegisterScript(string tag, Func<Entity, EntityScript> func)
@@ -42,7 +42,7 @@ namespace PrimalLike.Components
 
         public static ScriptComponent Create(ScriptInfo info, Entity entity)
         {
-            Debug.Assert(entity.IsValid());
+            Debug.Assert(entity.IsValid);
             Debug.Assert(info.ScriptCreator != null);
 
             ScriptId id;

@@ -1,7 +1,6 @@
 ﻿using Direct3D12;
 using Direct3D12.Shaders;
 using PrimalLike;
-using PrimalLike.Components;
 using ShaderCompiler;
 using System;
 using WindowsPlatform;
@@ -31,7 +30,7 @@ namespace DX12Windows
             {
                 Console.WriteLine("Engine shaders compilation failed");
             }
-            
+
             var app = HelloWorldApp.Start<Win32PlatformFactory, D3D12GraphicsPlatformFactory>();
 
             Win32WindowInfo windowInfo = new()
@@ -40,9 +39,11 @@ namespace DX12Windows
                 ClientArea = new(50, 50, 800, 600),
                 IsFullScreen = false,
             };
-            Application.CreateWindow(windowInfo);
+            var rnd = Application.CreateRenderComponent<HelloWorldComponent>(windowInfo);
 
             app.Run();
+
+            Application.RemoveRenderComponent(rnd);
         }
     }
 }

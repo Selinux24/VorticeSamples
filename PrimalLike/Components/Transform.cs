@@ -81,7 +81,7 @@ namespace PrimalLike.Components
 
         public static TransformComponent Create(TransformInfo info, Entity entity)
         {
-            Debug.Assert(entity.IsValid());
+            Debug.Assert(entity.IsValid);
             IdType entityIndex = IdDetail.Index(entity.Id);
 
             if (Positions.Count > entityIndex)
