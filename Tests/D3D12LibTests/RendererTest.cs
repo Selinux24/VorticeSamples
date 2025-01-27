@@ -9,6 +9,7 @@ using PrimalLike.EngineAPI;
 using PrimalLike.Graphics;
 using PrimalLike.Platform;
 using ShaderCompiler;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Numerics;
@@ -71,13 +72,32 @@ namespace D3D12LibTests
             {
                 return frameInfo;
             }
-
+            public override void Resized()
+            {
+                Surface.Surface.Resize(Surface.Window.Width, Surface.Window.Height);
+                Camera.AspectRatio = (float)Surface.Window.Width / Surface.Window.Height;
+            }
             public override void Remove()
             {
                 Application.RemoveRenderSurface(Surface);
                 Application.RemoveCamera(Camera.Id);
                 Application.RemoveEntity(Entity.Id);
             }
+        }
+
+        private const uint WM_CAPTURECHANGED = 0x0215;
+        private static IntPtr CustomWndProc(IntPtr hwnd, uint msg, IntPtr wParam, IntPtr lParam)
+        {
+            switch (msg)
+            {
+                case WM_CAPTURECHANGED:
+                    Array.Find(cameraSurfaces, c => c.Surface.Window.Handle == hwnd)?.Resized();
+                    return 0;
+                default:
+                    break;
+            }
+
+            return Win32Window.DefaultWndProc(hwnd, msg, wParam, lParam);
         }
 
         private const string shadersSourceDir = "../../../../../Libs/Direct3D12/Shaders/";
@@ -93,7 +113,7 @@ namespace D3D12LibTests
         ];
 
         private TestApp app;
-        private CameraSurface[] cameraSurfaces;
+        private static CameraSurface[] cameraSurfaces;
 
         private uint itemId = IdDetail.InvalidId;
         private uint modelId = IdDetail.InvalidId;
@@ -191,24 +211,28 @@ namespace D3D12LibTests
                     Caption = "DX12 for Windows 1",
                     ClientArea = new(100, 100, 400, 800),
                     IsFullScreen = false,
+                    WndProc = CustomWndProc,
                 },
                 new()
                 {
                     Caption = "DX12 for Windows 2",
                     ClientArea = new(150, 150, 800, 400),
                     IsFullScreen = false,
+                    WndProc = CustomWndProc,
                 },
                 new()
                 {
                     Caption = "DX12 for Windows 3",
                     ClientArea = new(200, 200, 400, 400),
                     IsFullScreen = false,
+                    WndProc = CustomWndProc,
                 },
                 new()
                 {
                     Caption = "DX12 for Windows 4",
                     ClientArea = new(250, 250, 800, 600),
                     IsFullScreen = false,
+                    WndProc = CustomWndProc,
                 }
             ];
 
@@ -258,7 +282,7 @@ namespace D3D12LibTests
             Assert.That(true);
         }
 
-        private void AppShutdown(object sender, System.EventArgs e)
+        private void AppShutdown(object sender, EventArgs e)
         {
             RenderItem.DestroyRenderItem(itemId);
 

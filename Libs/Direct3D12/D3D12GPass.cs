@@ -5,7 +5,6 @@ using PrimalLike.Graphics;
 using System;
 using System.Diagnostics;
 using System.Numerics;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Vortice.Direct3D12;
 using Vortice.DXGI;
@@ -164,13 +163,15 @@ namespace Direct3D12
             }
         }
 
-        public const Format mainBufferFormat = Format.R16G16B16A16_Float;
-        public const Format depthBufferFormat = Format.D32_Float;
-        static readonly SizeI initialDimensions = new() { Width = 100, Height = 100 };
+        public const Format MainBufferFormat = Format.R16G16B16A16_Float;
+        public const Format DepthBufferFormat = Format.D32_Float;
+        static readonly uint initialDimensionWidth = 100;
+        static readonly uint initialDimensionHeight = 100;
 
         static D3D12RenderTexture gpassMainBuffer;
         static D3D12DepthBuffer gpassDepthBuffer;
-        static SizeI dimensions = initialDimensions;
+        static uint dimensionWidth = initialDimensionWidth;
+        static uint dimensionHeight = initialDimensionHeight;
 
         static GPassCache frameCache = new();
 
@@ -180,40 +181,44 @@ namespace Direct3D12
         static readonly Color clearValue = new(0.0f);
 #endif
 
+        /// <summary>
+        /// Main buffer for the G-Buffer pass.
+        /// </summary>
         public static D3D12RenderTexture MainBuffer { get => gpassMainBuffer; }
+        /// <summary>
+        /// Depth buffer for the G-Buffer pass.
+        /// </summary>
         public static D3D12DepthBuffer DepthBuffer { get => gpassDepthBuffer; }
 
         public static bool Initialize()
         {
-            return CreateBuffers(initialDimensions);
+            return CreateBuffers(initialDimensionWidth, initialDimensionHeight);
         }
-        private static bool CreateBuffers(SizeI size)
+        private static bool CreateBuffers(uint width, uint height)
         {
-            Debug.Assert(size.Width > 0 && size.Height > 0);
+            Debug.Assert(width > 0 && height > 0);
             gpassMainBuffer?.Dispose();
             gpassDepthBuffer?.Dispose();
 
             // Create the main buffer
             {
-                ResourceDescription desc = new()
-                {
-                    Alignment = 0, // NOTE: 0 is the same as 64KB (or 4MB for MSAA)
-                    DepthOrArraySize = 1,
-                    Dimension = ResourceDimension.Texture2D,
-                    Flags = ResourceFlags.AllowRenderTarget,
-                    Format = mainBufferFormat,
-                    Height = (uint)size.Height,
-                    Layout = TextureLayout.Unknown,
-                    MipLevels = 0, // make space for all mip levels
-                    SampleDescription = new(1, 0),
-                    Width = (ulong)size.Width
-                };
-
                 D3D12TextureInitInfo info = new()
                 {
-                    Desc = desc,
+                    Desc = new()
+                    {
+                        Alignment = 0, // NOTE: 0 is the same as 64KB (or 4MB for MSAA)
+                        DepthOrArraySize = 1,
+                        Dimension = ResourceDimension.Texture2D,
+                        Flags = ResourceFlags.AllowRenderTarget,
+                        Format = MainBufferFormat,
+                        Height = height,
+                        Layout = TextureLayout.Unknown,
+                        MipLevels = 0, // make space for all mip levels
+                        SampleDescription = new(1, 0),
+                        Width = width
+                    },
                     InitialState = ResourceStates.PixelShaderResource,
-                    ClearValue = new(desc.Format, clearValue),
+                    ClearValue = new(MainBufferFormat, clearValue),
                 };
 
                 gpassMainBuffer = new D3D12RenderTexture(info);
@@ -221,28 +226,21 @@ namespace Direct3D12
 
             // Create the depth buffer
             {
-                var desc = ResourceDescription.Texture2D(
-                    depthBufferFormat,
-                    (uint)size.Width,
-                    (uint)size.Height,
-                    1,
-                    1,
-                    flags: ResourceFlags.AllowDepthStencil);
-
                 D3D12TextureInitInfo info = new()
                 {
-                    Desc = desc,
+                    Desc = ResourceDescription.Texture2D(DepthBufferFormat, width, height, 1, 1, flags: ResourceFlags.AllowDepthStencil),
                     InitialState = ResourceStates.DepthRead | ResourceStates.PixelShaderResource | ResourceStates.NonPixelShaderResource,
-                    ClearValue = new(desc.Format, 1f, 0),
+                    ClearValue = new(DepthBufferFormat, 1f, 0),
                 };
 
                 gpassDepthBuffer = new D3D12DepthBuffer(info);
+
             }
 
-            D3D12Helpers.NameD3D12Object(gpassMainBuffer.Resource, "GPass Main Buffer");
-            D3D12Helpers.NameD3D12Object(gpassDepthBuffer.Resource, "GPass Depth Buffer");
+            D3D12Helpers.NameD3D12Object(gpassMainBuffer.GetResource(), "GPass Main Buffer");
+            D3D12Helpers.NameD3D12Object(gpassDepthBuffer.GetResource(), "GPass Depth Buffer");
 
-            return gpassMainBuffer.Resource != null && gpassDepthBuffer.Resource != null;
+            return gpassMainBuffer.GetResource() != null && gpassDepthBuffer.GetResource() != null;
         }
 
         private static void FillPerObjectData(ConstantBuffer cbuffer, D3D12FrameInfo d3d12Info)
@@ -289,7 +287,7 @@ namespace Direct3D12
         {
             Debug.Assert(d3d12Info.Camera != null);
             Debug.Assert(d3d12Info.FrameInfo.RenderItemIds != null && d3d12Info.FrameInfo.RenderItemCount > 0);
-            
+
             frameCache.Clear();
             RenderItem.GetD3D12RenderItemIds(ref d3d12Info.FrameInfo, ref frameCache.D3D12RenderItemIds);
             frameCache.Resize();
@@ -313,20 +311,21 @@ namespace Direct3D12
             gpassMainBuffer = null;
             gpassDepthBuffer.Dispose();
             gpassDepthBuffer = null;
-            dimensions = initialDimensions;
+            dimensionWidth = initialDimensionWidth;
+            dimensionHeight = initialDimensionHeight;
         }
 
-        public static void SetSize(SizeI size)
+        public static void SetSize(uint width, uint height)
         {
-            if (size.Width <= dimensions.Width && size.Height <= dimensions.Height)
+            if (width <= dimensionWidth && height <= dimensionHeight)
             {
                 return;
             }
 
-            dimensions.Width = Math.Max(size.Width, dimensions.Width);
-            dimensions.Height = Math.Max(size.Height, dimensions.Height);
+            dimensionWidth = Math.Max(width, dimensionWidth);
+            dimensionHeight = Math.Max(height, dimensionHeight);
 
-            CreateBuffers(dimensions);
+            CreateBuffers(dimensionWidth, dimensionHeight);
         }
 
         public static void DepthPrePass(ID3D12GraphicsCommandList cmdList, D3D12FrameInfo d3d12Info)
@@ -391,7 +390,7 @@ namespace Direct3D12
 
                 SetRootParameters(cmdList, i);
 
-                IndexBufferView ibv = frameCache.IndexBufferViews[i];
+                var ibv = frameCache.IndexBufferViews[i];
                 uint indexCount = ibv.SizeInBytes >> (ibv.Format == Format.R16_UInt ? 1 : 2);
 
                 cmdList.IASetIndexBuffer(ibv);
@@ -399,52 +398,54 @@ namespace Direct3D12
                 cmdList.DrawIndexedInstanced(indexCount, 1, 0, 0, 0);
             }
         }
+
         public static void AddTransitionsForDepthPrePass(D3D12ResourceBarrier barriers)
         {
             barriers.AddTransitionBarrier(
-                gpassMainBuffer.Resource,
+                gpassMainBuffer.GetResource(),
                 ResourceStates.PixelShaderResource,
                 ResourceStates.RenderTarget,
                 ResourceBarrierFlags.BeginOnly);
 
             barriers.AddTransitionBarrier(
-                gpassDepthBuffer.Resource,
+                gpassDepthBuffer.GetResource(),
                 ResourceStates.DepthRead | ResourceStates.PixelShaderResource | ResourceStates.NonPixelShaderResource,
                 ResourceStates.DepthWrite);
         }
         public static void AddTransitionsForGPass(D3D12ResourceBarrier barriers)
         {
             barriers.AddTransitionBarrier(
-                gpassMainBuffer.Resource,
+                gpassMainBuffer.GetResource(),
                 ResourceStates.PixelShaderResource,
                 ResourceStates.RenderTarget,
                 ResourceBarrierFlags.EndOnly);
 
             barriers.AddTransitionBarrier(
-                gpassDepthBuffer.Resource,
+                gpassDepthBuffer.GetResource(),
                 ResourceStates.DepthWrite,
                 ResourceStates.DepthRead | ResourceStates.PixelShaderResource | ResourceStates.NonPixelShaderResource);
         }
         public static void AddTransitionsForPostProcess(D3D12ResourceBarrier barriers)
         {
             barriers.AddTransitionBarrier(
-                gpassMainBuffer.Resource,
+                gpassMainBuffer.GetResource(),
                 ResourceStates.RenderTarget,
                 ResourceStates.PixelShaderResource);
         }
+
         public static void SetRenderTargetsForDepthPrePass(ID3D12GraphicsCommandList cmdList)
         {
-            var dsv = gpassDepthBuffer.Dsv;
+            var dsv = gpassDepthBuffer.GetDsv();
             cmdList.ClearDepthStencilView(dsv.Cpu, ClearFlags.Depth | ClearFlags.Stencil, 1f, 0, 0, null);
             cmdList.OMSetRenderTargets([], dsv.Cpu);
         }
         public static void SetRenderTargetsForGPass(ID3D12GraphicsCommandList cmdList)
         {
             var rtv = gpassMainBuffer.GetRtv(0);
-            var dsv = gpassDepthBuffer.Dsv;
+            var dsv = gpassDepthBuffer.GetDsv();
 
-            cmdList.ClearRenderTargetView(rtv, clearValue, 0, null);
-            cmdList.OMSetRenderTargets(rtv, dsv.Cpu);
+            cmdList.ClearRenderTargetView(rtv.Cpu, clearValue, 0, null);
+            cmdList.OMSetRenderTargets(rtv.Cpu, dsv.Cpu);
         }
     }
 }

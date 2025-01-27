@@ -30,7 +30,7 @@ namespace WindowsPlatform
             get => isFullScreen;
             set
             {
-                SetFullscreen(isFullScreen);
+                SetFullscreen(value);
             }
         }
         /// <inheritdoc />
@@ -127,6 +127,13 @@ namespace WindowsPlatform
         internal void Resized(ClientArea clientArea)
         {
             this.clientArea = clientArea;
+        }
+        /// <summary>
+        /// Default window procedure.
+        /// </summary>
+        public static IntPtr DefaultWndProc(IntPtr hwnd, uint msg, IntPtr wParam, IntPtr lParam)
+        {
+            return Native.User32.DefWindowProcW(hwnd, msg, wParam, lParam);
         }
     }
 }

@@ -30,23 +30,30 @@ namespace DX12Windows
             Entity = Application.CreateEntity(entityInfo);
             Camera = Application.CreateCamera(new PerspectiveCameraInitInfo(Entity.Id));
             Camera.AspectRatio = (float)Surface.Window.Width / Surface.Window.Height;
-
-            frameInfo.CameraId = Camera.Id;
-            frameInfo.RenderItemIds = [];
-            frameInfo.RenderItemCount = 0;
-            frameInfo.Thresholds = [];
         }
 
         public override FrameInfo GetFrameInfo()
         {
             return frameInfo;
         }
-
+        public override void Resized()
+        {
+            Surface.Surface.Resize(Surface.Window.Width, Surface.Window.Height);
+            Camera.AspectRatio = (float)Surface.Window.Width / Surface.Window.Height;
+        }
         public override void Remove()
         {
             Application.RemoveRenderSurface(Surface);
             Application.RemoveCamera(Camera.Id);
             Application.RemoveEntity(Entity.Id);
+        }
+
+        public void UpdateFrameInfo(uint[] items, float[] thresholds)
+        {
+            frameInfo.CameraId = Camera.Id;
+            frameInfo.RenderItemIds = items;
+            frameInfo.RenderItemCount = (uint)items.Length;
+            frameInfo.Thresholds = thresholds;
         }
     }
 }

@@ -4,6 +4,7 @@ using PrimalLike.EngineAPI;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 
 namespace PrimalLike.Components
 {
@@ -55,7 +56,7 @@ namespace PrimalLike.Components
             }
             else
             {
-                id = (ScriptId)generations.Count;
+                id = (ScriptId)idMapping.Count;
                 idMapping.Add(default);
                 generations.Add(0);
             }
@@ -66,14 +67,14 @@ namespace PrimalLike.Components
             Debug.Assert(entityScripts[^1].Id == entity.Id);
             idMapping[(int)IdDetail.Index(id)] = index;
 
-            return new(entity.Id);
+            return new(id);
         }
         public static void Remove(ScriptComponent c)
         {
             Debug.Assert(c.IsValid() && Exists(c.Id));
             ScriptId id = c.Id;
             IdType index = idMapping[(int)IdDetail.Index(id)];
-            ScriptId lastId = entityScripts[^1].Id;
+            ScriptId lastId = entityScripts[^1].Script.Id;
 
             //Erase unordered
             entityScripts[(int)index] = entityScripts[^1];
@@ -81,11 +82,6 @@ namespace PrimalLike.Components
 
             idMapping[(int)IdDetail.Index(lastId)] = index;
             idMapping[(int)IdDetail.Index(id)] = IdDetail.InvalidId;
-
-            if (generations[(int)index] < GenerationType.MaxValue)
-            {
-                freeIds.Enqueue(id);
-            }
         }
 
         public static void Update(float dt)

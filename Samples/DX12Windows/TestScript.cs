@@ -14,5 +14,10 @@ namespace DX12Windows
         public override void Update(float deltaTime)
         {
         }
+
+        public override string ToString()
+        {
+            return $"Id: {Id}; Script: {Script.Id}";
+        }
     }
 }

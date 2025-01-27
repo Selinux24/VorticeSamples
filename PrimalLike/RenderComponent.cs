@@ -36,6 +36,10 @@ namespace PrimalLike
             Surface.Surface.Render(info);
         }
         /// <summary>
+        /// The component is resized.
+        /// </summary>
+        public abstract void Resized();
+        /// <summary>
         /// Removes the component.
         /// </summary>
         public abstract void Remove();

@@ -374,23 +374,23 @@ namespace Direct3D12
                 InvViewProjection = camera.InverseViewProjection,
                 CameraPosition = camera.Position,
                 CameraDirection = camera.Direction,
-                ViewWidth = (uint)surface.Width,
-                ViewHeight = (uint)surface.Height,
+                ViewWidth = surface.Width,
+                ViewHeight = surface.Height,
                 DeltaTime = deltaTime
             };
 
-            D3D12FrameInfo d3d12Info = new()
+            ulong dataBuffer = cbuffer.Write(data);
+
+            return new()
             {
                 FrameInfo = info,
                 Camera = camera,
-                GlobalShaderData = cbuffer.Write(data),
-                SurfaceWidth = data.ViewWidth,
-                SurfaceHeight = data.ViewHeight,
+                GlobalShaderData = dataBuffer,
+                SurfaceWidth = surface.Width,
+                SurfaceHeight = surface.Height,
                 FrameIndex = frameIdx,
                 DeltaTime = deltaTime
             };
-
-            return d3d12Info;
         }
 
         /// <inheritdoc/>
@@ -415,12 +415,12 @@ namespace Direct3D12
         /// <inheritdoc/>
         public static uint GetSurfaceWidth(uint id)
         {
-            return (uint)surfaces[id].Width;
+            return surfaces[id].Width;
         }
         /// <inheritdoc/>
         public static uint GetSurfaceHeight(uint id)
         {
-            return (uint)surfaces[id].Height;
+            return surfaces[id].Height;
         }
         /// <inheritdoc/>
         public static void RenderSurface(uint id, FrameInfo info)
@@ -444,16 +444,14 @@ namespace Direct3D12
             var surface = surfaces[id];
             var d3d12Info = GetD3D12FrameInfo(info, cbuffer, surface, (uint)frameIdx, 16.7f);
 
-            D3D12GPass.SetSize(new(surface.Width, surface.Height));
-            d3d12Info.SurfaceHeight = (uint)surface.Height;
-            d3d12Info.SurfaceWidth = (uint)surface.Width;
+            D3D12GPass.SetSize(d3d12Info.SurfaceWidth, d3d12Info.SurfaceHeight);
 
             // Record commands
-            cmdList.SetDescriptorHeaps([srvDescHeap.Heap]);
-            cmdList.RSSetViewport(surface.Viewport);
-            cmdList.RSSetScissorRect(surface.ScissorRect);
+            cmdList.SetDescriptorHeaps(srvDescHeap.Heap);
+            cmdList.RSSetViewports(surface.GetViewport());
+            cmdList.RSSetScissorRects(surface.GetScissorRect());
 
-            var currentBackBuffer = surface.Backbuffer;
+            var currentBackBuffer = surface.GetBackbuffer();
 
             // Depth prepass
             resourceBarriers.AddTransitionBarrier(
@@ -482,7 +480,7 @@ namespace Direct3D12
             resourceBarriers.Apply(cmdList);
 
             // Will write to the current back buffer, so back buffer is a render target
-            D3D12PostProcess.PostProcess(cmdList, d3d12Info, surface.Rtv);
+            D3D12PostProcess.PostProcess(cmdList, d3d12Info, surface.GetRtv().Cpu);
 
             // after post process
             cmdList.ResourceBarrierTransition(

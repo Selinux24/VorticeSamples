@@ -10,8 +10,8 @@ namespace Direct3D12
         private readonly D3D12DescriptorHandle[] rtv = new D3D12DescriptorHandle[D3D12Texture.MaxMips];
 
         public int MipCount { get; private set; }
-        public D3D12DescriptorHandle Srv { get => texture.Srv; }
-        public ID3D12Resource Resource { get => texture.Resource; }
+        public D3D12DescriptorHandle GetSrv() { return texture.Srv; }
+        public ID3D12Resource GetResource() { return texture.Resource; }
 
         public D3D12RenderTexture()
         {
@@ -20,7 +20,7 @@ namespace Direct3D12
         {
             texture = new D3D12Texture(info);
 
-            MipCount = Resource.Description.MipLevels;
+            MipCount = texture.Resource.Description.MipLevels;
             Debug.Assert(MipCount != 0 && MipCount <= D3D12Texture.MaxMips);
 
             Debug.Assert(info.Desc != null);
@@ -38,7 +38,7 @@ namespace Direct3D12
             for (uint i = 0; i < MipCount; i++)
             {
                 rtv[i] = rtvHeap.Allocate();
-                device.CreateRenderTargetView(Resource, desc, rtv[i].Cpu);
+                device.CreateRenderTargetView(texture.Resource, desc, rtv[i].Cpu);
                 desc.Texture2D.MipSlice++;
             }
         }
@@ -81,9 +81,9 @@ namespace Direct3D12
             MipCount = 0;
         }
 
-        public CpuDescriptorHandle GetRtv(int mipIndex)
+        public D3D12DescriptorHandle GetRtv(int mipIndex)
         {
-            return rtv[mipIndex].Cpu;
+            return rtv[mipIndex];
         }
 
         private void Reset()

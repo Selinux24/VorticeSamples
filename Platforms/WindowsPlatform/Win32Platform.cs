@@ -22,12 +22,15 @@ namespace WindowsPlatform
         const uint WM_KEYDOWN = 0x0100;
         const uint WM_SYSCHAR = 0x0106;
         const uint WM_SYSCOMMAND = 0x0112;
+        const uint WM_CAPTURECHANGED = 0x0215;
         const uint VK_RETURN = 0x0D;
         const uint VK_ESCAPE = 0x1B;
         const uint KF_ALTDOWN = 0x2000;
         const uint SC_KEYMENU = 0xF100;
         const WindowStyles FULL_SCREEN_STYLE = WindowStyles.WS_OVERLAPPED;
         const WindowStyles WINDOWED_STYLE = WindowStyles.WS_OVERLAPPEDWINDOW;
+
+        private static bool resized = false;
 
         private static readonly FreeList<Win32Window> windows = new();
         private static readonly Dictionary<IntPtr, uint> windowsDict = [];
@@ -266,6 +269,7 @@ namespace WindowsPlatform
 
             CoUninitialize();
         }
+
         private static IntPtr InternalWndProc(IntPtr hwnd, uint msg, IntPtr wParam, IntPtr lParam)
         {
             if (!windowsDict.TryGetValue(hwnd, out var id))
@@ -287,10 +291,7 @@ namespace WindowsPlatform
                     }
                     break;
                 case WM_SIZE:
-                    if (SetResized(hwnd, wParam != SIZE_MINIMIZED, out var clientArea))
-                    {
-                        wnd.Resized(clientArea);
-                    }
+                    resized = wParam != SIZE_MINIMIZED;
                     break;
                 case WM_SYSCHAR:
                     toggleFullscreen = wParam == VK_RETURN && (HiWord(lParam) & KF_ALTDOWN) != 0;
@@ -305,37 +306,40 @@ namespace WindowsPlatform
                     break;
             }
 
-            if (toggleFullscreen)
-            {
-                wnd.IsFullscreen = !wnd.IsFullscreen;
-            }
-
             if (msg == WM_SYSCOMMAND && wParam == SC_KEYMENU)
             {
                 return 0;
             }
 
-            var callbackPtr = GetWindowLongPtrW(hwnd, 0);
-            if (callbackPtr == IntPtr.Zero)
+            if (toggleFullscreen)
             {
-                return DefWindowProcW(hwnd, msg, wParam, lParam);
+                wnd.IsFullscreen = !wnd.IsFullscreen;
+
+                return 0;
             }
 
-            var callback = Marshal.GetDelegateForFunctionPointer<WndProcDelegate>(callbackPtr);
-            return callback(hwnd, msg, wParam, lParam);
+            if (resized && msg == WM_CAPTURECHANGED)
+            {
+                Debug.WriteLine("Window Resized");
+                SetResized(hwnd, out var clientArea);
+                wnd.Resized(clientArea);
+                resized = false;
+            }
+
+            var callbackPtr = GetWindowLongPtrW(hwnd, 0);
+            if (callbackPtr != IntPtr.Zero)
+            {
+                var callback = Marshal.GetDelegateForFunctionPointer<WndProcDelegate>(callbackPtr);
+                return callback(hwnd, msg, wParam, lParam);
+            }
+            return DefWindowProcW(hwnd, msg, wParam, lParam);
         }
         private static IntPtr HiWord(IntPtr l)
         {
             return (ushort)((l >> 16) & 0xffff);
         }
-        private static bool SetResized(IntPtr hwnd, bool resized, out ClientArea clientArea)
+        private static void SetResized(IntPtr hwnd, out ClientArea clientArea)
         {
-            if (!resized)
-            {
-                clientArea = default;
-                return false;
-            }
-
             GetWindowRect(hwnd, out var rect);
             MoveWindow(
                 hwnd,
@@ -351,8 +355,6 @@ namespace WindowsPlatform
                 area.Top,
                 area.GetWidth(),
                 area.GetHeight());
-
-            return true;
         }
     }
 }

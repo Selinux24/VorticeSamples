@@ -10,8 +10,8 @@ namespace Direct3D12
         private readonly D3D12Texture texture;
         private D3D12DescriptorHandle dsv;
 
-        public D3D12DescriptorHandle Dsv { get => dsv; }
-        public ID3D12Resource Resource { get => texture.Resource; }
+        public D3D12DescriptorHandle GetDsv() { return dsv; }
+        public ID3D12Resource GetResource() { return texture.Resource; }
 
         public D3D12DepthBuffer()
         {
@@ -58,7 +58,7 @@ namespace Direct3D12
 
             var device = D3D12Graphics.Device;
             Debug.Assert(device != null);
-            device.CreateDepthStencilView(Resource, dsvDesc, dsv.Cpu);
+            device.CreateDepthStencilView(texture.Resource, dsvDesc, dsv.Cpu);
         }
         public D3D12DepthBuffer(D3D12DepthBuffer o)
         {

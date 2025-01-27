@@ -31,14 +31,30 @@ namespace Direct3D12
         private RectI scissorRect;
         private Format format = DefaultBackBufferFormat;
 
-        /// <inheritdoc/>
-        public int Width { get => (int)viewport.Width; }
-        /// <inheritdoc/>
-        public int Height { get => (int)viewport.Height; }
-        public ID3D12Resource Backbuffer { get => renderTargetData[currentBbIndex].Resource; }
-        public CpuDescriptorHandle Rtv { get => renderTargetData[currentBbIndex].Rtv.Cpu; }
-        public Viewport Viewport { get => viewport; }
-        public RectI ScissorRect { get => scissorRect; }
+        /// <summary>
+        /// Gets the width of the surface.
+        /// </summary>
+        public uint Width { get => (uint)viewport.Width; }
+        /// <summary>
+        /// Gets the height of the surface.
+        /// </summary>
+        public uint Height { get => (uint)viewport.Height; }
+        /// <summary>
+        /// Gets the current render target backbuffer resource.
+        /// </summary>
+        public ID3D12Resource GetBackbuffer() { return renderTargetData[currentBbIndex].Resource; }
+        /// <summary>
+        /// Gets the current render target view descriptor handle.
+        /// </summary>
+        public D3D12DescriptorHandle GetRtv() { return renderTargetData[currentBbIndex].Rtv; }
+        /// <summary>
+        /// Gets the viewport.
+        /// </summary>
+        public Viewport GetViewport() { return viewport; }
+        /// <summary>
+        /// Gets the scissor rectangle.
+        /// </summary>
+        public RectI GetScissorRect() { return scissorRect; }
 
         /// <summary>
         /// Creates a new instance of the <see cref="D3D12Surface"/> class.
@@ -124,12 +140,11 @@ namespace Direct3D12
                 Width = window.Width,
                 Scaling = Scaling.Stretch,
                 SwapEffect = SwapEffect.FlipDiscard,
-                Stereo = false
+                Stereo = false,
+                SampleDescription = new(1, 0)
             };
-            desc.SampleDescription.Count = 1;
-            desc.SampleDescription.Quality = 0;
 
-            IntPtr hwnd = window.Handle;
+            var hwnd = window.Handle;
             var sc = factory.CreateSwapChainForHwnd(cmdQueue, hwnd, desc);
             factory.MakeWindowAssociation(hwnd, WindowAssociationFlags.IgnoreAltEnter);
             swapChain = sc.QueryInterface<IDXGISwapChain4>();
@@ -162,19 +177,13 @@ namespace Direct3D12
                 D3D12Graphics.Device.CreateRenderTargetView(renderTargetData[i].Resource, rtvdesc, renderTargetData[i].Rtv.Cpu);
             }
 
-            SwapChainDescription scdesc = swapChain.Description;
+            var scdesc = swapChain.Description;
             uint width = scdesc.BufferDescription.Width;
             uint height = scdesc.BufferDescription.Height;
             Debug.Assert(window.Width == width && window.Height == height);
 
             // set viewport and scissor rect
-            viewport.X = 0f;
-            viewport.Y = 0f;
-            viewport.Width = width;
-            viewport.Height = height;
-            viewport.MinDepth = 0f;
-            viewport.MaxDepth = 1f;
-
+            viewport = new(width, height);
             scissorRect = new(0, 0, (int)width, (int)height);
         }
 
@@ -187,21 +196,21 @@ namespace Direct3D12
             swapChain.Present(0, presentFlags);
             currentBbIndex = swapChain.CurrentBackBufferIndex;
         }
-
-        /// <inheritdoc/>
+        /// <summary>
+        /// Resizes the surface.
+        /// </summary>
         public void Resize()
         {
-            uint frameBufferCount = BufferCount;
-
             Debug.Assert(swapChain != null);
-            for (int i = 0; i < frameBufferCount; i++)
+
+            for (int i = 0; i < BufferCount; i++)
             {
                 renderTargetData[i].Resource?.Dispose();
                 renderTargetData[i].Resource = null;
             }
 
             SwapChainFlags flags = allowTearing != 0 ? SwapChainFlags.AllowTearing : 0;
-            swapChain.ResizeBuffers(frameBufferCount, 0, 0, Format.Unknown, flags);
+            swapChain.ResizeBuffers(BufferCount, 0, 0, Format.Unknown, flags);
             currentBbIndex = swapChain.CurrentBackBufferIndex;
 
             FinalizeSwapChainCreation();

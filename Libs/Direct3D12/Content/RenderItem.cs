@@ -9,7 +9,7 @@ using Vortice.Direct3D12;
 
 namespace Direct3D12.Content
 {
-    static class RenderItem
+    public static class RenderItem
     {
         static readonly FreeList<D3D12RenderItem> renderItems = new();
         static readonly FreeList<uint[]> renderItemIds = new();
@@ -140,7 +140,7 @@ namespace Direct3D12.Content
                 Debug.Assert(itemIndex <= d3d12RenderItemCount);
             }
         }
-        public static void GetItems(uint[] d3d12RenderItemIds, ref ItemsCache cache)
+        internal static void GetItems(uint[] d3d12RenderItemIds, ref ItemsCache cache)
         {
             Debug.Assert(d3d12RenderItemIds != null && d3d12RenderItemIds.Length > 0);
             Debug.Assert(

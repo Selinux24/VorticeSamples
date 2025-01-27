@@ -77,7 +77,7 @@ namespace Direct3D12
             cmdList.SetGraphicsRootSignature(fxRootSig);
             cmdList.SetPipelineState(fxPso);
 
-            cmdList.SetGraphicsRoot32BitConstant((uint)PostProcessRootParameters.MainBuffer, D3D12GPass.MainBuffer.Srv.Index, 0);
+            cmdList.SetGraphicsRoot32BitConstant((uint)PostProcessRootParameters.MainBuffer, D3D12GPass.MainBuffer.GetSrv().Index, 0);
             cmdList.IASetPrimitiveTopology(PrimitiveTopology.TriangleList);
             // NOTE: we don't need to clear the render target, because each pixel will 
             //       be overwritten by pixels from gpass main buffer.

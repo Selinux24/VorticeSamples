@@ -154,10 +154,10 @@ namespace Direct3D12.Content
 
                 D3D12PipelineStateSubobjectStream stream = new()
                 {
-                    RenderTargetFormats = new([D3D12GPass.mainBufferFormat]),
+                    RenderTargetFormats = new([D3D12GPass.MainBufferFormat]),
                     RootSignature = rootSignatures[(int)material.RootSignatureId],
                     PrimitiveTopology = GetD3DPrimitiveTopologyType(primitiveTopology),
-                    DepthStencilFormat = D3D12GPass.depthBufferFormat,
+                    DepthStencilFormat = D3D12GPass.DepthBufferFormat,
                     Rasterizer = D3D12Helpers.RasterizerStatesCollection.BackFaceCull,
                     DepthStencil1 = D3D12Helpers.DepthStatesCollection.EnabledReadonly,
                     Blend = D3D12Helpers.BlendStatesCollection.Disabled,
