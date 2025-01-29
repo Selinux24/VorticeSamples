@@ -62,12 +62,6 @@ namespace PrimalLike.Components
             IdType index = IdDetail.Index(id);
             Debug.Assert(IsAlive(id));
 
-            if (Transforms[(int)index].IsValid())
-            {
-                Transform.Remove(Transforms[(int)index]);
-                Transforms[(int)index] = new();
-            }
-
             if (Scripts[(int)index]?.IsValid() ?? false)
             {
                 Script.Remove(Scripts[(int)index]);
@@ -78,6 +72,12 @@ namespace PrimalLike.Components
             {
                 Geometry.Remove(Geometries[(int)index]);
                 Geometries[(int)index] = new();
+            }
+
+            if (Transforms[(int)index].IsValid())
+            {
+                Transform.Remove(Transforms[(int)index]);
+                Transforms[(int)index] = new();
             }
 
             if (generations[(int)index] < GenerationType.MaxValue)

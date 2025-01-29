@@ -13,9 +13,11 @@ namespace Direct3D12.Content
     {
         static readonly FreeList<D3D12RenderItem> renderItems = new();
         static readonly FreeList<uint[]> renderItemIds = new();
+        static readonly object renderItemMutex = new();
+
         static readonly List<ID3D12PipelineState> pipelineStates = [];
         static readonly Dictionary<ulong, uint> psoMap = [];
-        static readonly object renderItemMutex = new();
+        static readonly object psoMutex = new();
 
         static readonly FrameCache frameCache = new();
 
@@ -152,15 +154,18 @@ namespace Direct3D12.Content
 
             lock (renderItemMutex)
             {
-                for (uint i = 0; i < d3d12RenderItemIds.Length; i++)
+                lock (psoMutex)
                 {
-                    var item = renderItems[d3d12RenderItemIds[i]];
+                    for (uint i = 0; i < d3d12RenderItemIds.Length; i++)
+                    {
+                        var item = renderItems[d3d12RenderItemIds[i]];
 
-                    cache.EntityIds[i] = item.EntityId;
-                    cache.SubmeshGpuIds[i] = item.SubmeshGpuId;
-                    cache.MaterialIds[i] = item.MaterialId;
-                    cache.GPassPsos[i] = pipelineStates[(int)item.PsoId];
-                    cache.DepthPsos[i] = pipelineStates[(int)item.DepthPsoId];
+                        cache.EntityIds[i] = item.EntityId;
+                        cache.SubmeshGpuIds[i] = item.SubmeshGpuId;
+                        cache.MaterialIds[i] = item.MaterialId;
+                        cache.GPassPsos[i] = pipelineStates[(int)item.PsoId];
+                        cache.DepthPsos[i] = pipelineStates[(int)item.DepthPsoId];
+                    }
                 }
             }
         }
@@ -169,22 +174,27 @@ namespace Direct3D12.Content
         {
             // calculate Crc32 hash of the data.
             ulong key = (ulong)D3D12Helpers.GetStableHashCode(data);
-
-            if (psoMap.TryGetValue(key, out uint pair))
+            lock (psoMutex)
             {
-                return pair;
+                if (psoMap.TryGetValue(key, out uint pair))
+                {
+                    return pair;
+                }
             }
 
-            uint id = (uint)pipelineStates.Count;
             var pso = D3D12Graphics.Device.CreatePipelineState(data);
-            pipelineStates.Add(pso);
 
-            D3D12Helpers.NameD3D12Object(pipelineStates[^1], key, isDepth ? "Depth-only Pipeline State Object - key" : "GPass Pipeline State Object - key");
+            lock (psoMutex)
+            {
+                uint id = (uint)pipelineStates.Count;
+                pipelineStates.Add(pso);
 
+                D3D12Helpers.NameD3D12Object(pso, key, isDepth ? "Depth-only Pipeline State Object - key" : "GPass Pipeline State Object - key");
 
-            Debug.Assert(IdDetail.IsValid(id));
-            psoMap[key] = id;
-            return id;
+                Debug.Assert(IdDetail.IsValid(id));
+                psoMap[key] = id;
+                return id;
+            }
         }
     }
 }

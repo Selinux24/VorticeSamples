@@ -296,15 +296,43 @@ namespace Direct3D12
 
             if (isDirty)
             {
+                // NOTE: _near_z and _far_z are swapped because we use inverse depth in d3d12 renderer.
                 projection = (projectionType == CameraProjectionTypes.Perspective) ?
-                    Matrix4x4.CreatePerspectiveFieldOfView(FieldOfView * MathF.PI, AspectRatio, nearZ, farZ) :
-                    Matrix4x4.CreateOrthographic(ViewWidth, ViewHeight, nearZ, farZ);
+                    XMMatrixPerspectiveFovRH(FieldOfView * MathF.PI, AspectRatio, farZ, nearZ) :
+                    XMMatrixOrthographicRH(ViewWidth, ViewHeight, farZ, nearZ);
                 Matrix4x4.Invert(projection, out inverseProjection);
                 isDirty = false;
             }
 
             viewProjection = Matrix4x4.Multiply(view, projection);
             Matrix4x4.Invert(viewProjection, out inverseViewProjection);
+        }
+
+        private static Matrix4x4 XMMatrixPerspectiveFovRH(float fovY, float aspectRatio, float nearZ, float farZ)
+        {
+            float h = 1.0f / MathF.Tan(fovY / 2.0f);
+            float w = h / aspectRatio;
+            float q = farZ / (nearZ - farZ);
+
+            return new Matrix4x4(
+                w, 0, 0, 0,
+                0, h, 0, 0,
+                0, 0, q, -1,
+                0, 0, q * nearZ, 0
+            );
+        }
+        private static Matrix4x4 XMMatrixOrthographicRH(float viewWidth, float viewHeight, float nearZ, float farZ)
+        {
+            float w = 2.0f / viewWidth;
+            float h = 2.0f / viewHeight;
+            float q = 1.0f / (nearZ - farZ);
+
+            return new Matrix4x4(
+                w, 0, 0, 0,
+                0, h, 0, 0,
+                0, 0, q, 0,
+                0, 0, q * nearZ, 1
+            );
         }
     }
 }

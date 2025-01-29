@@ -148,20 +148,19 @@ namespace Direct3D12.Content
 
         public static PsoId CreatePso(uint materialId, D3DPrimitiveTopology primitiveTopology, uint elementsType)
         {
+            D3D12PipelineStateSubobjectStream stream = new();
+
             lock (materialMutex)
             {
                 D3D12MaterialStream material = new(materials[materialId]);
 
-                D3D12PipelineStateSubobjectStream stream = new()
-                {
-                    RenderTargetFormats = new([D3D12GPass.MainBufferFormat]),
-                    RootSignature = rootSignatures[(int)material.RootSignatureId],
-                    PrimitiveTopology = GetD3DPrimitiveTopologyType(primitiveTopology),
-                    DepthStencilFormat = D3D12GPass.DepthBufferFormat,
-                    Rasterizer = D3D12Helpers.RasterizerStatesCollection.BackFaceCull,
-                    DepthStencil1 = D3D12Helpers.DepthStatesCollection.EnabledReadonly,
-                    Blend = D3D12Helpers.BlendStatesCollection.Disabled,
-                };
+                stream.RenderTargetFormats = new([D3D12GPass.MainBufferFormat]);
+                stream.RootSignature = rootSignatures[(int)material.RootSignatureId];
+                stream.PrimitiveTopology = GetD3DPrimitiveTopologyType(primitiveTopology);
+                stream.DepthStencilFormat = D3D12GPass.DepthBufferFormat;
+                stream.Rasterizer = D3D12Helpers.RasterizerStatesCollection.BackFaceCull;
+                stream.DepthStencil1 = D3D12Helpers.DepthStatesCollection.ReversedReadonly;
+                stream.Blend = D3D12Helpers.BlendStatesCollection.Disabled;
 
                 ShaderFlags flags = material.ShaderFlags;
                 CompiledShader[] shaders = new CompiledShader[(int)ShaderTypes.Count];
@@ -187,20 +186,23 @@ namespace Direct3D12.Content
                 stream.Cs = new(shaders[(int)ShaderTypes.Compute].ByteCode.Span);
                 stream.As = new(shaders[(int)ShaderTypes.Amplification].ByteCode.Span);
                 stream.Ms = new(shaders[(int)ShaderTypes.Mesh].ByteCode.Span);
-
-                uint gPassPsoId = RenderItem.CreatePsoIfNeeded(stream, false);
-
-                stream.Ps = new([]);
-                stream.DepthStencil1 = D3D12Helpers.DepthStatesCollection.Enabled;
-
-                uint depthPsoId = RenderItem.CreatePsoIfNeeded(stream, true);
-
-                return new()
-                {
-                    GpassPsoId = gPassPsoId,
-                    DepthPsoId = depthPsoId
-                };
             }
+
+            uint gPassPsoId = RenderItem.CreatePsoIfNeeded(stream, false);
+
+            lock (materialMutex)
+            {
+                stream.Ps = new([]);
+                stream.DepthStencil1 = D3D12Helpers.DepthStatesCollection.Reversed;
+            }
+
+            uint depthPsoId = RenderItem.CreatePsoIfNeeded(stream, true);
+
+            return new()
+            {
+                GpassPsoId = gPassPsoId,
+                DepthPsoId = depthPsoId
+            };
         }
         private static D3DPrimitiveTopologyType GetD3DPrimitiveTopologyType(D3DPrimitiveTopology topology)
         {

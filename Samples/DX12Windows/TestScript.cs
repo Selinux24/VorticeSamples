@@ -1,9 +1,13 @@
 ﻿using PrimalLike.EngineAPI;
+using System.Numerics;
+using Vortice.Mathematics;
 
 namespace DX12Windows
 {
     public class TestScript : EntityScript
     {
+        private float angle = 0f;
+
         public TestScript() : base()
         {
         }
@@ -13,6 +17,13 @@ namespace DX12Windows
 
         public override void Update(float deltaTime)
         {
+            angle += 0.25f * deltaTime * MathHelper.TwoPi;
+            if (angle > MathHelper.TwoPi)
+            {
+                angle -= MathHelper.TwoPi;
+            }
+            Quaternion rotation = Quaternion.CreateFromYawPitchRoll(angle, 0, 0);
+            SetRotation(rotation);
         }
 
         public override string ToString()

@@ -4,7 +4,7 @@ using PrimalLike.EngineAPI;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Globalization;
+using System.Numerics;
 
 namespace PrimalLike.Components
 {
@@ -14,6 +14,9 @@ namespace PrimalLike.Components
         private static readonly List<IdType> idMapping = [];
         private static readonly List<GenerationType> generations = [];
         private static readonly Queue<ScriptId> freeIds = [];
+        private static readonly List<TransformCache> transformCache = [];
+        private static readonly Dictionary<IdType, uint> cacheMap = [];
+
         private static readonly Dictionary<string, Func<Entity, EntityScript>> scriptRegistry = [];
 
         private static bool Exists(ScriptId id)
@@ -26,6 +29,58 @@ namespace PrimalLike.Components
                 generations[(int)index] == IdDetail.Generation(id) &&
                 entityScripts[(int)idMapping[(int)index]] != null &&
                 entityScripts[(int)idMapping[(int)index]].IsValid;
+        }
+        private static uint GetCache(Entity entity)
+        {
+            Debug.Assert(GameEntity.IsAlive(entity.Id));
+            TransformId id = entity.Transform.Id;
+
+            uint index;
+            if (cacheMap.TryGetValue(id, out uint cacheIndex))
+            {
+                index = cacheIndex;
+            }
+            else
+            {
+                index = (uint)transformCache.Count;
+                transformCache.Add(new() { Id = id });
+                cacheMap.Add(id, index);
+            }
+
+            Debug.Assert(index < transformCache.Count);
+            return index;
+        }
+        public static void SetRotation(Entity entity, Quaternion rotation)
+        {
+            uint index = GetCache(entity);
+            var cache = transformCache[(int)index];
+            cache.Flags |= TransformFlags.Rotation;
+            cache.Rotation = rotation;
+            transformCache[(int)index] = cache;
+        }
+        public static void SetOrientation(Entity entity, Vector3 orientation)
+        {
+            uint index = GetCache(entity);
+            var cache = transformCache[(int)index];
+            cache.Flags |= TransformFlags.Orientation;
+            cache.Orientation = orientation;
+            transformCache[(int)index] = cache;
+        }
+        public static void SetPosition(Entity entity, Vector3 position)
+        {
+            uint index = GetCache(entity);
+            var cache = transformCache[(int)index];
+            cache.Flags |= TransformFlags.Position;
+            cache.Position = position;
+            transformCache[(int)index] = cache;
+        }
+        public static void SetScale(Entity entity, Vector3 scale)
+        {
+            uint index = GetCache(entity);
+            var cache = transformCache[(int)index];
+            cache.Flags |= TransformFlags.Scale;
+            cache.Scale = scale;
+            transformCache[(int)index] = cache;
         }
 
         public static bool RegisterScript(string tag, Func<Entity, EntityScript> func)
@@ -89,6 +144,14 @@ namespace PrimalLike.Components
             foreach (var script in entityScripts)
             {
                 script.Update(dt);
+            }
+
+            if (transformCache.Count > 0)
+            {
+                Transform.Update([.. transformCache]);
+                transformCache.Clear();
+
+                cacheMap.Clear();
             }
         }
 

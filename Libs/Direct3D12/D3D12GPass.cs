@@ -230,7 +230,7 @@ namespace Direct3D12
                 {
                     Desc = ResourceDescription.Texture2D(DepthBufferFormat, width, height, 1, 1, flags: ResourceFlags.AllowDepthStencil),
                     InitialState = ResourceStates.DepthRead | ResourceStates.PixelShaderResource | ResourceStates.NonPixelShaderResource,
-                    ClearValue = new(DepthBufferFormat, 1f, 0),
+                    ClearValue = new(DepthBufferFormat, 0f, 0),
                 };
 
                 gpassDepthBuffer = new D3D12DepthBuffer(info);
@@ -243,11 +243,13 @@ namespace Direct3D12
             return gpassMainBuffer.GetResource() != null && gpassDepthBuffer.GetResource() != null;
         }
 
-        private static void FillPerObjectData(ConstantBuffer cbuffer, D3D12FrameInfo d3d12Info)
+        private static void FillPerObjectData(D3D12FrameInfo d3d12Info)
         {
             uint renderItemsCount = frameCache.Size();
             uint currentEntityId = uint.MaxValue;
             ulong currentGpuAddress = 0;
+
+            var cbuffer = D3D12Graphics.CBuffer;
 
             for (uint i = 0; i < renderItemsCount; i++)
             {
@@ -303,6 +305,8 @@ namespace Direct3D12
             var materialsCache = frameCache.MaterialsCache();
             Material.GetMaterials(itemsCache.MaterialIds, ref materialsCache);
             frameCache.SetMaterials(materialsCache);
+
+            FillPerObjectData(d3d12Info);
         }
 
         public static void Shutdown()
@@ -331,9 +335,6 @@ namespace Direct3D12
         public static void DepthPrePass(ID3D12GraphicsCommandList cmdList, D3D12FrameInfo d3d12Info)
         {
             PrepareRenderFrame(d3d12Info);
-
-            var cbuffer = D3D12Graphics.CBuffer;
-            FillPerObjectData(cbuffer, d3d12Info);
 
             uint itemsCount = frameCache.Size();
 
@@ -436,7 +437,7 @@ namespace Direct3D12
         public static void SetRenderTargetsForDepthPrePass(ID3D12GraphicsCommandList cmdList)
         {
             var dsv = gpassDepthBuffer.GetDsv();
-            cmdList.ClearDepthStencilView(dsv.Cpu, ClearFlags.Depth | ClearFlags.Stencil, 1f, 0, 0, null);
+            cmdList.ClearDepthStencilView(dsv.Cpu, ClearFlags.Depth | ClearFlags.Stencil, 0f, 0, 0, null);
             cmdList.OMSetRenderTargets([], dsv.Cpu);
         }
         public static void SetRenderTargetsForGPass(ID3D12GraphicsCommandList cmdList)

@@ -1,6 +1,7 @@
 ﻿using PrimalLike.Common;
 using PrimalLike.Components;
 using System.Diagnostics;
+using System.Numerics;
 
 namespace PrimalLike.EngineAPI
 {
@@ -44,5 +45,11 @@ namespace PrimalLike.EngineAPI
                 return GameEntity.Geometries[(int)IdDetail.Index(Id)];
             }
         }
+
+
+        public Quaternion Rotation { get => Transform.Rotation; }
+        public Vector3 Orientation { get => Transform.Orientation; }
+        public Vector3 Position { get => Transform.Position; }
+        public Vector3 Scale { get => Transform.Scale; }
     }
 }

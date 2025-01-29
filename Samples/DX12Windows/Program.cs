@@ -66,22 +66,24 @@ namespace DX12Windows
             using var file = new MemoryStream(File.ReadAllBytes(testModelFile));
             modelId = ContentToEngine.CreateResource(file, AssetTypes.Mesh);
         }
-        static Entity CreateOneGameEntity(bool isCamera)
+        static Entity CreateOneGameEntity(Vector3 position, Vector3 rotation, bool rotates)
         {
             TransformInfo transform = new()
             {
-                Rotation = Quaternion.CreateFromYawPitchRoll(0, isCamera ? 3.14f : 0f, 0)
+                Position = position,
+                Rotation = Quaternion.CreateFromYawPitchRoll(rotation.X, rotation.Y, rotation.Z)
             };
 
-            if (isCamera)
+            ScriptInfo script = new();
+            if (rotates)
             {
-                transform.Position.Y = 1f;
-                transform.Position.Z = 3f;
+                script.ScriptCreator = (entity) => new TestScript(entity);
             }
 
             EntityInfo entityInfo = new()
             {
                 Transform = transform,
+                Script = script,
             };
 
             Entity ntt = Application.CreateEntity(entityInfo);
@@ -90,7 +92,7 @@ namespace DX12Windows
         }
         static void CreateRenderItem()
         {
-            itemId = HelloWorldRenderItem.CreateRenderItem(CreateOneGameEntity(false).Id);
+            itemId = HelloWorldRenderItem.CreateRenderItem(CreateOneGameEntity(Vector3.Zero, Vector3.Zero, true).Id);
         }
         static void CreateWindow()
         {

@@ -39,7 +39,7 @@ namespace PrimalLike
         /// </summary>
         public void Update()
         {
-            var elapsedTime = Total - Elapsed;
+            var elapsedTime = stopwatch.Elapsed - Total;
 
             Total = stopwatch.Elapsed;
             Elapsed = elapsedTime;
