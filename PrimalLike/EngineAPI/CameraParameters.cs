@@ -1,7 +1,7 @@
 ﻿
-namespace PrimalLike.Graphics
+namespace PrimalLike.EngineAPI
 {
-    public enum CameraParameters : int
+    public enum CameraParameters : uint
     {
         UpVector,
         FieldOfView,
@@ -17,5 +17,7 @@ namespace PrimalLike.Graphics
         InverseViewProjection,
         ProjectionType,
         EntityId,
+
+        Count,
     }
 }

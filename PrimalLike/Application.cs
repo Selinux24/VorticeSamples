@@ -178,6 +178,24 @@ namespace PrimalLike
         }
 
         /// <summary>
+        /// Creates a light.
+        /// </summary>
+        /// <param name="info">Light info</param>
+        public static Light CreateLight(LightInitInfo info)
+        {
+            return Renderer.CreateLight(info);
+        }
+        /// <summary>
+        /// Removes a light.
+        /// </summary>
+        /// <param name="id">Light id</param>
+        /// <param name="lightSetKey">Lightset key</param>
+        public static void RemoveLight(LightId id, ulong lightSetKey)
+        {
+            Renderer.RemoveLight(id, lightSetKey);
+        }
+
+        /// <summary>
         /// Creates a game entity
         /// </summary>
         /// <param name="info">Entity info</param>
@@ -202,7 +220,7 @@ namespace PrimalLike
         public static bool RegisterScript<T>() where T : EntityScript
         {
             return Script.RegisterScript(
-                IdDetail.StringHash<T>(), 
+                IdDetail.StringHash<T>(),
                 (entity) => (T)Activator.CreateInstance(typeof(T), [entity]));
         }
 

@@ -1,8 +1,9 @@
 ﻿global using CameraId = System.UInt32;
 using PrimalLike.Common;
+using PrimalLike.Graphics;
 using System.Numerics;
 
-namespace PrimalLike.Graphics
+namespace PrimalLike.EngineAPI
 {
     public class Camera
     {

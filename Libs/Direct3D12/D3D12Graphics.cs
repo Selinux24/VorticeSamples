@@ -1,6 +1,5 @@
 ﻿using Direct3D12.Shaders;
 using PrimalLike.Graphics;
-using PrimalLike.Platform;
 using SharpGen.Runtime;
 using System;
 using System.Collections.Generic;
@@ -14,6 +13,7 @@ using Vortice.DXGI;
 [assembly: InternalsVisibleTo("D3D12LibTests")]
 namespace Direct3D12
 {
+    using PrimalLike.EngineAPI;
 #if DEBUG
     using Vortice.Direct3D12.Debug;
     using Vortice.DXGI.Debug;

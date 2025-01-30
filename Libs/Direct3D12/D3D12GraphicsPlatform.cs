@@ -1,6 +1,6 @@
 ﻿using Direct3D12.Content;
+using PrimalLike.EngineAPI;
 using PrimalLike.Graphics;
-using PrimalLike.Platform;
 using System;
 
 namespace Direct3D12
@@ -55,6 +55,27 @@ namespace Direct3D12
         public void RenderSurface(uint id, FrameInfo info)
         {
             D3D12Graphics.RenderSurface(id, info);
+        }
+
+        /// <inheritdoc/>
+        public Light CreateLight(LightInitInfo info)
+        {
+            return D3D12Light.Create(info);
+        }
+        /// <inheritdoc/>
+        public void RemoveLight(uint id, ulong lightSetKey)
+        {
+            D3D12Light.Remove(id, lightSetKey);
+        }
+        /// <inheritdoc/>
+        public void SetParameter<T>(uint id, ulong lightSetKey, LightParameters parameter, T value) where T : unmanaged
+        {
+            D3D12Light.SetParameter(id, lightSetKey, parameter, value);
+        }
+        /// <inheritdoc/>
+        public void GetParameter<T>(uint id, ulong lightSetKey, LightParameters parameter, out T value) where T : unmanaged
+        {
+            D3D12Light.GetParameter(id, lightSetKey, parameter, out value);
         }
 
         /// <inheritdoc/>

@@ -1,4 +1,6 @@
-﻿namespace PrimalLike.Platform
+﻿using PrimalLike.EngineAPI;
+
+namespace PrimalLike.Platform
 {
     static class PlatformBase
     {

@@ -1,23 +1,43 @@
 ﻿global using SurfaceId = System.UInt32;
 using PrimalLike.Common;
+using PrimalLike.Graphics;
 using System.Diagnostics;
 
-namespace PrimalLike.Graphics
+namespace PrimalLike.EngineAPI
 {
+    /// <summary>
+    /// Surface
+    /// </summary>
     public class Surface
     {
+        /// <summary>
+        /// Surface id
+        /// </summary>
         private readonly SurfaceId id = SurfaceId.MaxValue;
 
+        /// <summary>
+        /// Constructor
+        /// </summary>
         public Surface()
         {
 
         }
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="id">Surface id</param>
         public Surface(SurfaceId id)
         {
             this.id = id;
         }
 
+        /// <summary>
+        /// Gets the surface id.
+        /// </summary>
         public SurfaceId Id { get => id; }
+        /// <summary>
+        /// Checks if the surface is valid.
+        /// </summary>
         public bool IsValid { get => IdDetail.IsValid(id); }
 
         /// <summary>

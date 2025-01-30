@@ -8,7 +8,7 @@ using System.Numerics;
 
 namespace PrimalLike.Components
 {
-    static class Script
+    public static class Script
     {
         private static readonly List<EntityScript> entityScripts = [];
         private static readonly List<IdType> idMapping = [];
@@ -94,6 +94,10 @@ namespace PrimalLike.Components
             bool result = scriptRegistry.TryGetValue(tag, out Func<Entity, EntityScript> func);
             Debug.Assert(result);
             return func;
+        }
+        public static Func<Entity, EntityScript> GetScriptCreator<T>() where T : EntityScript
+        {
+            return GetScriptCreator(IdDetail.StringHash<T>());
         }
 
         public static ScriptComponent Create(ScriptInfo info, Entity entity)

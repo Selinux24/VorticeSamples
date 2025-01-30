@@ -1,7 +1,6 @@
-﻿using PrimalLike.Graphics;
-using PrimalLike.Platform;
+﻿using PrimalLike.Platform;
 
-namespace PrimalLike
+namespace PrimalLike.Graphics
 {
     /// <summary>
     /// Represents a render component.

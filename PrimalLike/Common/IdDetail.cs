@@ -39,13 +39,16 @@ namespace PrimalLike.Common
             return Index(id) | generation << IndexBits;
         }
 
-        public static string StringHash<T>()
+        public static string StringHash(string typeName)
         {
-            string typeName = typeof(T).Name;
             byte[] byteArray = SHA256.HashData(Encoding.UTF8.GetBytes(typeName));
             string hash = Convert.ToHexString(byteArray);
 
             return hash;
+        }
+        public static string StringHash<T>()
+        {
+            return StringHash(typeof(T).Name);
         }
     }
 }

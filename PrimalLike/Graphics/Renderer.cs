@@ -1,5 +1,5 @@
 ﻿using PrimalLike.Common;
-using PrimalLike.Platform;
+using PrimalLike.EngineAPI;
 using System;
 using System.Diagnostics;
 
@@ -40,6 +40,23 @@ namespace PrimalLike.Graphics
         {
             Debug.Assert(IdDetail.IsValid(id));
             gfx.RemoveSurface(id);
+        }
+
+        public static Light CreateLight(LightInitInfo info)
+        {
+            return gfx.CreateLight(info);
+        }
+        public static void RemoveLight(LightId id, ulong lightSetKey)
+        {
+            gfx.RemoveLight(id, lightSetKey);
+        }
+        public static void SetParameter<T>(LightId id, ulong lightSetKey, LightParameters parameter, T value) where T : unmanaged
+        {
+            gfx.SetParameter(id, lightSetKey, parameter, value);
+        }
+        public static void GetParameter<T>(LightId id, ulong lightSetKey, LightParameters parameter, out T value) where T : unmanaged
+        {
+            gfx.GetParameter(id, lightSetKey, parameter, out value);
         }
 
         public static Camera CreateCamera(CameraInitInfo info)

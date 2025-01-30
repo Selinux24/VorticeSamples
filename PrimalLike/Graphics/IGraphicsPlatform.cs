@@ -1,5 +1,4 @@
-﻿using PrimalLike.Platform;
-using System;
+﻿using PrimalLike.EngineAPI;
 
 namespace PrimalLike.Graphics
 {
@@ -56,6 +55,34 @@ namespace PrimalLike.Graphics
         void RenderSurface(SurfaceId id, FrameInfo info);
 
         /// <summary>
+        /// Creates a light.
+        /// </summary>
+        /// <param name="info">Light initialization info</param>
+        Light CreateLight(LightInitInfo info);
+        /// <summary>
+        /// Removes a light.
+        /// </summary>
+        /// <param name="id">Light id</param>
+        /// <param name="lightSetKey">Lightset key</param>
+        void RemoveLight(LightId id, ulong lightSetKey);
+        /// <summary>
+        /// Sets a light parameter.
+        /// </summary>
+        /// <param name="id">Light id</param>
+        /// <param name="lightSetKey">Lightset key</param>
+        /// <param name="parameter">Parameter to set</param>
+        /// <param name="data">Data to read-from the parameter value</param>
+        void SetParameter<T>(LightId id, ulong lightSetKey, LightParameters parameter, T data) where T : unmanaged;
+        /// <summary>
+        /// Gets a light parameter.
+        /// </summary>
+        /// <param name="id">Light id</param>
+        /// <param name="lightSetKey">Lightset key</param>
+        /// <param name="parameter">Parameter to get</param>
+        /// <param name="data">Data to write-in the parameter value</param>
+        void GetParameter<T>(LightId id, ulong lightSetKey, LightParameters parameter, out T data) where T : unmanaged;
+
+        /// <summary>
         /// Creates a camera.
         /// </summary>
         /// <param name="info">Camera initialization info</param>
@@ -71,7 +98,6 @@ namespace PrimalLike.Graphics
         /// <param name="id">Camera id</param>
         /// <param name="parameter">Parameter to set</param>
         /// <param name="data">Data to read-from the parameter value</param>
-        /// <param name="size">Size of data</param>
         void SetParameter<T>(CameraId id, CameraParameters parameter, T data) where T : unmanaged;
         /// <summary>
         /// Gets a camera parameter.
@@ -79,14 +105,13 @@ namespace PrimalLike.Graphics
         /// <param name="id">Camera id</param>
         /// <param name="parameter">Parameter to get</param>
         /// <param name="data">Data to write-in the parameter value</param>
-        /// <param name="size">Size of data</param>
         void GetParameter<T>(CameraId id, CameraParameters parameter, out T data) where T : unmanaged;
 
         /// <summary>
         /// Adds a submesh.
         /// </summary>
         /// <param name="data">Submesh data</param>
-        IdType AddSubmesh(ref IntPtr data);
+        IdType AddSubmesh(ref nint data);
         /// <summary>
         /// Removes a submesh.
         /// </summary>

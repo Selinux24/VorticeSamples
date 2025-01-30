@@ -1,5 +1,4 @@
 ﻿using Direct3D12;
-using Direct3D12.Content;
 using Direct3D12.Shaders;
 using PrimalLike;
 using PrimalLike.Common;
@@ -8,10 +7,11 @@ using PrimalLike.Content;
 using PrimalLike.EngineAPI;
 using ShaderCompiler;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Numerics;
-using Vortice.Direct3D12;
+using Vortice.Mathematics;
 using WindowsPlatform;
 
 namespace DX12Windows
@@ -22,6 +22,7 @@ namespace DX12Windows
         private const string shadersIncludeDir = "../../../../../Libs/Direct3D12/Shaders/";
         private const string shadersOutputPath = "./Content/engineShaders.bin";
         private const string testModelFile = "./Content/Model.model";
+        private const uint WM_CAPTURECHANGED = 0x0215;
 
         private static readonly EngineShaderInfo[] engineShaderFiles =
         [
@@ -35,6 +36,10 @@ namespace DX12Windows
         private static uint modelId;
         private static uint itemId;
 
+        private static readonly ulong leftSet = 0;
+        private static readonly ulong rightSet = 1;
+        private static readonly List<Light> lights = [];
+
         static void Main()
         {
             InitializeApp();
@@ -42,6 +47,8 @@ namespace DX12Windows
             LoadTestModel();
             CreateRenderItem();
             CreateWindow();
+
+            GenerateLights();
 
             app.Run();
         }
@@ -66,7 +73,7 @@ namespace DX12Windows
             using var file = new MemoryStream(File.ReadAllBytes(testModelFile));
             modelId = ContentToEngine.CreateResource(file, AssetTypes.Mesh);
         }
-        static Entity CreateOneGameEntity(Vector3 position, Vector3 rotation, bool rotates)
+        static Entity CreateOneGameEntity(Vector3 position, Vector3 rotation, string scriptName)
         {
             TransformInfo transform = new()
             {
@@ -75,9 +82,9 @@ namespace DX12Windows
             };
 
             ScriptInfo script = new();
-            if (rotates)
+            if (!string.IsNullOrEmpty(scriptName))
             {
-                script.ScriptCreator = (entity) => new HelloWorldScript(entity);
+                script.ScriptCreator = Script.GetScriptCreator(IdDetail.StringHash(scriptName));
             }
 
             EntityInfo entityInfo = new()
@@ -92,7 +99,7 @@ namespace DX12Windows
         }
         static void CreateRenderItem()
         {
-            itemId = HelloWorldRenderItem.CreateRenderItem(CreateOneGameEntity(Vector3.Zero, Vector3.Zero, true).Id);
+            itemId = HelloWorldRenderItem.CreateRenderItem(CreateOneGameEntity(Vector3.Zero, Vector3.Zero, nameof(HelloWorldScript)).Id);
         }
         static void CreateWindow()
         {
@@ -106,19 +113,6 @@ namespace DX12Windows
             component = Application.CreateRenderComponent<HelloWorldComponent>(windowInfo);
             component.UpdateFrameInfo([itemId], [10f]);
         }
-        static void AppShutdown(object sender, EventArgs e)
-        {
-            HelloWorldRenderItem.DestroyRenderItem(itemId);
-
-            if (IdDetail.IsValid(modelId))
-            {
-                ContentToEngine.DestroyResource(modelId, AssetTypes.Mesh);
-            }
-
-            Application.RemoveRenderComponent(component);
-        }
-
-        const uint WM_CAPTURECHANGED = 0x0215;
         static IntPtr CustomWndProc(IntPtr hwnd, uint msg, IntPtr wParam, IntPtr lParam)
         {
             switch (msg)
@@ -131,6 +125,80 @@ namespace DX12Windows
             }
 
             return Win32Window.DefaultWndProc(hwnd, msg, wParam, lParam);
+        }
+
+        static Vector3 RGBToColor(byte r, byte g, byte b)
+        {
+            return new()
+            {
+                X = r / 255f,
+                Y = g / 255f,
+                Z = b / 255f
+            };
+        }
+        static void GenerateLights()
+        {
+            // LEFT_SET
+            LightInitInfo info = new()
+            {
+                EntityId = CreateOneGameEntity(Vector3.Zero, Vector3.Zero, null).Id,
+                LightType = LightTypes.Directional,
+                LightSetKey = leftSet,
+                Intensity = 1f,
+                Color = RGBToColor(174, 174, 174)
+            };
+            lights.Add(Application.CreateLight(info));
+
+            info.EntityId = CreateOneGameEntity(Vector3.Zero, new(MathHelper.PiOver2, 0, 0), null).Id;
+            info.Color = RGBToColor(17, 27, 48);
+            lights.Add(Application.CreateLight(info));
+
+            info.EntityId = CreateOneGameEntity(Vector3.Zero, new(-MathHelper.PiOver2, 0, 0), null).Id;
+            info.Color = RGBToColor(63, 47, 30);
+            lights.Add(Application.CreateLight(info));
+
+            // RIGHT_SET
+            info.EntityId = CreateOneGameEntity(Vector3.Zero, Vector3.Zero, null).Id;
+            info.LightSetKey = rightSet;
+            info.Color = RGBToColor(150, 100, 200);
+            lights.Add(Application.CreateLight(info));
+
+            info.EntityId = CreateOneGameEntity(Vector3.Zero, new(MathHelper.PiOver2, 0, 0), null).Id;
+            info.Color = RGBToColor(17, 27, 48);
+            lights.Add(Application.CreateLight(info));
+
+            info.EntityId = CreateOneGameEntity(Vector3.Zero, new(-MathHelper.PiOver2, 0, 0), null).Id;
+            info.Color = RGBToColor(63, 47, 30);
+            lights.Add(Application.CreateLight(info));
+        }
+        static void RemoveLights()
+        {
+            foreach (var light in lights)
+            {
+                uint id = light.EntityId;
+                Application.RemoveLight(light.Id, light.LightSetKey);
+                RemoveGameEntity(id);
+            }
+
+            lights.Clear();
+        }
+        static void RemoveGameEntity(uint id)
+        {
+            Application.RemoveEntity(id);
+        }
+
+        static void AppShutdown(object sender, EventArgs e)
+        {
+            HelloWorldRenderItem.DestroyRenderItem(itemId);
+
+            if (IdDetail.IsValid(modelId))
+            {
+                ContentToEngine.DestroyResource(modelId, AssetTypes.Mesh);
+            }
+
+            Application.RemoveRenderComponent(component);
+
+            RemoveLights();
         }
     }
 }

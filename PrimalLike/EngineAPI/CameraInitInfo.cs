@@ -2,7 +2,7 @@
 using System.Diagnostics;
 using System.Numerics;
 
-namespace PrimalLike.Graphics
+namespace PrimalLike.EngineAPI
 {
     public abstract record CameraInitInfo()
     {
