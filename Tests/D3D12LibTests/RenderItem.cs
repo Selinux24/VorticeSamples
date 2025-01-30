@@ -1,4 +1,5 @@
-﻿using PrimalLike;
+﻿using ContentTools;
+using PrimalLike;
 using PrimalLike.Common;
 using PrimalLike.Content;
 using PrimalLike.Graphics;
@@ -34,26 +35,48 @@ namespace D3D12LibTests
         {
             // Let's say our material uses a vertex shader and a pixel shader.
             ShaderFileInfo info = new(Path.Combine(shadersSourcePath, "TestShader.hlsl"), "TestShaderVS", ShaderStage.Vertex);
-            bool compiledVs = Compiler.Compile(info, shadersIncludeDir, out var vertexShader);
-            Debug.Assert(compiledVs);
+
+            string[] defines = ["ELEMENTS_TYPE=1", "ELEMENTS_TYPE=3"];
+            uint[] keys =
+            [
+                (uint)ElementsType.StaticNormal,
+                (uint)ElementsType.StaticNormalTexture,
+            ];
+
+            List<string> extraArgs = [];
+            PrimalLike.Content.CompiledShader[] vertexShaders = new PrimalLike.Content.CompiledShader[2];
+            for (uint i = 0; i < defines.Length; i++)
+            {
+                extraArgs.Clear();
+                extraArgs.Add("-D");
+                extraArgs.Add(defines[i]);
+                bool compiledVs = Compiler.Compile(info, shadersIncludeDir, extraArgs, out var vertexShader);
+                Debug.Assert(compiledVs);
+                vertexShaders[i] = new()
+                {
+                    ByteCodeSize = (ulong)vertexShader.ByteCode.Length,
+                    ByteCode = vertexShader.ByteCode,
+                    Hash = vertexShader.Hash.HashDigest
+                };
+            }
+
+            vsId = ContentToEngine.AddShaderGroup(vertexShaders, keys);
 
             info = new ShaderFileInfo(Path.Combine(shadersSourcePath, "TestShader.hlsl"), "TestShaderPS", ShaderStage.Pixel);
             bool compiledPs = Compiler.Compile(info, shadersIncludeDir, out var pixelShader);
             Debug.Assert(compiledPs);
 
-            vsId = ContentToEngine.AddShader(new PrimalLike.Content.CompiledShader()
-            {
-                ByteCodeSize = (ulong)vertexShader.ByteCode.Length,
-                ByteCode = vertexShader.ByteCode,
-                Hash = vertexShader.Hash.HashDigest
-            });
+            PrimalLike.Content.CompiledShader[] pixelShaders =
+            [
+                new PrimalLike.Content.CompiledShader()
+                {
+                    ByteCodeSize = (ulong)pixelShader.ByteCode.Length,
+                    ByteCode = pixelShader.ByteCode,
+                    Hash = pixelShader.Hash.HashDigest
+                }
+            ];
 
-            psId = ContentToEngine.AddShader(new PrimalLike.Content.CompiledShader()
-            {
-                ByteCodeSize = (ulong)pixelShader.ByteCode.Length,
-                ByteCode = pixelShader.ByteCode,
-                Hash = pixelShader.Hash.HashDigest
-            });
+            psId = ContentToEngine.AddShaderGroup(pixelShaders, [uint.MaxValue]);
         }
         public static void CreateMaterial()
         {
@@ -107,12 +130,12 @@ namespace D3D12LibTests
             // remove shaders and textures
             if (IdDetail.IsValid(vsId))
             {
-                ContentToEngine.RemoveShader(vsId);
+                ContentToEngine.RemoveShaderGroup(vsId);
             }
 
             if (IdDetail.IsValid(psId))
             {
-                ContentToEngine.RemoveShader(psId);
+                ContentToEngine.RemoveShaderGroup(psId);
             }
 
             // remove model

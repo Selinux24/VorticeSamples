@@ -9,13 +9,14 @@ using System.Runtime.InteropServices;
 using Vortice.Direct3D12;
 using Vortice.DXGI;
 using Vortice.Mathematics;
+using D3D12PrimitiveTopology = Vortice.Direct3D.PrimitiveTopology;
 
 namespace Direct3D12
 {
-    using D3D12PrimitiveTopology = Vortice.Direct3D.PrimitiveTopology;
-
     static class D3D12GPass
     {
+        #region Structures
+
         [StructLayout(LayoutKind.Sequential)]
         struct FrameConstants
         {
@@ -163,22 +164,25 @@ namespace Direct3D12
             }
         }
 
+        #endregion
+
         public const Format MainBufferFormat = Format.R16G16B16A16_Float;
         public const Format DepthBufferFormat = Format.D32_Float;
-        static readonly uint initialDimensionWidth = 100;
-        static readonly uint initialDimensionHeight = 100;
 
-        static D3D12RenderTexture gpassMainBuffer;
-        static D3D12DepthBuffer gpassDepthBuffer;
-        static uint dimensionWidth = initialDimensionWidth;
-        static uint dimensionHeight = initialDimensionHeight;
+        private const uint initialDimensionWidth = 100;
+        private const uint initialDimensionHeight = 100;
 
-        static GPassCache frameCache = new();
+        private static D3D12RenderTexture gpassMainBuffer;
+        private static D3D12DepthBuffer gpassDepthBuffer;
+        private static uint dimensionWidth = initialDimensionWidth;
+        private static uint dimensionHeight = initialDimensionHeight;
+
+        private static GPassCache frameCache = new();
 
 #if DEBUG
-        static readonly Color clearValue = new(0.5f, 0.5f, 0.5f, 1.0f);
+        private static readonly Color clearValue = new(0.5f, 0.5f, 0.5f, 1.0f);
 #else
-        static readonly Color clearValue = new(0.0f);
+        private static readonly Color clearValue = new(0.0f);
 #endif
 
         /// <summary>

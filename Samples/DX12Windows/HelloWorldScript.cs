@@ -4,14 +4,14 @@ using Vortice.Mathematics;
 
 namespace DX12Windows
 {
-    public class TestScript : EntityScript
+    public class HelloWorldScript : EntityScript
     {
         private float angle = 0f;
 
-        public TestScript() : base()
+        public HelloWorldScript() : base()
         {
         }
-        public TestScript(Entity entity) : base(entity)
+        public HelloWorldScript(Entity entity) : base(entity)
         {
         }
 

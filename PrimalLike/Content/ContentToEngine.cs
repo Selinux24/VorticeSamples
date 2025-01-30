@@ -22,7 +22,7 @@ namespace PrimalLike.Content
         private static readonly FreeList<IntPtr> geometryHierarchies = new();
         private static readonly object geometryMutex = new();
 
-        private static readonly FreeList<CompiledShader> shaders = new();
+        private static readonly FreeList<Dictionary<uint, CompiledShader>> shaderGroups = new();
         private static readonly object shaderMutex = new();
 
         public static uint CreateResource<T>(T data, AssetTypes assetType)
@@ -308,28 +308,42 @@ namespace PrimalLike.Content
             Renderer.RemoveMaterial(id);
         }
 
-        public static IdType AddShader(CompiledShader shader)
+        public static IdType AddShaderGroup(CompiledShader[] shaders, uint[] keys)
         {
+            Debug.Assert(shaders?.Length > 0 && keys?.Length > 0);
+            Dictionary<uint, CompiledShader> group = [];
+            for (uint i = 0; i < shaders.Length; i++)
+            {
+                group[keys[i]] = shaders[i];
+            }
+
             lock (shaderMutex)
             {
-                return shaders.Add(shader);
+                return shaderGroups.Add(group);
             }
         }
-        public static void RemoveShader(IdType id)
+        public static void RemoveShaderGroup(IdType id)
         {
             lock (shaderMutex)
             {
                 Debug.Assert(IdDetail.IsValid(id));
-                shaders.Remove(id);
+                shaderGroups[id].Clear();
+                shaderGroups.Remove(id);
             }
         }
-        public static CompiledShader GetShader(IdType id)
+        public static CompiledShader GetShader(IdType id, uint shaderKey)
         {
             lock (shaderMutex)
             {
                 Debug.Assert(IdDetail.IsValid(id));
 
-                return shaders[id];
+                if (shaderGroups[id].TryGetValue(shaderKey, out var shader))
+                {
+                    return shader;
+                }
+
+                Debug.Assert(false); // should never occure.
+                return default;
             }
         }
     }

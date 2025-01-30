@@ -48,7 +48,7 @@ namespace DX12Windows
 
         static void InitializeApp()
         {
-            if (!Application.RegisterScript<TestScript>())
+            if (!Application.RegisterScript<HelloWorldScript>())
             {
                 Console.WriteLine("Failed to register TestScript");
             }
@@ -77,7 +77,7 @@ namespace DX12Windows
             ScriptInfo script = new();
             if (rotates)
             {
-                script.ScriptCreator = (entity) => new TestScript(entity);
+                script.ScriptCreator = (entity) => new HelloWorldScript(entity);
             }
 
             EntityInfo entityInfo = new()

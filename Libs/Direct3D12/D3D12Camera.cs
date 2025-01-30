@@ -297,6 +297,9 @@ namespace Direct3D12
             if (isDirty)
             {
                 // NOTE: _near_z and _far_z are swapped because we use inverse depth in d3d12 renderer.
+                //projection = (projectionType == CameraProjectionTypes.Perspective) ?
+                //    Matrix4x4.CreatePerspectiveFieldOfView(FieldOfView * MathF.PI, AspectRatio, farZ, nearZ) :
+                //    Matrix4x4.CreateOrthographic(ViewWidth, ViewHeight, farZ, nearZ);
                 projection = (projectionType == CameraProjectionTypes.Perspective) ?
                     XMMatrixPerspectiveFovRH(FieldOfView * MathF.PI, AspectRatio, farZ, nearZ) :
                     XMMatrixOrthographicRH(ViewWidth, ViewHeight, farZ, nearZ);

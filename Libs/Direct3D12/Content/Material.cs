@@ -3,14 +3,14 @@ using PrimalLike.Graphics;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Numerics;
 using Utilities;
+using Vortice.Direct3D12;
+using D3DPrimitiveTopology = Vortice.Direct3D.PrimitiveTopology;
+using D3DPrimitiveTopologyType = Vortice.Direct3D12.PrimitiveTopologyType;
 
 namespace Direct3D12.Content
 {
-    using Vortice.Direct3D12;
-    using D3DPrimitiveTopology = Vortice.Direct3D.PrimitiveTopology;
-    using D3DPrimitiveTopologyType = Vortice.Direct3D12.PrimitiveTopologyType;
-
     static class Material
     {
         static readonly List<ID3D12RootSignature> rootSignatures = [];
@@ -153,6 +153,7 @@ namespace Direct3D12.Content
             lock (materialMutex)
             {
                 D3D12MaterialStream material = new(materials[materialId]);
+                var shaders = GetMaterialShaders(material, elementsType);
 
                 stream.RenderTargetFormats = new([D3D12GPass.MainBufferFormat]);
                 stream.RootSignature = rootSignatures[(int)material.RootSignatureId];
@@ -162,30 +163,14 @@ namespace Direct3D12.Content
                 stream.DepthStencil1 = D3D12Helpers.DepthStatesCollection.ReversedReadonly;
                 stream.Blend = D3D12Helpers.BlendStatesCollection.Disabled;
 
-                ShaderFlags flags = material.ShaderFlags;
-                CompiledShader[] shaders = new CompiledShader[(int)ShaderTypes.Count];
-                uint shaderIndex = 0;
-                for (uint i = 0; i < (uint)ShaderTypes.Count; i++)
-                {
-                    ShaderFlags shaderFlags = (ShaderFlags)(1u << (int)i);
-                    if (flags.HasFlag(shaderFlags))
-                    {
-                        uint shaderId = material.ShaderIds[shaderIndex];
-                        var shader = ContentToEngine.GetShader(shaderId);
-                        Debug.Assert(shader.ByteCodeSize > 0);
-                        shaders[i] = shader;
-                        shaderIndex++;
-                    }
-                }
-
-                stream.Vs = new(shaders[(int)ShaderTypes.Vertex].ByteCode.Span);
-                stream.Ps = new(shaders[(int)ShaderTypes.Pixel].ByteCode.Span);
-                stream.Ds = new(shaders[(int)ShaderTypes.Domain].ByteCode.Span);
-                stream.Hs = new(shaders[(int)ShaderTypes.Hull].ByteCode.Span);
-                stream.Gs = new(shaders[(int)ShaderTypes.Geometry].ByteCode.Span);
-                stream.Cs = new(shaders[(int)ShaderTypes.Compute].ByteCode.Span);
-                stream.As = new(shaders[(int)ShaderTypes.Amplification].ByteCode.Span);
-                stream.Ms = new(shaders[(int)ShaderTypes.Mesh].ByteCode.Span);
+                stream.Vs = new(shaders[(uint)ShaderTypes.Vertex].ByteCode.Span);
+                stream.Ps = new(shaders[(uint)ShaderTypes.Pixel].ByteCode.Span);
+                stream.Ds = new(shaders[(uint)ShaderTypes.Domain].ByteCode.Span);
+                stream.Hs = new(shaders[(uint)ShaderTypes.Hull].ByteCode.Span);
+                stream.Gs = new(shaders[(uint)ShaderTypes.Geometry].ByteCode.Span);
+                stream.Cs = new(shaders[(uint)ShaderTypes.Compute].ByteCode.Span);
+                stream.As = new(shaders[(uint)ShaderTypes.Amplification].ByteCode.Span);
+                stream.Ms = new(shaders[(uint)ShaderTypes.Mesh].ByteCode.Span);
             }
 
             uint gPassPsoId = RenderItem.CreatePsoIfNeeded(stream, false);
@@ -213,6 +198,31 @@ namespace Direct3D12.Content
                 D3DPrimitiveTopology.TriangleList or D3DPrimitiveTopology.TriangleStrip => D3DPrimitiveTopologyType.Triangle,
                 _ => D3DPrimitiveTopologyType.Undefined,
             };
+        }
+        private static CompiledShader[] GetMaterialShaders(D3D12MaterialStream material, uint elementsType)
+        {
+            ShaderFlags flags = material.ShaderFlags;
+            CompiledShader[] shaders = new CompiledShader[(int)ShaderTypes.Count];
+            uint shaderIndex = 0;
+            for (uint i = 0; i < (uint)ShaderTypes.Count; i++)
+            {
+                ShaderFlags shaderFlags = (ShaderFlags)(1u << (int)i);
+                if (flags.HasFlag(shaderFlags))
+                {
+                    ShaderTypes shaderType = GetShaderType(shaderFlags);
+                    uint key = shaderType == ShaderTypes.Vertex ? elementsType : uint.MaxValue;
+                    uint shaderId = material.ShaderIds[shaderIndex];
+                    shaders[i] = ContentToEngine.GetShader(shaderId, key);
+                    Debug.Assert(shaders[i].ByteCodeSize > 0);
+                    shaderIndex++;
+                }
+            }
+            return shaders;
+        }
+        private static ShaderTypes GetShaderType(ShaderFlags flag)
+        {
+            int index = BitOperations.TrailingZeroCount((uint)flag);
+            return (ShaderTypes)index;
         }
     }
 }

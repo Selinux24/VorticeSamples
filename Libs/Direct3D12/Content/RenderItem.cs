@@ -144,19 +144,21 @@ namespace Direct3D12.Content
         }
         internal static void GetItems(uint[] d3d12RenderItemIds, ref ItemsCache cache)
         {
-            Debug.Assert(d3d12RenderItemIds != null && d3d12RenderItemIds.Length > 0);
+            Debug.Assert(d3d12RenderItemIds?.Length > 0);
+            uint count = (uint)d3d12RenderItemIds.Length;
+
             Debug.Assert(
-                cache.EntityIds != null &&
-                cache.SubmeshGpuIds != null &&
-                cache.MaterialIds != null &&
-                cache.GPassPsos != null &&
-                cache.DepthPsos != null);
+                cache.EntityIds?.Length >= count &&
+                cache.SubmeshGpuIds?.Length >= count &&
+                cache.MaterialIds?.Length >= count &&
+                cache.GPassPsos?.Length >= count &&
+                cache.DepthPsos?.Length >= count);
 
             lock (renderItemMutex)
             {
                 lock (psoMutex)
                 {
-                    for (uint i = 0; i < d3d12RenderItemIds.Length; i++)
+                    for (uint i = 0; i < count; i++)
                     {
                         var item = renderItems[d3d12RenderItemIds[i]];
 
@@ -173,7 +175,7 @@ namespace Direct3D12.Content
         public static uint CreatePsoIfNeeded<T>(T data, bool isDepth) where T : unmanaged
         {
             // calculate Crc32 hash of the data.
-            ulong key = (ulong)D3D12Helpers.GetStableHashCode(data);
+            ulong key = (ulong)StableHashCode.Get(data);
             lock (psoMutex)
             {
                 if (psoMap.TryGetValue(key, out uint pair))
