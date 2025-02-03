@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Numerics;
 
@@ -16,32 +17,46 @@ namespace AssetsImporter
     public static class AssimpImporter
     {
         private static readonly object mutex = new();
-        private static Scene scene = null;
 
-        public static void Add(string filePath, SceneData sceneData)
+        public static string[] Read(string fileName, GeometryImportSettings settings, string assetsFolder)
         {
-            scene ??= new(sceneData.Name);
-
             lock (mutex)
             {
-                var aScene = ReadFile(
-                    filePath,
-                    APostProcessSteps.Triangulate,
-                    [new AFBXConvertToMetersConfig(true)]);
+                List<string> files = [];
 
-                float unitScaleFactor = 1f;
-                if (aScene.Metadata.TryGetValue("UnitScaleFactor", out var scaleFactor))
+                var models = ReadScene(fileName, settings);
+                foreach (var model in models)
                 {
-                    unitScaleFactor = (float)scaleFactor.Data;
+                    // Process the scene data
+                    Geometry.ProcessScene(model, settings);
+
+                    // Pack the scene data (for editor)
+                    files.Add(Geometry.PackData(model, assetsFolder));
                 }
 
-                ReadScene(aScene, sceneData.Settings);
+                return [.. files];
             }
         }
-        public static void Import(SceneData sceneData)
+        public static void Import(string assetFilename, string contentFilename)
         {
-            Geometry.ProcessScene(scene, sceneData.Settings);
-            Geometry.PackForEngine(scene, sceneData);
+            string output = Path.GetFullPath(contentFilename);
+            if (File.Exists(output))
+            {
+                File.Delete(output);
+            }
+            string outputDir = Path.GetDirectoryName(output);
+            if (!Directory.Exists(outputDir))
+            {
+                Directory.CreateDirectory(outputDir);
+            }
+
+            // Read the packed data (to editor)
+            var d = GeometryToEngine.ReadData(assetFilename);
+
+            // Pack the editor data (for engine)
+            GeometryToEngine.PackForEngine(d, output);
+
+            Console.WriteLine("Asset imported successfully.");
         }
         private static AScene ReadFile(string filePath, APostProcessSteps ppSteps = APostProcessSteps.None, APropertyConfig[] configs = null)
         {
@@ -58,8 +73,21 @@ namespace AssetsImporter
 
             return importer.ImportFile(filePath, ppSteps);
         }
-        private static void ReadScene(AScene aScene, GeometryImportSettings settings)
+        private static Geometry.Model[] ReadScene(string fileName, GeometryImportSettings settings)
         {
+            var aScene = ReadFile(
+                fileName,
+                APostProcessSteps.Triangulate,
+                [new AFBXConvertToMetersConfig(true)]);
+
+            float unitScaleFactor = 1f;
+            if (aScene.Metadata.TryGetValue("UnitScaleFactor", out var scaleFactor))
+            {
+                unitScaleFactor = (float)scaleFactor.Data;
+            }
+
+            List<Geometry.Model> models = [];
+
             foreach (var aMesh in aScene.Meshes)
             {
                 // Get vertices
@@ -153,7 +181,7 @@ namespace AssetsImporter
                     uvSets.Add(uvs);
                 }
 
-                Mesh mesh = new()
+                Geometry.Mesh mesh = new()
                 {
                     Name = aMesh.Name,
 
@@ -164,24 +192,23 @@ namespace AssetsImporter
                     Tangents = [.. tangents],
                     UVSets = [.. uvSets],
                     MaterialIndices = [.. materialIndices],
+
+                    LodThreshold = -1f,
                 };
 
-                MeshLOD meshLOD = new()
+                Geometry.LODGroup lod = new()
                 {
                     Name = aMesh.Name,
                     Meshes = [mesh],
-                    Threshold = -1f,
                 };
 
-                LODGroup lod = new()
+                models.Add(new Geometry.Model(aMesh.Name)
                 {
-                    Name = aMesh.Name,
-                    LODs = [meshLOD]
-                };
-                lod.LODs[0].Meshes.Add(mesh);
-
-                scene.LODGroups.Add(lod);
+                    LODGroups = [lod],
+                });
             }
+
+            return [.. models];
         }
     }
 }

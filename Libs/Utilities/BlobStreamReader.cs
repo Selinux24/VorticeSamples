@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.InteropServices;
 
 namespace Utilities
@@ -41,6 +42,17 @@ namespace Utilities
             this.buffer = buffer;
             position = buffer;
         }
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="filename">Filename</param>
+        public BlobStreamReader(string filename)
+        {
+            byte[] bytes = File.ReadAllBytes(filename);
+            buffer = Marshal.AllocHGlobal(bytes.Length);
+            Marshal.Copy(bytes, 0, buffer, bytes.Length);
+            position = buffer;
+        }
 
         /// <summary>
         /// This method is intended to read primitive types (e.g. int, float, bool)
@@ -79,6 +91,15 @@ namespace Utilities
             Marshal.Copy(position, buffer, 0, length);
             position += length;
             return buffer;
+        }
+        /// <summary>
+        /// Reads a string of 'length' bytes and returns it.
+        /// </summary>
+        /// <param name="length">Length of the string</param>
+        public string ReadString(int length)
+        {
+            byte[] buffer = Read(length);
+            return System.Text.Encoding.UTF8.GetString(buffer);
         }
         /// <summary>
         /// Skips 'offset' bytes.

@@ -14,6 +14,43 @@ namespace ContentTools
     /// </summary>
     public static class Geometry
     {
+        public class Model(string name)
+        {
+            public string Name { get; set; } = name ?? $"model_{Guid.NewGuid()}";
+            public List<LODGroup> LODGroups { get; set; } = [];
+        }
+        public class LODGroup()
+        {
+            public string Name { get; set; }
+            public List<Mesh> Meshes { get; set; } = [];
+        }
+        public class Mesh()
+        {
+            // Initial data
+            public Vector3[] Positions { get; set; } = [];
+            public Vector3[] Normals { get; set; } = [];
+            public Vector4[] Tangents { get; set; } = [];
+            public Vector3[] Colors { get; set; } = [];
+            public Vector2[][] UVSets { get; set; } = [];
+            public int[] MaterialIndices { get; set; } = [];
+            public int[] MaterialUsed { get => MaterialIndices.Distinct().ToArray(); }
+
+            public uint[] RawIndices { get; set; } = [];
+
+            // Intermediate data
+            public List<Vertex> Vertices { get; set; } = [];
+            public List<uint> Indices { get; set; } = [];
+
+            // Output data
+            public string Name { get; set; }
+            public ElementsType ElementsType { get; set; }
+            public byte[] PositionBuffer { get; set; }
+            public byte[] ElementBuffer { get; set; }
+
+            public float LodThreshold { get; set; } = -1f;
+            public uint LodId { get; set; } = uint.MaxValue;
+        }
+
         private const float Epsilon = 1e-5f;
 
         private delegate void VertexProcessor(MemoryStream ms, Vertex vertex);
@@ -38,9 +75,9 @@ namespace ContentTools
             return processors;
         }
 
-        public static void ProcessScene(Scene scene, GeometryImportSettings settings)
+        public static void ProcessScene(Model scene, GeometryImportSettings settings)
         {
-            foreach (var lod in scene.LODGroups[0].LODs)
+            foreach (var lod in scene.LODGroups)
             {
                 foreach (var m in lod.Meshes)
                 {
@@ -265,23 +302,6 @@ namespace ContentTools
             return [.. idxRef];
         }
 
-        private static int GetVertexElementSize(ElementsType type)
-        {
-            return type switch
-            {
-                ElementsType.StaticNormal => StaticNormal.GetStride(),
-                ElementsType.StaticNormalTexture => StaticNormalTexture.GetStride(),
-                ElementsType.StaticColor => StaticColor.GetStride(),
-                ElementsType.Skeletal => Skeletal.GetStride(),
-                ElementsType.SkeletalColor => SkeletalColor.GetStride(),
-                ElementsType.SkeletalNormal => SkeletalNormal.GetStride(),
-                ElementsType.SkeletalNormalColor => SkeletalNormalColor.GetStride(),
-                ElementsType.SkeletalNormalTexture => SkeletalNormalTexture.GetStride(),
-                ElementsType.SkeletalNormalTextureColor => SkeletalNormalTextureColor.GetStride(),
-                _ => 0
-            };
-        }
-
         private static void PackVertices(Mesh m)
         {
             int numVertices = m.Vertices.Count;
@@ -297,7 +317,7 @@ namespace ContentTools
             }
             m.PositionBuffer = msPositionBuffer.ToArray();
 
-            int elementsCapacity = GetVertexElementSize(m.ElementsType) * numVertices;
+            int elementsCapacity = PackingHelper.GetVertexElementSize(m.ElementsType) * numVertices;
             using MemoryStream msElementsType = new(elementsCapacity);
 
             for (int i = 0; i < numVertices; i++)
@@ -308,50 +328,50 @@ namespace ContentTools
             m.ElementBuffer = msElementsType.ToArray();
         }
 
-        public static void PackForEditor(Scene scene, SceneData data)
+        public static string PackData(Model model, string assetsFolder)
         {
-            int sceneSize = GetSceneSizeForEditor(scene);
-            data.Buffer = Marshal.AllocHGlobal(sceneSize);
-            data.BufferSize = sceneSize;
+            int sceneSize = GetSceneSize(model);
+            IntPtr buffer = Marshal.AllocHGlobal(sceneSize);
 
-            BlobStreamWriter blob = new(data.Buffer, data.BufferSize);
+            BlobStreamWriter blob = new(buffer, sceneSize);
 
             // scene name
-            blob.Write(scene.Name);
+            blob.Write(model.Name);
 
             // number of LODs
-            blob.Write(scene.LODGroups[0].LODs.Count);
+            blob.Write(model.LODGroups.Count);
 
-            foreach (var lod in scene.LODGroups[0].LODs)
+            foreach (var lod in model.LODGroups)
             {
                 // LOD name
                 blob.Write(lod.Name);
 
-                // threshols
-                blob.Write(lod.Threshold);
-
                 // number of meshes in this LOD
                 blob.Write(lod.Meshes.Count);
 
-                var sizeOfSubmeshesPosition = blob.Position;
-                blob.Write(0);
-
                 foreach (var m in lod.Meshes)
                 {
-                    PackMeshForEditor(m, blob);
+                    PackMesh(m, blob);
                 }
-
-                var endOfSubmeshes = blob.Position;
-                var sizeOfSubmeshes = (int)(endOfSubmeshes - sizeOfSubmeshesPosition - sizeof(int));
-
-                blob.Position = sizeOfSubmeshesPosition;
-                blob.Write(sizeOfSubmeshes);
-                blob.Position = endOfSubmeshes;
             }
 
             Debug.Assert(sceneSize == blob.Offset);
+
+            string fileName = Path.Combine(assetsFolder, Path.ChangeExtension(model.Name, ".asset"));
+            if (!Directory.Exists(assetsFolder))
+            {
+                Directory.CreateDirectory(assetsFolder);
+            }
+            if (File.Exists(fileName))
+            {
+                File.Delete(fileName);
+            }
+
+            blob.SaveToFile(fileName);
+
+            return fileName;
         }
-        private static int GetSceneSizeForEditor(Scene scene)
+        private static int GetSceneSize(Model scene)
         {
             int size;
             int sceneNameLength = scene.Name.Length;
@@ -361,21 +381,18 @@ namespace ContentTools
                 sceneNameLength +           // room for scene name string
                 sizeof(int);                // number of LODs
 
-            foreach (var lod in scene.LODGroups[0].LODs)
+            foreach (var lod in scene.LODGroups)
             {
                 int lodSize;
                 int lodNameLength = lod.Name.Length;
 
                 lodSize =
-                    sizeof(int) +
-                    lodNameLength +         // LOD name length and room for LOD name string
-                    sizeof(float) +         // LOD threshold
-                    sizeof(int) +           // number of meshes in this LOD
-                    sizeof(int);            // size of submeshes
+                    sizeof(int) + lodNameLength +   // LOD name length and room for LOD name string
+                    sizeof(int);                    // number of meshes in this LOD
 
                 foreach (var m in lod.Meshes)
                 {
-                    lodSize += GetMeshSizeForEditor(m);
+                    lodSize += GetMeshSize(m);
                 }
 
                 size += lodSize;
@@ -383,7 +400,7 @@ namespace ContentTools
 
             return size;
         }
-        private static int GetMeshSizeForEditor(Mesh m)
+        private static int GetMeshSize(Mesh m)
         {
             int nameLength = m.Name.Length;
             int numVertices = m.Vertices.Count;
@@ -391,45 +408,54 @@ namespace ContentTools
             int positionBufferSize = m.PositionBuffer.Length;
             Debug.Assert(positionBufferSize == Marshal.SizeOf(typeof(Vector3)) * numVertices);
             int elementBufferSize = m.ElementBuffer.Length;
-            Debug.Assert(elementBufferSize == GetVertexElementSize(m.ElementsType) * numVertices);
+            Debug.Assert(elementBufferSize == PackingHelper.GetVertexElementSize(m.ElementsType) * numVertices);
             int indexSize = (numVertices < (1 << 16)) ? sizeof(ushort) : sizeof(uint);
             int indexBufferSize = indexSize * numIndices;
 
             int size =
                 sizeof(int) + nameLength +      // mesh name length and room for mesh name string
+                sizeof(uint) +                  // lod id
                 sizeof(int) +                   // vertex element size (vertex size excluding position element)
-                sizeof(int) +                   // number of vertices
-                sizeof(int) +                   // number of indices
                 sizeof(int) +                   // element type enumeration
-                sizeof(int) +                   // primitive topology
+                sizeof(int) +                   // number of vertices
+                sizeof(int) +                   // index size (16 bit or 32 bit)
+                sizeof(int) +                   // number of indices
+                sizeof(float) +                 // LOD threshold
                 positionBufferSize +            // room for vertex positions
                 elementBufferSize +             // room for vertex elements
                 indexBufferSize;                // room for indices
 
             return size;
         }
-        private static void PackMeshForEditor(Mesh m, BlobStreamWriter blob)
+        private static void PackMesh(Mesh m, BlobStreamWriter blob)
         {
             // mesh name
             blob.Write(m.Name);
 
+            // lod id
+            blob.Write(m.LodId);
+
             // elements size
-            int elementsSize = GetVertexElementSize(m.ElementsType);
+            int elementsSize = PackingHelper.GetVertexElementSize(m.ElementsType);
             blob.Write(elementsSize);
+
+            // elements type enumeration
+            blob.Write((uint)m.ElementsType);
 
             // number of vertices
             int numVertices = m.Vertices.Count;
             blob.Write(numVertices);
 
+            // index size (16 bit or 32 bit)
+            int indexSize = (numVertices < (1 << 16)) ? sizeof(ushort) : sizeof(uint);
+            blob.Write(indexSize);
+
             // number of indices
             int numIndices = m.Indices.Count;
             blob.Write(numIndices);
 
-            // elements type enumeration
-            blob.Write((uint)m.ElementsType);
-
-            // primitive topology
-            blob.Write((uint)m.PrimitiveTopology);
+            // LOD threshold
+            blob.Write(m.LodThreshold);
 
             // position buffer
             Debug.Assert(m.PositionBuffer.Length == Marshal.SizeOf(typeof(Vector3)) * numVertices);
@@ -439,148 +465,18 @@ namespace ContentTools
             Debug.Assert(m.ElementBuffer.Length == elementsSize * numVertices);
             blob.Write(m.ElementBuffer);
 
-            // index size (16 bit or 32 bit)
-            int indexSize = (numVertices < (1 << 16)) ? sizeof(ushort) : sizeof(uint);
-
             // index data
             int indexDataLenght = indexSize * numIndices;
             if (indexSize == (uint)sizeof(ushort))
             {
-                ushort[] data = m.Indices.Take(numIndices).Select(i => (ushort)i).ToArray();
+                ushort[] data = [.. m.Indices.Select(i => (ushort)i)];
                 blob.Write(data);
             }
             else
             {
-                var data = m.Indices.ToArray();
+                uint[] data = [.. m.Indices];
                 blob.Write(data);
             }
         }
-
-        public static void PackForEngine(Scene scene, SceneData data)
-        {
-            int sceneSize = GetSceneSizeForEngine(scene);
-            data.Buffer = Marshal.AllocHGlobal(sceneSize);
-            data.BufferSize = sceneSize;
-
-            BlobStreamWriter blob = new(data.Buffer, data.BufferSize);
-
-            // number of LODs
-            blob.Write(scene.LODGroups[0].LODs.Count);
-
-            foreach (var lod in scene.LODGroups[0].LODs)
-            {
-                // threshols
-                blob.Write(lod.Threshold);
-
-                // number of meshes in this LOD
-                blob.Write(lod.Meshes.Count);
-
-                var sizeOfSubmeshesPosition = blob.Position;
-                blob.Write(0);
-
-                foreach (var m in lod.Meshes)
-                {
-                    PackMeshForEngine(m, blob);
-                }
-
-                var endOfSubmeshes = blob.Position;
-                var sizeOfSubmeshes = (int)(endOfSubmeshes - sizeOfSubmeshesPosition - sizeof(int));
-
-                blob.Position = sizeOfSubmeshesPosition;
-                blob.Write(sizeOfSubmeshes);
-                blob.Position = endOfSubmeshes;
-            }
-
-            Debug.Assert(sceneSize == blob.Offset);
-        }
-        private static int GetSceneSizeForEngine(Scene scene)
-        {
-            int size = sizeof(int); // number of LODs
-
-            foreach (var lod in scene.LODGroups[0].LODs)
-            {
-                int lodSize =
-                        sizeof(float) +         // LOD threshold
-                        sizeof(int) +           // number of meshes in this LOD
-                        sizeof(int);            // size of submeshes
-
-                foreach (var m in lod.Meshes)
-                {
-                    lodSize += GetMeshSizeForEngine(m);
-                }
-
-                size += lodSize;
-            }
-
-            return size;
-        }
-        private static int GetMeshSizeForEngine(Mesh m)
-        {
-            int numVertices = m.Vertices.Count;
-            int numIndices = m.Indices.Count;
-            int positionBufferSize = m.PositionBuffer.Length;
-            Debug.Assert(positionBufferSize == Marshal.SizeOf(typeof(Vector3)) * numVertices);
-            int elementBufferSize = m.ElementBuffer.Length;
-            Debug.Assert(elementBufferSize == GetVertexElementSize(m.ElementsType) * numVertices);
-            int indexSize = (numVertices < (1 << 16)) ? sizeof(ushort) : sizeof(uint);
-            int indexBufferSize = indexSize * numIndices;
-
-            int size =
-                sizeof(int) +                               // vertex element size (vertex size excluding position element)
-                sizeof(int) +                               // number of vertices
-                sizeof(int) +                               // number of indices
-                sizeof(int) +                               // element type enumeration
-                sizeof(int) +                               // primitive topology
-                positionBufferSize +                        // room for vertex positions
-                elementBufferSize +                         // room for vertex elements
-                indexBufferSize;                            // room for indices
-
-            return size;
-        }
-        private static void PackMeshForEngine(Mesh m, BlobStreamWriter blob)
-        {
-            // elements size
-            int elementsSize = GetVertexElementSize(m.ElementsType);
-            blob.Write(elementsSize);
-
-            // number of vertices
-            int numVertices = m.Vertices.Count;
-            blob.Write(numVertices);
-
-            // number of indices
-            int numIndices = m.Indices.Count;
-            blob.Write(numIndices);
-
-            // elements type enumeration
-            blob.Write((uint)m.ElementsType);
-
-            // primitive topology
-            blob.Write((uint)m.PrimitiveTopology);
-
-            // position buffer
-            Debug.Assert(m.PositionBuffer.Length == Marshal.SizeOf(typeof(Vector3)) * numVertices);
-            blob.Write(m.PositionBuffer);
-
-            // element buffer
-            Debug.Assert(m.ElementBuffer.Length == elementsSize * numVertices);
-            blob.Write(m.ElementBuffer);
-
-            // index size (16 bit or 32 bit)
-            int indexSize = (numVertices < (1 << 16)) ? sizeof(ushort) : sizeof(uint);
-
-            // index data
-            int indexDataLenght = indexSize * numIndices;
-            if (indexSize == (uint)sizeof(ushort))
-            {
-                ushort[] data = m.Indices.Take(numIndices).Select(i => (ushort)i).ToArray();
-                blob.Write(data);
-            }
-            else
-            {
-                var data = m.Indices.ToArray();
-                blob.Write(data);
-            }
-        }
-
     }
 }

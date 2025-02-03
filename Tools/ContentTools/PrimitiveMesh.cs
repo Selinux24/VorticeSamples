@@ -1,11 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Numerics;
 
 namespace ContentTools
 {
+    using LODGroup = Geometry.LODGroup;
+    using Mesh = Geometry.Mesh;
+    using Model = Geometry.Model;
+
     public static class PrimitiveMesh
     {
         private static readonly PrimitiveMeshCreator[] Creators =
@@ -18,10 +23,9 @@ namespace ContentTools
             CreateCapsule
         ];
 
-        private static void CreatePlane(Scene scene, PrimitiveInitInfo info)
+        private static void CreatePlane(Model scene, PrimitiveInitInfo info)
         {
-            var meshLOD = new MeshLOD { Name = "plane", Threshold = -1f, Meshes = [CreatePlane(info)] };
-            var lod = new LODGroup { Name = "plane", LODs = [meshLOD] };
+            var lod = new LODGroup { Name = "plane", Meshes = [CreatePlane(info)] };
             scene.LODGroups.Add(lod);
         }
         private static Mesh CreatePlane(PrimitiveInitInfo info, int horizontalIndex = 0, int verticalIndex = 2, bool flipWinding = false, Vector3 offset = default, Vector2 uRange = default, Vector2 vRange = default)
@@ -107,14 +111,13 @@ namespace ContentTools
             return mesh;
         }
 
-        private static void CreateCube(Scene scene, PrimitiveInitInfo info)
+        private static void CreateCube(Model scene, PrimitiveInitInfo info)
         {
         }
 
-        private static void CreateUvSphere(Scene scene, PrimitiveInitInfo info)
+        private static void CreateUvSphere(Model scene, PrimitiveInitInfo info)
         {
-            var meshLOD = new MeshLOD { Name = "uv-sphere", Threshold = -1f, Meshes = [CreateUvSphere(info)] };
-            var lod = new LODGroup { Name = "uv-sphere", LODs = [meshLOD] };
+            var lod = new LODGroup { Name = "uv-sphere", Meshes = [CreateUvSphere(info)] };
             scene.LODGroups.Add(lod);
         }
         private static Mesh CreateUvSphere(PrimitiveInitInfo info)
@@ -169,29 +172,29 @@ namespace ContentTools
             return m;
         }
 
-        private static void CreateIcoSphere(Scene scene, PrimitiveInitInfo info)
+        private static void CreateIcoSphere(Model scene, PrimitiveInitInfo info)
         {
         }
 
-        private static void CreateCylinder(Scene scene, PrimitiveInitInfo info)
+        private static void CreateCylinder(Model scene, PrimitiveInitInfo info)
         {
         }
 
-        private static void CreateCapsule(Scene scene, PrimitiveInitInfo info)
+        private static void CreateCapsule(Model scene, PrimitiveInitInfo info)
         {
         }
 
-        public static void CreatePrimitiveMesh(SceneData data, PrimitiveInitInfo info)
+        public static void CreatePrimitiveMesh(GeometryImportSettings settings, PrimitiveInitInfo info)
         {
-            Debug.Assert(data != null && info != null);
+            Debug.Assert(settings != null && info != null);
             Debug.Assert(info.Type < PrimitiveMeshType.Count);
 
-            var scene = new Scene("PrimitiveMesh");
+            var scene = new Model("PrimitiveMesh");
             Creators[(int)info.Type](scene, info);
 
-            data.Settings.CalculateNormals = true;
-            Geometry.ProcessScene(scene, data.Settings);
-            Geometry.PackForEditor(scene, data);
+            settings.CalculateNormals = true;
+            Geometry.ProcessScene(scene, settings);
+            Geometry.PackData(scene, Path.GetRandomFileName());
         }
     }
 }

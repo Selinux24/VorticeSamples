@@ -1,5 +1,4 @@
 ﻿using AssetsImporter;
-using ContentTools;
 using Direct3D12;
 using Direct3D12.Shaders;
 using DX12Windows.Content;
@@ -24,14 +23,13 @@ namespace DX12Windows
         private const string shadersSourceDir = "../../../../../Libs/Direct3D12/Shaders/";
         private const string shadersIncludeDir = "../../../../../Libs/Direct3D12/Shaders/";
         private const string shadersOutputPath = "./Content/engineShaders.bin";
-
-        private const string testModelFile = "./Content/Model.model";
+        private const string assetsFolder = "./Assets";
+        private const string outputsFolder = "./Content";
 
         private const string modelToyTank = "../../../../../Assets/ToyTank.fbx";
-        private const string modelToyTankOutput = "./Content/ToyTank.model";
-
         private const string modelPrimalLab = "../../../../../Assets/LabScene.fbx";
-        private const string modelPrimalLabOutput = "./Content/LabScene.model";
+
+        private const string testModelFile = "./Content/Model.model";
 
         private const uint WM_CAPTURECHANGED = 0x0215;
 
@@ -54,11 +52,9 @@ namespace DX12Windows
         {
             InitializeApp();
 
-            //ImportAssets(modelPrimalLab, modelPrimalLabOutput);
-            //CreateRenderItem(modelPrimalLabOutput, 1);
+            //ImportAssets(modelPrimalLab, assetsFolder, outputsFolder);
 
-            //ImportAssets(modelToyTank, modelToyTankOutput);
-            //CreateRenderItem(modelToyTankOutput, 2);
+            //ImportAssets(modelToyTank, assetsFolder, outputsFolder);
 
             CreateRenderItem(testModelFile, 5);
 
@@ -84,17 +80,26 @@ namespace DX12Windows
             app = HelloWorldApp.Start<Win32PlatformFactory, D3D12GraphicsPlatformFactory>();
             app.OnShutdown += AppShutdown;
         }
-        static void ImportAssets(string modelPath, string output)
+        static void ImportAssets(string modelPath, string assetsFolder, string outputsFolder)
         {
+            string output = Path.Combine(outputsFolder, Path.ChangeExtension(Path.GetFileName(modelPath), ".model"));
             if (File.Exists(output))
             {
                 File.Delete(output);
             }
 
-            SceneData sceneData = new("Scene");
-            AssimpImporter.Add(modelPath, sceneData);
-            AssimpImporter.Import(sceneData);
-            sceneData.SaveToFile(output);
+            var assets = AssimpImporter.Read(modelPath, new(), assetsFolder);
+
+            foreach (string assetFilename in assets)
+            {
+                if (string.IsNullOrEmpty(assetFilename))
+                {
+                    continue;
+                }
+
+                AssimpImporter.Import(assetFilename, output);
+                CreateRenderItem(output, 1);
+            }
         }
         static Entity CreateOneGameEntity(Vector3 position, Vector3 rotation, string scriptName)
         {

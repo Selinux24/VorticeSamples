@@ -1,57 +1,59 @@
 ﻿using ContentTools;
 using System;
+using System.Collections.Generic;
 using System.IO;
 
 namespace AssetsImporter
 {
     internal class Program
     {
-        private const string sceneName = "Test Scene";
         private const string modelM24Path = "../../../../../Assets/M24.dae";
         private const string modelHumveePath = "../../../../../Assets/Humvee.obj";
         private const string modelToyTankPath = "../../../../../Assets/ToyTank.fbx";
-        private const string outputPath = "./Assets/Scene.asset";
+        private const string modelLabScenePath = "../../../../../Assets/LabScene.fbx";
+        private const string assetsFolder = "./Assets";
+        private const string modelsFolder = "./Models";
 
         static void Main()
         {
-            SceneData sceneData = new(sceneName);
+            GeometryImportSettings settings = new();
 
-            AddModel(modelM24Path, sceneData);
-            AddModel(modelHumveePath, sceneData);
-            AddModel(modelToyTankPath, sceneData);
-            ExportAssetsFile(outputPath, sceneData);
+            List<string> files = [];
+
+            files.AddRange(ImportModel(modelM24Path, settings, assetsFolder));
+            files.AddRange(ImportModel(modelHumveePath, settings, assetsFolder));
+            files.AddRange(ImportModel(modelToyTankPath, settings, assetsFolder));
+            files.AddRange(ImportModel(modelLabScenePath, settings, assetsFolder));
+
+            foreach (string assetFilename in files)
+            {
+                if (string.IsNullOrEmpty(assetFilename))
+                {
+                    continue;
+                }
+
+                ExportAssetsFile(assetFilename);
+            }
             Console.ReadKey();
         }
 
-        private static void AddModel(string modelPath, SceneData sceneData)
+        private static string[] ImportModel(string modelPath, GeometryImportSettings settings, string assetsFolder)
         {
             string path = Path.GetFullPath(modelPath);
             if (!File.Exists(path))
             {
                 Console.WriteLine("Asset file not found");
                 Console.ReadKey();
-                return;
+                return null;
             }
 
-            AssimpImporter.Add(path, sceneData);
+            return AssimpImporter.Read(path, settings, assetsFolder);
         }
-        private static void ExportAssetsFile(string assetFilename, SceneData sceneData)
+        private static void ExportAssetsFile(string assetFilename)
         {
-            AssimpImporter.Import(sceneData);
+            string contentFilename = Path.Combine(modelsFolder, Path.ChangeExtension(Path.GetFileName(assetFilename), ".model"));
 
-            string output = Path.GetFullPath(assetFilename);
-            if (File.Exists(output))
-            {
-                File.Delete(output);
-            }
-            string outputDir = Path.GetDirectoryName(output);
-            if (!Directory.Exists(outputDir))
-            {
-                Directory.CreateDirectory(outputDir);
-            }
-            sceneData.SaveToFile(output);
-
-            Console.WriteLine(sceneData.BufferSize > 0 ? $"Asset imported successfully. {sceneData.BufferSize} bytes" : "Asset import failed");
+            AssimpImporter.Import(assetFilename, contentFilename);
         }
     }
 }

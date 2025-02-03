@@ -41,6 +41,23 @@ namespace ContentTools
 
             return tSign;
         }
+
+        public static int GetVertexElementSize(ElementsType type)
+        {
+            return type switch
+            {
+                ElementsType.StaticNormal => StaticNormal.GetStride(),
+                ElementsType.StaticNormalTexture => StaticNormalTexture.GetStride(),
+                ElementsType.StaticColor => StaticColor.GetStride(),
+                ElementsType.Skeletal => Skeletal.GetStride(),
+                ElementsType.SkeletalColor => SkeletalColor.GetStride(),
+                ElementsType.SkeletalNormal => SkeletalNormal.GetStride(),
+                ElementsType.SkeletalNormalColor => SkeletalNormalColor.GetStride(),
+                ElementsType.SkeletalNormalTexture => SkeletalNormalTexture.GetStride(),
+                ElementsType.SkeletalNormalTextureColor => SkeletalNormalTextureColor.GetStride(),
+                _ => 0
+            };
+        }
     }
 
     [StructLayout(LayoutKind.Explicit)]
