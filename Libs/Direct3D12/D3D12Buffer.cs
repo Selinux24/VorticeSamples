@@ -35,6 +35,9 @@ namespace Direct3D12
             D3D12Helpers.NameD3D12Object(buffer, size, "D3D12 Buffer - size");
         }
 
+        public D3D12Buffer()
+        {
+        }
         public D3D12Buffer(D3D12Buffer o)
         {
             buffer = o.buffer;

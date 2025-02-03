@@ -34,7 +34,7 @@ namespace Utilities
         /// <summary>
         /// Current position
         /// </summary>
-        public IntPtr Position => position;
+        public IntPtr Position { get => position; set => position = value; }
         /// <summary>
         /// Current offset
         /// </summary>

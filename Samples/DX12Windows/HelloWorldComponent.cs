@@ -54,6 +54,7 @@ namespace DX12Windows
             frameInfo.RenderItemIds = items;
             frameInfo.RenderItemCount = (uint)items.Length;
             frameInfo.Thresholds = thresholds;
+            frameInfo.LightSetKey = 0;
         }
     }
 }

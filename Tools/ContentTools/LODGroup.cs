@@ -5,6 +5,6 @@ namespace ContentTools
     public class LODGroup()
     {
         public string Name { get; set; }
-        public List<Mesh> Meshes { get; set; } = [];
+        public List<MeshLOD> LODs { get; set; } = [];
     }
 }

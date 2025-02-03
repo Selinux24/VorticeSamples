@@ -9,9 +9,9 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading;
 
-namespace DX12Windows
+namespace DX12Windows.Content
 {
-    class HelloWorldRenderItem
+    class ModelRenderItem
     {
         private const string shadersSourcePath = "./Shaders/";
         private const string shadersIncludeDir = "../../../../../Libs/Direct3D12/Shaders/";
@@ -23,9 +23,11 @@ namespace DX12Windows
 
         private static readonly Dictionary<uint, uint> renderItemEntityMap = [];
 
+        public static string ModelPath { get; set; }
+
         private static void LoadModel()
         {
-            string modelPath = Path.GetFullPath("./Content/Model.model");
+            string modelPath = Path.GetFullPath(ModelPath);
             using var file = new MemoryStream(File.ReadAllBytes(modelPath));
 
             modelId = ContentToEngine.CreateResource(file, AssetTypes.Mesh);
@@ -87,7 +89,7 @@ namespace DX12Windows
             mtlId = ContentToEngine.CreateResource(info, AssetTypes.Material);
         }
 
-        public static uint CreateRenderItem(uint entityId)
+        public static uint CreateRenderItem(uint entityId, uint numMaterials)
         {
             // load a model, pretend it belongs to entity_id
             var _1 = new Thread(LoadModel);
@@ -103,7 +105,11 @@ namespace DX12Windows
             _2.Join();
             // add a render item using the model and its materials.
             CreateMaterial();
-            uint[] materials = [mtlId, mtlId, mtlId, mtlId, mtlId];
+            uint[] materials = new uint[numMaterials];
+            for (uint i = 0; i < numMaterials; i++)
+            {
+                materials[i] = mtlId;
+            }
 
             // TODO: add add_render_item in renderer.
             uint itemId = Direct3D12.Content.RenderItem.Add(entityId, modelId, materials);

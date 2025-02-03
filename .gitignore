@@ -364,3 +364,4 @@ FodyWeavers.xsd
 
 # Add Assets folder with all it's content, obj files too
 !Assets/**/*
+/Assets/LabScene.fbx

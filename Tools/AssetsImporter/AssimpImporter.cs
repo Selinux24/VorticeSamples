@@ -1,5 +1,6 @@
 ﻿using ContentTools;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
@@ -12,7 +13,7 @@ namespace AssetsImporter
     using APropertyConfig = Assimp.Configs.PropertyConfig;
     using AScene = Assimp.Scene;
 
-    static class AssimpImporter
+    public static class AssimpImporter
     {
         private static readonly object mutex = new();
         private static Scene scene = null;
@@ -23,22 +24,24 @@ namespace AssetsImporter
 
             lock (mutex)
             {
-                APostProcessSteps steps =
-                    APostProcessSteps.ValidateDataStructure |
-                    APostProcessSteps.GlobalScale |
-                    APostProcessSteps.Triangulate |
-                    APostProcessSteps.GenerateNormals |
-                    APostProcessSteps.CalculateTangentSpace;
-                var scaleConfig = new AFBXConvertToMetersConfig(true);
+                var aScene = ReadFile(
+                    filePath,
+                    APostProcessSteps.Triangulate,
+                    [new AFBXConvertToMetersConfig(true)]);
 
-                var aScene = ReadFile(filePath, steps, [scaleConfig]);
+                float unitScaleFactor = 1f;
+                if (aScene.Metadata.TryGetValue("UnitScaleFactor", out var scaleFactor))
+                {
+                    unitScaleFactor = (float)scaleFactor.Data;
+                }
+
                 ReadScene(aScene, sceneData.Settings);
             }
         }
         public static void Import(SceneData sceneData)
         {
             Geometry.ProcessScene(scene, sceneData.Settings);
-            Geometry.PackData(scene, sceneData);
+            Geometry.PackForEngine(scene, sceneData);
         }
         private static AScene ReadFile(string filePath, APostProcessSteps ppSteps = APostProcessSteps.None, APropertyConfig[] configs = null)
         {
@@ -59,30 +62,20 @@ namespace AssetsImporter
         {
             foreach (var aMesh in aScene.Meshes)
             {
-                Mesh mesh = new()
-                {
-                    LODId = 0,
-                    LODThreshold = -1f,
-                    Name = aMesh.Name
-                };
-
-                LODGroup lod = new()
-                {
-                    Name = aMesh.Name
-                };
-                lod.Meshes.Add(mesh);
-
-                scene.LODGroups.Add(lod);
-
                 // Get vertices
                 if (!aMesh.HasVertices)
                 {
                     continue;
                 }
+
+                List<Vector3> positions = [];
+                List<Vector3> normals = [];
+                List<Vector4> tangents = [];
+                List<Vector2[]> uvSets = [];
+                List<int> materialIndices = [];
+
                 Vector3[] vertices = [.. aMesh.Vertices];
                 uint[] indices = [.. aMesh.GetUnsignedIndices()];
-                uint[] vertexRef = new uint[vertices.Length];
-
                 if (indices.Length == 0)
                 {
                     Debug.Assert(vertices.Length % 3 == 0);
@@ -94,17 +87,20 @@ namespace AssetsImporter
                         indices[i] = i;
                     }
                 }
+                Debug.Assert(indices.Max() == vertices.Length - 1);
 
+                uint[] rawIndices = new uint[indices.Length];
                 for (int i = 0; i < indices.Length; i++)
                 {
-                    mesh.RawIndices.Add(uint.MaxValue);
+                    rawIndices[i] = uint.MaxValue;
                 }
+                uint[] vertexRef = new uint[vertices.Length];
                 for (int i = 0; i < vertices.Length; i++)
                 {
                     vertexRef[i] = uint.MaxValue;
                 }
 
-                for (int i = 0; i < indices.Length; i++)
+                for (uint i = 0; i < indices.LongLength; i++)
                 {
                     uint vIdx = indices[i];
 
@@ -112,26 +108,26 @@ namespace AssetsImporter
                     // If not, add the vertex and a new index.
                     if (vertexRef[vIdx] != uint.MaxValue)
                     {
-                        mesh.RawIndices[i] = vertexRef[vIdx];
+                        rawIndices[i] = vertexRef[vIdx];
                     }
                     else
                     {
                         var v = vertices[vIdx];
-                        mesh.RawIndices[i] = (uint)mesh.Positions.Count;
-                        vertexRef[vIdx] = mesh.RawIndices[i];
-                        mesh.Positions.Add(v);
+                        rawIndices[i] = (uint)positions.Count;
+                        vertexRef[vIdx] = rawIndices[i];
+                        positions.Add(v);
                     }
                 }
                 Debug.Assert(vertices.Length > 0 && indices.Length > 0);
                 Debug.Assert(indices.Length % 3 == 0);
 
-                mesh.MaterialIndices.Add(aMesh.MaterialIndex);
+                materialIndices.Add(aMesh.MaterialIndex);
 
                 if (settings.CalculateNormals)
                 {
                     if (aMesh.HasNormals)
                     {
-                        mesh.Normals.AddRange(aMesh.Normals);
+                        normals.AddRange(aMesh.Normals);
                     }
                     else
                     {
@@ -143,7 +139,7 @@ namespace AssetsImporter
                 {
                     if (aMesh.HasTangentBasis)
                     {
-                        mesh.Tangents.AddRange(aMesh.Tangents.Select(t => new Vector4(t, 0f)));
+                        tangents.AddRange(aMesh.Tangents.Select(t => new Vector4(t, 0f)));
                     }
                     else
                     {
@@ -151,11 +147,40 @@ namespace AssetsImporter
                     }
                 }
 
-                for (int i = 0; i < aMesh.TextureCoordinateChannelCount; i++)
+                for (uint i = 0; i < aMesh.TextureCoordinateChannelCount; i++)
                 {
                     Vector2[] uvs = [.. aMesh.TextureCoordinateChannels[i].Select(uv => new Vector2(uv.X, uv.Y))];
-                    mesh.UVSets.Add(new(uvs));
+                    uvSets.Add(uvs);
                 }
+
+                Mesh mesh = new()
+                {
+                    Name = aMesh.Name,
+
+                    Positions = [.. positions],
+                    RawIndices = [.. rawIndices],
+
+                    Normals = [.. normals],
+                    Tangents = [.. tangents],
+                    UVSets = [.. uvSets],
+                    MaterialIndices = [.. materialIndices],
+                };
+
+                MeshLOD meshLOD = new()
+                {
+                    Name = aMesh.Name,
+                    Meshes = [mesh],
+                    Threshold = -1f,
+                };
+
+                LODGroup lod = new()
+                {
+                    Name = aMesh.Name,
+                    LODs = [meshLOD]
+                };
+                lod.LODs[0].Meshes.Add(mesh);
+
+                scene.LODGroups.Add(lod);
             }
         }
     }

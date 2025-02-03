@@ -29,7 +29,6 @@ namespace Direct3D12
         private PresentFlags presentFlags = 0;
         private Viewport viewport;
         private RectI scissorRect;
-        private Format format = DefaultBackBufferFormat;
 
         /// <summary>
         /// Gets the width of the surface.
@@ -115,7 +114,7 @@ namespace Direct3D12
         /// <param name="factory">Swap chain factory</param>
         /// <param name="cmdQueue">Command queue</param>
         /// <param name="format">Swap chain format</param>
-        public void CreateSwapChain(IDXGIFactory7 factory, ID3D12CommandQueue cmdQueue, Format format = DefaultBackBufferFormat)
+        public void CreateSwapChain(IDXGIFactory7 factory, ID3D12CommandQueue cmdQueue)
         {
             Debug.Assert(factory != null && cmdQueue != null);
             Release();
@@ -127,15 +126,13 @@ namespace Direct3D12
                 presentFlags = PresentFlags.AllowTearing;
             }
 
-            this.format = format;
-
             SwapChainDescription1 desc = new()
             {
                 AlphaMode = AlphaMode.Unspecified,
                 BufferCount = frameBufferCount,
                 BufferUsage = Usage.RenderTargetOutput,
                 Flags = allowTearing != 0 ? SwapChainFlags.AllowTearing : 0,
-                Format = ToNonSrgb(format),
+                Format = ToNonSrgb(DefaultBackBufferFormat),
                 Height = window.Height,
                 Width = window.Width,
                 Scaling = Scaling.Stretch,
@@ -171,7 +168,7 @@ namespace Direct3D12
                 swapChain.GetBuffer(i, out renderTargetData[i].Resource);
                 RenderTargetViewDescription rtvdesc = new()
                 {
-                    Format = format,
+                    Format = DefaultBackBufferFormat,
                     ViewDimension = RenderTargetViewDimension.Texture2D
                 };
                 D3D12Graphics.Device.CreateRenderTargetView(renderTargetData[i].Resource, rtvdesc, renderTargetData[i].Rtv.Cpu);

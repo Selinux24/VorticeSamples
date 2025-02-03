@@ -385,6 +385,7 @@ namespace Direct3D12
                     currentRootSignature = frameCache.RootSignatures[i];
                     cmdList.SetGraphicsRootSignature(currentRootSignature);
                     cmdList.SetGraphicsRootConstantBufferView((uint)OpaqueRootParameter.GlobalShaderData, d3d12Info.GlobalShaderData);
+                    cmdList.SetGraphicsRootShaderResourceView((uint)OpaqueRootParameter.DirectionalLights, D3D12Light.NonCullableLightBuffer(d3d12Info.FrameIndex));
                 }
 
                 if (currentPipelineState != frameCache.GPassPipelineStates[i])

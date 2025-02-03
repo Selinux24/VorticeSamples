@@ -13,11 +13,12 @@ namespace Direct3D12.Shaders
         public Matrix4x4 InvViewProjection;
 
         public Vector3 CameraPosition;
-        public uint ViewWidth;
+        public float ViewWidth;
 
         public Vector3 CameraDirection;
-        public uint ViewHeight;
+        public float ViewHeight;
 
+        public uint NumDirectionalLights;
         public float DeltaTime;
     }
 }

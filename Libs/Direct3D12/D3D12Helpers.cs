@@ -2,7 +2,6 @@
 global using D3D12GraphicsCommandList = Vortice.Direct3D12.ID3D12GraphicsCommandList6;
 global using DXGIAdapter = Vortice.DXGI.IDXGIAdapter4;
 global using DXGIFactory = Vortice.DXGI.IDXGIFactory7;
-using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Vortice.Direct3D12;

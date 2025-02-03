@@ -1,9 +1,12 @@
-﻿using Direct3D12;
+﻿using AssetsImporter;
+using ContentTools;
+using Direct3D12;
 using Direct3D12.Shaders;
+using DX12Windows.Content;
+using DX12Windows.Scripts;
 using PrimalLike;
 using PrimalLike.Common;
 using PrimalLike.Components;
-using PrimalLike.Content;
 using PrimalLike.EngineAPI;
 using ShaderCompiler;
 using System;
@@ -21,7 +24,15 @@ namespace DX12Windows
         private const string shadersSourceDir = "../../../../../Libs/Direct3D12/Shaders/";
         private const string shadersIncludeDir = "../../../../../Libs/Direct3D12/Shaders/";
         private const string shadersOutputPath = "./Content/engineShaders.bin";
+
         private const string testModelFile = "./Content/Model.model";
+
+        private const string modelToyTank = "../../../../../Assets/ToyTank.fbx";
+        private const string modelToyTankOutput = "./Content/ToyTank.model";
+
+        private const string modelPrimalLab = "../../../../../Assets/LabScene.fbx";
+        private const string modelPrimalLabOutput = "./Content/LabScene.model";
+
         private const uint WM_CAPTURECHANGED = 0x0215;
 
         private static readonly EngineShaderInfo[] engineShaderFiles =
@@ -33,7 +44,6 @@ namespace DX12Windows
 
         private static HelloWorldApp app;
         private static HelloWorldComponent component;
-        private static uint modelId;
         private static uint itemId;
 
         private static readonly ulong leftSet = 0;
@@ -44,8 +54,14 @@ namespace DX12Windows
         {
             InitializeApp();
 
-            LoadTestModel();
-            CreateRenderItem();
+            //ImportAssets(modelPrimalLab, modelPrimalLabOutput);
+            //CreateRenderItem(modelPrimalLabOutput, 1);
+
+            //ImportAssets(modelToyTank, modelToyTankOutput);
+            //CreateRenderItem(modelToyTankOutput, 2);
+
+            CreateRenderItem(testModelFile, 5);
+
             CreateWindow();
 
             GenerateLights();
@@ -55,7 +71,7 @@ namespace DX12Windows
 
         static void InitializeApp()
         {
-            if (!Application.RegisterScript<HelloWorldScript>())
+            if (!Application.RegisterScript<RotatorScript>())
             {
                 Console.WriteLine("Failed to register TestScript");
             }
@@ -68,10 +84,17 @@ namespace DX12Windows
             app = HelloWorldApp.Start<Win32PlatformFactory, D3D12GraphicsPlatformFactory>();
             app.OnShutdown += AppShutdown;
         }
-        static void LoadTestModel()
+        static void ImportAssets(string modelPath, string output)
         {
-            using var file = new MemoryStream(File.ReadAllBytes(testModelFile));
-            modelId = ContentToEngine.CreateResource(file, AssetTypes.Mesh);
+            if (File.Exists(output))
+            {
+                File.Delete(output);
+            }
+
+            SceneData sceneData = new("Scene");
+            AssimpImporter.Add(modelPath, sceneData);
+            AssimpImporter.Import(sceneData);
+            sceneData.SaveToFile(output);
         }
         static Entity CreateOneGameEntity(Vector3 position, Vector3 rotation, string scriptName)
         {
@@ -97,9 +120,11 @@ namespace DX12Windows
             Debug.Assert(ntt.IsValid);
             return ntt;
         }
-        static void CreateRenderItem()
+        static void CreateRenderItem(string path, uint numMaterials)
         {
-            itemId = HelloWorldRenderItem.CreateRenderItem(CreateOneGameEntity(Vector3.Zero, Vector3.Zero, nameof(HelloWorldScript)).Id);
+            ModelRenderItem.ModelPath = path;
+            uint entityId = CreateOneGameEntity(Vector3.Zero, Vector3.Zero, nameof(RotatorScript)).Id;
+            itemId = ModelRenderItem.CreateRenderItem(entityId, numMaterials);
         }
         static void CreateWindow()
         {
@@ -189,12 +214,7 @@ namespace DX12Windows
 
         static void AppShutdown(object sender, EventArgs e)
         {
-            HelloWorldRenderItem.DestroyRenderItem(itemId);
-
-            if (IdDetail.IsValid(modelId))
-            {
-                ContentToEngine.DestroyResource(modelId, AssetTypes.Mesh);
-            }
+            ModelRenderItem.DestroyRenderItem(itemId);
 
             Application.RemoveRenderComponent(component);
 

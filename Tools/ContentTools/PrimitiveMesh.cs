@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Numerics;
 
 namespace ContentTools
@@ -19,8 +20,8 @@ namespace ContentTools
 
         private static void CreatePlane(Scene scene, PrimitiveInitInfo info)
         {
-            var lod = new LODGroup { Name = "plane" };
-            lod.Meshes.Add(CreatePlane(info));
+            var meshLOD = new MeshLOD { Name = "plane", Threshold = -1f, Meshes = [CreatePlane(info)] };
+            var lod = new LODGroup { Name = "plane", LODs = [meshLOD] };
             scene.LODGroups.Add(lod);
         }
         private static Mesh CreatePlane(PrimitiveInitInfo info, int horizontalIndex = 0, int verticalIndex = 2, bool flipWinding = false, Vector3 offset = default, Vector2 uRange = default, Vector2 vRange = default)
@@ -39,7 +40,9 @@ namespace ContentTools
             float uStep = (uRange.Y - uRange.X) / horizontalCount;
             float vStep = (vRange.Y - vRange.X) / verticalCount;
 
-            var mesh = new Mesh();
+            var positions = new List<Vector3>();
+            var rawIndices = new List<uint>();
+            var uvSets = new List<List<Vector2>>();
             var uvs = new List<Vector2>();
 
             for (uint j = 0; j <= verticalCount; ++j)
@@ -50,7 +53,7 @@ namespace ContentTools
                     var asArray = new[] { position.X, position.Y, position.Z };
                     asArray[horizontalIndex] += i * horizontalStep;
                     asArray[verticalIndex] += j * verticalStep;
-                    mesh.Positions.Add(new Vector3(asArray[0] * info.Size.X, asArray[1] * info.Size.Y, asArray[2] * info.Size.Z));
+                    positions.Add(new Vector3(asArray[0] * info.Size.X, asArray[1] * info.Size.Y, asArray[2] * info.Size.Z));
 
                     var uv = new Vector2(uRange.X, 1f - vRange.X);
                     uv.X += i * uStep;
@@ -59,7 +62,7 @@ namespace ContentTools
                 }
             }
 
-            Debug.Assert(mesh.Positions.Count == (horizontalCount + 1) * (verticalCount + 1));
+            Debug.Assert(positions.Count == (horizontalCount + 1) * (verticalCount + 1));
 
             uint rowLength = horizontalCount + 1;
             for (uint j = 0; j < verticalCount; ++j)
@@ -74,24 +77,32 @@ namespace ContentTools
                         i + 1 + (j + 1) * rowLength
                     ];
 
-                    mesh.RawIndices.Add(index[0]);
-                    mesh.RawIndices.Add(index[flipWinding ? 2 : 1]);
-                    mesh.RawIndices.Add(index[flipWinding ? 1 : 2]);
+                    rawIndices.Add(index[0]);
+                    rawIndices.Add(index[flipWinding ? 2 : 1]);
+                    rawIndices.Add(index[flipWinding ? 1 : 2]);
 
-                    mesh.RawIndices.Add(index[2]);
-                    mesh.RawIndices.Add(index[flipWinding ? 3 : 1]);
-                    mesh.RawIndices.Add(index[flipWinding ? 1 : 3]);
+                    rawIndices.Add(index[2]);
+                    rawIndices.Add(index[flipWinding ? 3 : 1]);
+                    rawIndices.Add(index[flipWinding ? 1 : 3]);
                 }
             }
 
             uint numIndices = 3 * 2 * horizontalCount * verticalCount;
-            Debug.Assert(mesh.RawIndices.Count == numIndices);
+            Debug.Assert(rawIndices.Count == numIndices);
 
             for (uint i = 0; i < numIndices; ++i)
             {
-                int rawIndex = (int)mesh.RawIndices[(int)i];
-                mesh.UVSets[0].Add(uvs[rawIndex]);
+                int rawIndex = (int)rawIndices[(int)i];
+                uvSets[0].Add(uvs[rawIndex]);
             }
+
+            var mesh = new Mesh()
+            {
+                Name = "plane",
+                Positions = [.. positions],
+                RawIndices = [.. rawIndices],
+                UVSets = [.. uvSets.Select(set => set.ToArray())],
+            };
 
             return mesh;
         }
@@ -102,8 +113,8 @@ namespace ContentTools
 
         private static void CreateUvSphere(Scene scene, PrimitiveInitInfo info)
         {
-            var lod = new LODGroup { Name = "uv-sphere" };
-            lod.Meshes.Add(CreateUvSphere(info));
+            var meshLOD = new MeshLOD { Name = "uv-sphere", Threshold = -1f, Meshes = [CreateUvSphere(info)] };
+            var lod = new LODGroup { Name = "uv-sphere", LODs = [meshLOD] };
             scene.LODGroups.Add(lod);
         }
         private static Mesh CreateUvSphere(PrimitiveInitInfo info)
@@ -115,14 +126,9 @@ namespace ContentTools
             uint numIndices = 2 * 3 * phiCount + 2 * 3 * phiCount * (thetaCount - 2);
             uint numVertices = 2 + phiCount * (thetaCount - 1);
 
-            Mesh m = new()
-            {
-                Name = "uv_sphere",
-                Positions = new(new Vector3[numVertices])
-            };
-
+            List<Vector3> positions = [];
             uint c = 0;
-            m.Positions[(int)c++] = new Vector3(0f, info.Size.Y, 0f);
+            positions[(int)c++] = new Vector3(0f, info.Size.Y, 0f);
 
             for (uint j = 1; j <= (thetaCount - 1); ++j)
             {
@@ -130,18 +136,18 @@ namespace ContentTools
                 for (uint i = 0; i < phiCount; ++i)
                 {
                     float phi = i * phiStep;
-                    m.Positions[(int)c++] = new Vector3(
+                    positions[(int)c++] = new Vector3(
                         info.Size.X * MathF.Sin(theta) * MathF.Cos(phi),
                         info.Size.Y * MathF.Cos(theta),
                         -info.Size.Z * MathF.Sin(theta) * MathF.Sin(phi));
                 }
             }
 
-            m.Positions[(int)c++] = new Vector3(0f, -info.Size.Y, 0f);
+            positions[(int)c++] = new Vector3(0f, -info.Size.Y, 0f);
             Debug.Assert(c == numVertices);
 
             c = 0;
-            m.RawIndices = new(new uint[numIndices]);
+            List<uint> rawIndices = new(new uint[numIndices]);
             List<Vector2> uvs = new(new Vector2[numIndices]);
             float invThetaCount = 1f / thetaCount;
             float invPhiCount = 1f / phiCount;
@@ -149,9 +155,16 @@ namespace ContentTools
             for (uint i = 0; i < phiCount - 1; ++i)
             {
                 uvs[(int)c] = new Vector2((2 * i + 1) * 0.5f * invPhiCount, 1f);
-                m.RawIndices[(int)c++] = 0;
+                rawIndices[(int)c++] = 0;
                 uvs[(int)c] = new Vector2(i * invPhiCount, 1f - invThetaCount);
             }
+
+            Mesh m = new()
+            {
+                Name = "uv_sphere",
+                Positions = [.. positions],
+                RawIndices = [.. rawIndices],
+            };
 
             return m;
         }
@@ -178,7 +191,7 @@ namespace ContentTools
 
             data.Settings.CalculateNormals = true;
             Geometry.ProcessScene(scene, data.Settings);
-            Geometry.PackData(scene, data);
+            Geometry.PackForEditor(scene, data);
         }
     }
 }

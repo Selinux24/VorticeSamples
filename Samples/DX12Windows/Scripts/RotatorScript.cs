@@ -2,16 +2,16 @@
 using System.Numerics;
 using Vortice.Mathematics;
 
-namespace DX12Windows
+namespace DX12Windows.Scripts
 {
-    public class HelloWorldScript : EntityScript
+    public class RotatorScript : EntityScript
     {
         private float angle = 0f;
 
-        public HelloWorldScript() : base()
+        public RotatorScript() : base()
         {
         }
-        public HelloWorldScript(Entity entity) : base(entity)
+        public RotatorScript(Entity entity) : base(entity)
         {
         }
 

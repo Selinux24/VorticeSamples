@@ -41,7 +41,7 @@ namespace Direct3D12
         private static D3D12Command gfxCommand;
         private static readonly FreeList<D3D12Surface> surfaces = new();
         private static readonly D3D12ResourceBarrier resourceBarriers = new();
-        private static readonly ConstantBuffer[] constantBuffers = new ConstantBuffer[FrameBufferCount];
+        private static readonly D3D12ConstantBuffer[] constantBuffers = new D3D12ConstantBuffer[FrameBufferCount];
 
         private static readonly D3D12DescriptorHeap rtvDescHeap = new(DescriptorHeapType.RenderTargetView);
         private static readonly D3D12DescriptorHeap dsvDescHeap = new(DescriptorHeapType.DepthStencilView);
@@ -75,7 +75,7 @@ namespace Direct3D12
         /// <summary>
         /// Gets the constant buffer.
         /// </summary>
-        internal static ConstantBuffer CBuffer { get => constantBuffers[CurrentFrameIndex]; }
+        internal static D3D12ConstantBuffer CBuffer { get => constantBuffers[CurrentFrameIndex]; }
         /// <summary>
         /// Gets the current frame index.
         /// </summary>
@@ -169,7 +169,7 @@ namespace Direct3D12
 
             for (uint i = 0; i < FrameBufferCount; i++)
             {
-                constantBuffers[i] = new ConstantBuffer(ConstantBuffer.GetDefaultInitInfo(1024 * 1024));
+                constantBuffers[i] = new D3D12ConstantBuffer(D3D12ConstantBuffer.GetDefaultInitInfo(1024 * 1024));
                 D3D12Helpers.NameD3D12Object(constantBuffers[i].Buffer, i, "Global Constant Buffer");
             }
 
@@ -184,7 +184,8 @@ namespace Direct3D12
                 !D3D12GPass.Initialize() ||
                 !D3D12PostProcess.Initialize() ||
                 !D3D12Upload.Initialize() ||
-                !D3D12Content.Initialize())
+                !D3D12Content.Initialize() ||
+                !D3D12Light.Initialize())
             {
                 return FailedInit();
             }
@@ -203,6 +204,7 @@ namespace Direct3D12
             }
 
             // shutdown modules
+            D3D12Light.Shutdown();
             D3D12Content.Shutdown();
             D3D12Upload.Shutdown();
             D3D12PostProcess.Shutdown();
@@ -360,7 +362,7 @@ namespace Direct3D12
             }
         }
 
-        private static D3D12FrameInfo GetD3D12FrameInfo(FrameInfo info, ConstantBuffer cbuffer, D3D12Surface surface, uint frameIdx, float deltaTime)
+        private static D3D12FrameInfo GetD3D12FrameInfo(FrameInfo info, D3D12ConstantBuffer cbuffer, D3D12Surface surface, uint frameIdx, float deltaTime)
         {
             var camera = D3D12Camera.Get(info.CameraId);
             camera.Update();
@@ -376,6 +378,7 @@ namespace Direct3D12
                 CameraDirection = camera.Direction,
                 ViewWidth = surface.Width,
                 ViewHeight = surface.Height,
+                NumDirectionalLights = D3D12Light.NonCullableLightCount(info.LightSetKey),
                 DeltaTime = deltaTime
             };
 
@@ -465,6 +468,7 @@ namespace Direct3D12
             D3D12GPass.DepthPrePass(cmdList, d3d12Info);
 
             // Geometry and lighting pass
+            D3D12Light.UpdateLightBuffers(d3d12Info);
             D3D12GPass.AddTransitionsForGPass(resourceBarriers);
             resourceBarriers.Apply(cmdList);
             D3D12GPass.SetRenderTargetsForGPass(cmdList);

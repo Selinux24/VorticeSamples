@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 namespace Direct3D12.Shaders
 {
     [StructLayout(LayoutKind.Sequential)]
-    record DirectionalLightParameters
+    struct DirectionalLightParameters
     {
         public Vector3 Direction;
         public float Intensity;

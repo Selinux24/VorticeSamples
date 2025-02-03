@@ -7,6 +7,7 @@ namespace Direct3D12
         PositionBuffer,
         ElementBuffer,
         SrvIndices,
+        DirectionalLights,
         PerObjectData,
 
         Count
