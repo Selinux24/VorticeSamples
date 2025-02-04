@@ -19,6 +19,14 @@ namespace Direct3D12.Shaders
                 BuffersHelper.WriteArray(CpuAddress, lights);
             }
 
+            public void Resize()
+            {
+                fixed (byte** cpuAddress = &CpuAddress)
+                {
+                    D3D12Helpers.DxCall(Buffer.Buffer.Map(0, cpuAddress));
+                    Debug.Assert(CpuAddress != null);
+                }
+            }
             public void Release()
             {
                 Buffer.Release();
@@ -49,29 +57,6 @@ namespace Direct3D12.Shaders
             currentLightSetKey = 0;
         }
 
-        unsafe void ResizeBuffer(LightBufferType type, uint size, uint frameIndex)
-        {
-            Debug.Assert(type < LightBufferType.Count);
-            if (size == 0)
-            {
-                return;
-            }
-
-            buffers[(uint)type].Buffer.Release();
-            buffers[(uint)type].Buffer = new D3D12Buffer(D3D12ConstantBuffer.GetDefaultInitInfo(size), true);
-            D3D12Helpers.NameD3D12Object(
-                buffers[(uint)type].Buffer.Buffer,
-                frameIndex,
-                type == LightBufferType.NonCullableLight ? "Non-cullable Light Buffer" :
-                type == LightBufferType.CullableLight ? "Cullable Light Buffer" : "Light Culling Info Buffer");
-
-            fixed (byte** cpuAddress = &buffers[(uint)type].CpuAddress)
-            {
-                D3D12Helpers.DxCall(buffers[(uint)type].Buffer.Buffer.Map(0, cpuAddress));
-                Debug.Assert(buffers[(uint)type].CpuAddress != null);
-            }
-        }
-
         public void UpdateLightBuffers(LightSet set, ulong lightSetKey, uint frameIndex)
         {
             uint[] sizes = new uint[(uint)LightBufferType.Count];
@@ -89,6 +74,25 @@ namespace Direct3D12.Shaders
             buffers[(uint)LightBufferType.NonCullableLight].Write(lights);
 
             // TODO: cullable lights
+        }
+        private void ResizeBuffer(LightBufferType type, uint size, uint frameIndex)
+        {
+            Debug.Assert(type < LightBufferType.Count);
+            if (size == 0)
+            {
+                return;
+            }
+
+            buffers[(uint)type].Buffer.Release();
+            buffers[(uint)type].Buffer = new(D3D12ConstantBuffer.GetDefaultInitInfo(size), true);
+
+            D3D12Helpers.NameD3D12Object(
+                buffers[(uint)type].Buffer.Buffer,
+                frameIndex,
+                type == LightBufferType.NonCullableLight ? "Non-cullable Light Buffer" :
+                type == LightBufferType.CullableLight ? "Cullable Light Buffer" : "Light Culling Info Buffer");
+
+            buffers[(uint)type].Resize();
         }
 
         public void Release()

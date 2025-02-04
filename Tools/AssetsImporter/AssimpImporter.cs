@@ -22,9 +22,14 @@ namespace AssetsImporter
         {
             lock (mutex)
             {
+                var aScene = ReadFile(
+                    fileName,
+                    APostProcessSteps.Triangulate,
+                    [new AFBXConvertToMetersConfig(true)]);
+
                 List<string> files = [];
 
-                var models = ReadScene(fileName, settings);
+                var models = ReadScene(aScene, settings);
                 foreach (var model in models)
                 {
                     // Process the scene data
@@ -36,27 +41,6 @@ namespace AssetsImporter
 
                 return [.. files];
             }
-        }
-        public static void Import(string assetFilename, string contentFilename)
-        {
-            string output = Path.GetFullPath(contentFilename);
-            if (File.Exists(output))
-            {
-                File.Delete(output);
-            }
-            string outputDir = Path.GetDirectoryName(output);
-            if (!Directory.Exists(outputDir))
-            {
-                Directory.CreateDirectory(outputDir);
-            }
-
-            // Read the packed data (to editor)
-            var d = GeometryToEngine.ReadData(assetFilename);
-
-            // Pack the editor data (for engine)
-            GeometryToEngine.PackForEngine(d, output);
-
-            Console.WriteLine("Asset imported successfully.");
         }
         private static AScene ReadFile(string filePath, APostProcessSteps ppSteps = APostProcessSteps.None, APropertyConfig[] configs = null)
         {
@@ -73,19 +57,8 @@ namespace AssetsImporter
 
             return importer.ImportFile(filePath, ppSteps);
         }
-        private static Geometry.Model[] ReadScene(string fileName, GeometryImportSettings settings)
+        private static Geometry.Model[] ReadScene(AScene aScene, GeometryImportSettings settings)
         {
-            var aScene = ReadFile(
-                fileName,
-                APostProcessSteps.Triangulate,
-                [new AFBXConvertToMetersConfig(true)]);
-
-            float unitScaleFactor = 1f;
-            if (aScene.Metadata.TryGetValue("UnitScaleFactor", out var scaleFactor))
-            {
-                unitScaleFactor = (float)scaleFactor.Data;
-            }
-
             List<Geometry.Model> models = [];
 
             foreach (var aMesh in aScene.Meshes)
@@ -209,6 +182,29 @@ namespace AssetsImporter
             }
 
             return [.. models];
+        }
+
+        public static void Import(string assetFilename, string contentFilename)
+        {
+            string output = Path.GetFullPath(contentFilename);
+            if (File.Exists(output))
+            {
+                File.Delete(output);
+            }
+            string outputDir = Path.GetDirectoryName(output);
+            if (!Directory.Exists(outputDir))
+            {
+                Directory.CreateDirectory(outputDir);
+            }
+
+            // Read the packed data (to editor)
+            var geometry = GeometryToEngine.ReadData(assetFilename);
+            Debug.Assert(geometry?.LODGroups?.Count > 0);
+
+            // Pack the editor data (for engine)
+            GeometryToEngine.PackForEngine(geometry, output);
+
+            Console.WriteLine("Asset imported successfully.");
         }
     }
 }
