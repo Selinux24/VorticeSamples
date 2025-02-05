@@ -1,4 +1,5 @@
-﻿using PrimalLike.Platform;
+﻿using PrimalLike.Components;
+using PrimalLike.Platform;
 
 namespace PrimalLike.Graphics
 {
@@ -16,6 +17,12 @@ namespace PrimalLike.Graphics
         /// Gets the render surface.
         /// </summary>
         public RenderSurface Surface { get; protected set; }
+
+        /// <summary>
+        /// Creates the camera.
+        /// </summary>
+        /// <param name="entityInfo">Entity info</param>
+        public abstract void CreateCamera(EntityInfo entityInfo);
 
         /// <summary>
         /// Gets the frame info.

@@ -55,7 +55,11 @@ namespace D3D12LibTests
             public CameraSurface(IPlatformWindowInfo info) : base(info)
             {
                 Surface = Application.CreateRenderSurface(info);
-                Entity = CreateOneGameEntity(true);
+            }
+
+            public override void CreateCamera(EntityInfo entityInfo)
+            {
+                Entity = Application.CreateEntity(entityInfo);
                 Camera = Application.CreateCamera(new PerspectiveCameraInitInfo(Entity.Id));
                 Camera.AspectRatio = (float)Surface.Window.Width / Surface.Window.Height;
             }
@@ -66,6 +70,7 @@ namespace D3D12LibTests
                 frameInfo.RenderItemIds = items;
                 frameInfo.RenderItemCount = (uint)items.Length;
                 frameInfo.Thresholds = thresholds;
+                frameInfo.LightSetKey = ulong.MaxValue;
             }
 
             public override FrameInfo GetFrameInfo()
@@ -180,28 +185,6 @@ namespace D3D12LibTests
             Assert.That(modelId != uint.MaxValue, "Model creation error.");
         }
 
-        private static Entity CreateOneGameEntity(bool isCamera)
-        {
-            TransformInfo transform = new()
-            {
-                Rotation = Quaternion.CreateFromYawPitchRoll(0, isCamera ? 3.14f : 0f, 0)
-            };
-
-            if (isCamera)
-            {
-                transform.Position.Y = 1f;
-                transform.Position.Z = 3f;
-            }
-
-            EntityInfo entityInfo = new()
-            {
-                Transform = transform,
-            };
-
-            Entity ntt = Application.CreateEntity(entityInfo);
-            Debug.Assert(ntt.IsValid);
-            return ntt;
-        }
         private void CreateCameras()
         {
             Win32WindowInfo[] initInfos =
@@ -241,12 +224,22 @@ namespace D3D12LibTests
             for (uint i = 0; i < initInfos.Length; i++)
             {
                 cameraSurfaces[i] = Application.CreateRenderComponent<CameraSurface>(initInfos[i]);
+
+                EntityInfo entityInfo = new()
+                {
+                    Transform = new()
+                    {
+                        Rotation = Quaternion.CreateFromYawPitchRoll(0, 3.14f, 0),
+                        Position = new(0, 1f, 3f),
+                    },
+                };
+                cameraSurfaces[i].CreateCamera(entityInfo);
                 cameraSurfaces[i].UpdateFrameInfo([itemId], [10f]);
             }
         }
         private void CreateRenderItem()
         {
-            itemId = RenderItem.CreateRenderItem(CreateOneGameEntity(false).Id);
+            itemId = RenderItem.CreateRenderItem(Application.CreateEntity(new()).Id);
         }
 
         [Test()]

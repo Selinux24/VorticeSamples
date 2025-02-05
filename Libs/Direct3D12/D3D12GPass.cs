@@ -260,11 +260,15 @@ namespace Direct3D12
                 if (currentEntityId != frameCache.EntityIds[i])
                 {
                     currentEntityId = frameCache.EntityIds[i];
-                    PerObjectData data = new();
-                    Transform.GetTransformMatrices(currentEntityId, out data.World, out data.InvWorld);
-                    var world = data.World;
+                    Transform.GetTransformMatrices(currentEntityId, out var world, out var invWorld);
                     var wvp = Matrix4x4.Multiply(world, d3d12Info.Camera.ViewProjection);
-                    data.WorldViewProjection = wvp;
+
+                    PerObjectData data = new()
+                    {
+                        World = world,
+                        InvWorld = invWorld,
+                        WorldViewProjection = wvp
+                    };
 
                     currentGpuAddress = cbuffer.Write(data);
                 }

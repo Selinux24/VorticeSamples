@@ -1,17 +1,11 @@
-﻿using AssetsImporter;
-using Direct3D12;
-using Direct3D12.Shaders;
+﻿using Direct3D12;
 using DX12Windows.Content;
-using DX12Windows.Scripts;
+using DX12Windows.Shaders;
 using PrimalLike;
-using PrimalLike.Common;
 using PrimalLike.Components;
 using PrimalLike.EngineAPI;
-using ShaderCompiler;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
 using System.Numerics;
 using Vortice.Mathematics;
 using WindowsPlatform;
@@ -20,43 +14,27 @@ namespace DX12Windows
 {
     internal class Program
     {
-        private const string shadersSourceDir = "../../../../../Libs/Direct3D12/Shaders/";
-        private const string shadersIncludeDir = "../../../../../Libs/Direct3D12/Shaders/";
-        private const string shadersOutputPath = "./Content/engineShaders.bin";
         private const string assetsFolder = "./Assets";
         private const string outputsFolder = "./Content";
 
-        private const string modelToyTank = "../../../../../Assets/ToyTank.fbx";
-        private const string modelPrimalLab = "../../../../../Assets/LabScene.fbx";
-
-        private const string testModelFile = "./Content/Model.model";
-
         private const uint WM_CAPTURECHANGED = 0x0215;
-
-        private static readonly EngineShaderInfo[] engineShaderFiles =
-        [
-            new ((int)EngineShaders.FullScreenTriangleVs, new (Path.Combine(shadersSourceDir, "FullScreenTriangle.hlsl"), "FullScreenTriangleVS", ShaderStage.Vertex)),
-            new ((int)EngineShaders.FillColorPs, new (Path.Combine(shadersSourceDir, "FillColor.hlsl"), "FillColorPS", ShaderStage.Pixel)),
-            new ((int)EngineShaders.PostProcessPs, new (Path.Combine(shadersSourceDir, "PostProcess.hlsl"), "PostProcessPS", ShaderStage.Pixel)),
-        ];
 
         private static HelloWorldApp app;
         private static HelloWorldComponent component;
-        private static uint itemId;
 
         private static readonly ulong leftSet = 0;
         private static readonly ulong rightSet = 1;
         private static readonly List<Light> lights = [];
 
+        private static readonly LabSceneRenderItem renderItem = new();
+
         static void Main()
         {
+            EngineShadersHelper.Compile();
+
             InitializeApp();
 
-            //ImportAssets(modelPrimalLab, assetsFolder, outputsFolder);
-
-            //ImportAssets(modelToyTank, assetsFolder, outputsFolder);
-
-            CreateRenderItem(testModelFile, 5);
+            renderItem.Load(assetsFolder, outputsFolder);
 
             CreateWindow();
 
@@ -67,69 +45,8 @@ namespace DX12Windows
 
         static void InitializeApp()
         {
-            if (!Application.RegisterScript<RotatorScript>())
-            {
-                Console.WriteLine("Failed to register TestScript");
-            }
-
-            if (!Compiler.CompileShaders(engineShaderFiles, shadersIncludeDir, shadersOutputPath))
-            {
-                Console.WriteLine("Engine shaders compilation failed");
-            }
-
             app = HelloWorldApp.Start<Win32PlatformFactory, D3D12GraphicsPlatformFactory>();
             app.OnShutdown += AppShutdown;
-        }
-        static void ImportAssets(string modelPath, string assetsFolder, string outputsFolder)
-        {
-            string output = Path.Combine(outputsFolder, Path.ChangeExtension(Path.GetFileName(modelPath), ".model"));
-            if (File.Exists(output))
-            {
-                File.Delete(output);
-            }
-
-            var assets = AssimpImporter.Read(modelPath, new(), assetsFolder);
-
-            foreach (string assetFilename in assets)
-            {
-                if (string.IsNullOrEmpty(assetFilename))
-                {
-                    continue;
-                }
-
-                AssimpImporter.Import(assetFilename, output);
-                CreateRenderItem(output, 1);
-            }
-        }
-        static Entity CreateOneGameEntity(Vector3 position, Vector3 rotation, string scriptName)
-        {
-            TransformInfo transform = new()
-            {
-                Position = position,
-                Rotation = Quaternion.CreateFromYawPitchRoll(rotation.X, rotation.Y, rotation.Z)
-            };
-
-            ScriptInfo script = new();
-            if (!string.IsNullOrEmpty(scriptName))
-            {
-                script.ScriptCreator = Script.GetScriptCreator(IdDetail.StringHash(scriptName));
-            }
-
-            EntityInfo entityInfo = new()
-            {
-                Transform = transform,
-                Script = script,
-            };
-
-            Entity ntt = Application.CreateEntity(entityInfo);
-            Debug.Assert(ntt.IsValid);
-            return ntt;
-        }
-        static void CreateRenderItem(string path, uint numMaterials)
-        {
-            ModelRenderItem.ModelPath = path;
-            uint entityId = CreateOneGameEntity(Vector3.Zero, Vector3.Zero, nameof(RotatorScript)).Id;
-            itemId = ModelRenderItem.CreateRenderItem(entityId, numMaterials);
         }
         static void CreateWindow()
         {
@@ -141,7 +58,17 @@ namespace DX12Windows
                 WndProc = CustomWndProc,
             };
             component = Application.CreateRenderComponent<HelloWorldComponent>(windowInfo);
-            component.UpdateFrameInfo([itemId], [10f]);
+
+            EntityInfo entityInfo = new()
+            {
+                Transform = new()
+                {
+                    Rotation = renderItem.InitialCameraRotation,
+                    Position = renderItem.InitialCameraPosition,
+                },
+            };
+            component.CreateCamera(entityInfo);
+            component.UpdateFrameInfo(renderItem.GetRenderItems(), [10f]);
         }
         static IntPtr CustomWndProc(IntPtr hwnd, uint msg, IntPtr wParam, IntPtr lParam)
         {
@@ -171,7 +98,7 @@ namespace DX12Windows
             // LEFT_SET
             LightInitInfo info = new()
             {
-                EntityId = CreateOneGameEntity(Vector3.Zero, Vector3.Zero, null).Id,
+                EntityId = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, Vector3.Zero, null).Id,
                 LightType = LightTypes.Directional,
                 LightSetKey = leftSet,
                 Intensity = 1f,
@@ -179,25 +106,25 @@ namespace DX12Windows
             };
             lights.Add(Application.CreateLight(info));
 
-            info.EntityId = CreateOneGameEntity(Vector3.Zero, new(MathHelper.PiOver2, 0, 0), null).Id;
+            info.EntityId = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, new(MathHelper.PiOver2, 0, 0), null).Id;
             info.Color = RGBToColor(17, 27, 48);
             lights.Add(Application.CreateLight(info));
 
-            info.EntityId = CreateOneGameEntity(Vector3.Zero, new(-MathHelper.PiOver2, 0, 0), null).Id;
+            info.EntityId = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, new(-MathHelper.PiOver2, 0, 0), null).Id;
             info.Color = RGBToColor(63, 47, 30);
             lights.Add(Application.CreateLight(info));
 
             // RIGHT_SET
-            info.EntityId = CreateOneGameEntity(Vector3.Zero, Vector3.Zero, null).Id;
+            info.EntityId = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, Vector3.Zero, null).Id;
             info.LightSetKey = rightSet;
             info.Color = RGBToColor(150, 100, 200);
             lights.Add(Application.CreateLight(info));
 
-            info.EntityId = CreateOneGameEntity(Vector3.Zero, new(MathHelper.PiOver2, 0, 0), null).Id;
+            info.EntityId = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, new(MathHelper.PiOver2, 0, 0), null).Id;
             info.Color = RGBToColor(17, 27, 48);
             lights.Add(Application.CreateLight(info));
 
-            info.EntityId = CreateOneGameEntity(Vector3.Zero, new(-MathHelper.PiOver2, 0, 0), null).Id;
+            info.EntityId = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, new(-MathHelper.PiOver2, 0, 0), null).Id;
             info.Color = RGBToColor(63, 47, 30);
             lights.Add(Application.CreateLight(info));
         }
@@ -219,7 +146,7 @@ namespace DX12Windows
 
         static void AppShutdown(object sender, EventArgs e)
         {
-            ModelRenderItem.DestroyRenderItem(itemId);
+            renderItem.DestroyRenderItems();
 
             Application.RemoveRenderComponent(component);
 

@@ -46,7 +46,7 @@ namespace Direct3D12.Shaders
                     Debug.Assert(cpuOffset + alignedSize <= Buffer.Size);
                     if (cpuOffset + alignedSize <= Buffer.Size)
                     {
-                        var address = cpuAddress + cpuOffset;
+                        byte* address = cpuAddress + cpuOffset;
                         cpuOffset += alignedSize;
                         return (T*)address;
                     }
@@ -84,7 +84,7 @@ namespace Direct3D12.Shaders
             }
         }
 
-        private readonly ConstantBuffer cBuffer = new(info);
+        private ConstantBuffer cBuffer = new(info);
 
         public ID3D12Resource Buffer { get => cBuffer.Buffer.Buffer; }
         public ulong GpuAddress { get => cBuffer.Buffer.GpuAddress; }

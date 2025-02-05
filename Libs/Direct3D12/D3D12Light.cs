@@ -138,6 +138,11 @@ namespace Direct3D12
         public static void UpdateLightBuffers(D3D12FrameInfo d3d12Info)
         {
             ulong lightSetKey = d3d12Info.FrameInfo.LightSetKey;
+            if (lightSetKey == ulong.MaxValue)
+            {
+                return;
+            }
+
             Debug.Assert(lightSets.ContainsKey(lightSetKey));
             LightSet set = lightSets[lightSetKey];
             if (!set.HasLights())
@@ -157,6 +162,11 @@ namespace Direct3D12
         }
         public static uint NonCullableLightCount(ulong lightSetKey)
         {
+            if (lightSetKey == ulong.MaxValue)
+            {
+                return 0;
+            }
+
             Debug.Assert(lightSets.ContainsKey(lightSetKey));
             return lightSets[lightSetKey].NonCullableLightCount();
         }

@@ -1,131 +1,106 @@
-﻿using ContentTools;
+﻿using DX12Windows.Scripts;
+using DX12Windows.Shaders;
 using PrimalLike;
 using PrimalLike.Common;
 using PrimalLike.Content;
 using PrimalLike.Graphics;
-using ShaderCompiler;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Numerics;
 using System.Threading;
 
 namespace DX12Windows.Content
 {
-    class ModelRenderItem
+    class ModelRenderItem : ITestRenderItem
     {
-        private const string shadersSourcePath = "./Shaders/";
-        private const string shadersIncludeDir = "../../../../../Libs/Direct3D12/Shaders/";
+        private const string testModelFile = "./Content/Model.model";
 
-        private static uint modelId = IdDetail.InvalidId;
-        private static uint vsId = IdDetail.InvalidId;
-        private static uint psId = IdDetail.InvalidId;
-        private static uint mtlId = IdDetail.InvalidId;
+        private uint modelId = IdDetail.InvalidId;
+        private uint mtlId = IdDetail.InvalidId;
+        private uint entityId = IdDetail.InvalidId;
+        private uint itemId = IdDetail.InvalidId;
 
-        private static readonly Dictionary<uint, uint> renderItemEntityMap = [];
+        private readonly Dictionary<uint, uint> renderItemEntityMap = [];
 
-        public static string ModelPath { get; set; }
+        public Vector3 InitialCameraPosition { get; } = new(0, 1f, 3f);
+        public Quaternion InitialCameraRotation { get; } = Quaternion.CreateFromYawPitchRoll(0, 3.14f, 0);
 
-        private static void LoadModel()
+        public void Load(string assetsFolder, string outputsFolder)
         {
-            string modelPath = Path.GetFullPath(ModelPath);
+            if (!Application.RegisterScript<RotatorScript>())
+            {
+                Console.WriteLine("Failed to register script");
+            }
+            
+            CreateRenderItem(testModelFile);
+        }
+
+        private void LoadModel(string model)
+        {
+            string modelPath = Path.GetFullPath(model);
             using var file = new MemoryStream(File.ReadAllBytes(modelPath));
 
             modelId = ContentToEngine.CreateResource(file, AssetTypes.Mesh);
             Debug.Assert(IdDetail.IsValid(modelId));
         }
-        private static void LoadShaders()
-        {
-            // Let's say our material uses a vertex shader and a pixel shader.
-            ShaderFileInfo info = new(Path.Combine(shadersSourcePath, "TestShader.hlsl"), "TestShaderVS", ShaderStage.Vertex);
-
-            string[] defines = ["ELEMENTS_TYPE=1", "ELEMENTS_TYPE=3"];
-            uint[] keys =
-            [
-                (uint)ElementsType.StaticNormal,
-                (uint)ElementsType.StaticNormalTexture,
-            ];
-
-            List<string> extraArgs = [];
-            PrimalLike.Content.CompiledShader[] vertexShaders = new PrimalLike.Content.CompiledShader[2];
-            for (uint i = 0; i < defines.Length; i++)
-            {
-                extraArgs.Clear();
-                extraArgs.Add("-D");
-                extraArgs.Add(defines[i]);
-                bool compiledVs = Compiler.Compile(info, shadersIncludeDir, extraArgs, out var vertexShader);
-                Debug.Assert(compiledVs);
-                vertexShaders[i] = new()
-                {
-                    ByteCodeSize = (ulong)vertexShader.ByteCode.Length,
-                    ByteCode = vertexShader.ByteCode,
-                    Hash = vertexShader.Hash.HashDigest
-                };
-            }
-
-            vsId = ContentToEngine.AddShaderGroup(vertexShaders, keys);
-
-            info = new ShaderFileInfo(Path.Combine(shadersSourcePath, "TestShader.hlsl"), "TestShaderPS", ShaderStage.Pixel);
-            bool compiledPs = Compiler.Compile(info, shadersIncludeDir, out var pixelShader);
-            Debug.Assert(compiledPs);
-
-            PrimalLike.Content.CompiledShader[] pixelShaders =
-            [
-                new PrimalLike.Content.CompiledShader()
-                {
-                    ByteCodeSize = (ulong)pixelShader.ByteCode.Length,
-                    ByteCode = pixelShader.ByteCode,
-                    Hash = pixelShader.Hash.HashDigest
-                }
-            ];
-
-            psId = ContentToEngine.AddShaderGroup(pixelShaders, [uint.MaxValue]);
-        }
-        public static void CreateMaterial()
+        private void CreateMaterial()
         {
             MaterialInitInfo info = new();
-            info.ShaderIds[(uint)ShaderTypes.Vertex] = vsId;
-            info.ShaderIds[(uint)ShaderTypes.Pixel] = psId;
+            info.ShaderIds[(uint)ShaderTypes.Vertex] = TestShaders.VsId;
+            info.ShaderIds[(uint)ShaderTypes.Pixel] = TestShaders.PsId;
             info.Type = MaterialTypes.Opaque;
             mtlId = ContentToEngine.CreateResource(info, AssetTypes.Material);
         }
-
-        public static uint CreateRenderItem(uint entityId, uint numMaterials)
+        private void RemoveItem(uint entityId, uint itemId, uint modelId)
         {
+            if (IdDetail.IsValid(itemId))
+            {
+                Direct3D12.Content.RenderItem.Remove(itemId);
+
+                if (renderItemEntityMap.TryGetValue(itemId, out var value))
+                {
+                    Application.RemoveEntity(value);
+                }
+
+                if (IdDetail.IsValid(modelId))
+                {
+                    ContentToEngine.DestroyResource(modelId, AssetTypes.Mesh);
+                }
+            }
+        }
+
+        private uint CreateRenderItem(string model)
+        {
+            entityId = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, Vector3.Zero, nameof(RotatorScript)).Id;
+
             // load a model, pretend it belongs to entity_id
-            var _1 = new Thread(LoadModel);
+            var _1 = new Thread(() => LoadModel(model));
             _1.Start();
 
             // load a material:
             // 1) load textures, oh nooooo we don't have any, but that's ok.
             // 2) load shaders for that material
-            var _2 = new Thread(LoadShaders);
+            var _2 = new Thread(TestShaders.LoadShaders);
             _2.Start();
 
             _1.Join();
             _2.Join();
+
             // add a render item using the model and its materials.
             CreateMaterial();
-            uint[] materials = new uint[numMaterials];
-            for (uint i = 0; i < numMaterials; i++)
-            {
-                materials[i] = mtlId;
-            }
+            uint[] materials = [mtlId, mtlId, mtlId, mtlId, mtlId];
 
             // TODO: add add_render_item in renderer.
-            uint itemId = Direct3D12.Content.RenderItem.Add(entityId, modelId, materials);
+            itemId = Direct3D12.Content.RenderItem.Add(entityId, modelId, materials);
 
             renderItemEntityMap[itemId] = entityId;
             return itemId;
         }
-        public static void DestroyRenderItem(uint itemId)
+        public void DestroyRenderItems()
         {
-            // remove the render item from engine (also the game entity)
-            if (IdDetail.IsValid(itemId))
-            {
-                Direct3D12.Content.RenderItem.Remove(itemId);
-                var pair = renderItemEntityMap[itemId];
-                Application.RemoveEntity(pair);
-            }
+            RemoveItem(entityId, itemId, modelId);
 
             // remove material
             if (IdDetail.IsValid(mtlId))
@@ -134,21 +109,11 @@ namespace DX12Windows.Content
             }
 
             // remove shaders and textures
-            if (IdDetail.IsValid(vsId))
-            {
-                ContentToEngine.RemoveShaderGroup(vsId);
-            }
-
-            if (IdDetail.IsValid(psId))
-            {
-                ContentToEngine.RemoveShaderGroup(psId);
-            }
-
-            // remove model
-            if (IdDetail.IsValid(modelId))
-            {
-                ContentToEngine.DestroyResource(modelId, AssetTypes.Mesh);
-            }
+            TestShaders.RemoveShaders();
+        }
+        public uint[] GetRenderItems()
+        {
+            return [itemId];
         }
     }
 }

@@ -17,16 +17,10 @@ namespace DX12Windows
         public HelloWorldComponent(Win32WindowInfo info) : base(info)
         {
             Surface = Application.CreateRenderSurface(info);
+        }
 
-            EntityInfo entityInfo = new()
-            {
-                Transform = new()
-                {
-                    Rotation = Quaternion.CreateFromYawPitchRoll(0, 3.14f, 0),
-                    Position = new Vector3(0, 1f, 3f),
-                },
-            };
-
+        public override void CreateCamera(EntityInfo entityInfo)
+        {
             Entity = Application.CreateEntity(entityInfo);
             Camera = Application.CreateCamera(new PerspectiveCameraInitInfo(Entity.Id));
             Camera.AspectRatio = (float)Surface.Window.Width / Surface.Window.Height;

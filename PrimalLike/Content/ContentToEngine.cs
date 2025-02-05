@@ -238,7 +238,7 @@ namespace PrimalLike.Content
         }
         public static void GetLodOffsets(IdType[] geometryIds, float[] thresholds, uint idCount, List<LodOffset> offsets)
         {
-            Debug.Assert(geometryIds != null && thresholds != null && idCount != 0);
+            Debug.Assert(geometryIds?.Length > 0 && thresholds?.Length > 0 && idCount > 0);
             Debug.Assert(offsets.Count == 0);
 
             lock (geometryMutex)
@@ -248,7 +248,6 @@ namespace PrimalLike.Content
                     var pointer = geometryHierarchies[geometryIds[i]];
                     if ((pointer & SingleMeshMarker) != 0)
                     {
-                        Debug.Assert(idCount == 1);
                         offsets.Add(new(0, 1));
                     }
                     else
