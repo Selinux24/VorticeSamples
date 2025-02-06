@@ -4,6 +4,7 @@ using PrimalLike.Components;
 using PrimalLike.EngineAPI;
 using PrimalLike.Graphics;
 using PrimalLike.Platform;
+using System;
 using System.Diagnostics;
 using System.Numerics;
 
@@ -19,26 +20,51 @@ namespace DX12Windows
             return new HelloWorldApp(new TPlatform(), new TGraphics());
         }
 
-        public static Entity CreateOneGameEntity(Vector3 position, Vector3 rotation, string scriptName)
+        public static Entity CreateOneGameEntity(Vector3 position, Vector3 rotation)
         {
-            TransformInfo transform = new()
+            return CreateOneGameEntity(position, rotation, 1.0f);
+        }
+        public static Entity CreateOneGameEntity(Vector3 position, Vector3 rotation, float scale)
+        {
+            EntityInfo entityInfo = new()
             {
-                Position = position,
-                Rotation = Quaternion.CreateFromYawPitchRoll(rotation.X, rotation.Y, rotation.Z)
+                Transform = new()
+                {
+                    Position = position,
+                    Rotation = Quaternion.CreateFromYawPitchRoll(rotation.X, rotation.Y, rotation.Z),
+                    Scale = new(scale),
+                },
             };
+
+            Entity ntt = CreateEntity(entityInfo);
+            Debug.Assert(ntt.IsValid);
+            return ntt;
+        }
+
+        public static Entity CreateOneGameEntity<T>(Vector3 position, Vector3 rotation) where T : EntityScript
+        {
+            return CreateOneGameEntity<T>(position, rotation, 1.0f);
+        }
+        public static Entity CreateOneGameEntity<T>(Vector3 position, Vector3 rotation, float scale) where T : EntityScript
+        {
+            if (!RegisterScript<T>())
+            {
+                Console.WriteLine($"Failed to register script {nameof(T)}");
+            }
 
             EntityInfo entityInfo = new()
             {
-                Transform = transform,
-            };
-
-            if (!string.IsNullOrEmpty(scriptName))
-            {
-                entityInfo.Script = new()
+                Transform = new()
                 {
-                    ScriptCreator = Script.GetScriptCreator(IdDetail.StringHash(scriptName)),
-                };
-            }
+                    Position = position,
+                    Rotation = Quaternion.CreateFromYawPitchRoll(rotation.X, rotation.Y, rotation.Z),
+                    Scale = new(scale),
+                },
+                Script = new()
+                {
+                    ScriptCreator = Script.GetScriptCreator<T>(),
+                }
+            };
 
             Entity ntt = CreateEntity(entityInfo);
             Debug.Assert(ntt.IsValid);

@@ -179,7 +179,7 @@ namespace ContentTools
                         Position = m.Positions[m.RawIndices[jRef]]
                     };
 
-                    Vector3 n1 = m.Normals[jRef];
+                    Vector3 n1 = m.Normals[m.RawIndices[jRef]];
                     if (!isHardEdge)
                     {
                         uint k = j + 1;
@@ -188,7 +188,7 @@ namespace ContentTools
                             int kRef = refs[(int)k];
 
                             float cosTheta = 0f;
-                            Vector3 n2 = m.Normals[kRef];
+                            Vector3 n2 = m.Normals[m.RawIndices[jRef]];
                             if (!isSoftEdge)
                             {
                                 cosTheta = Vector3.Dot(n1, n2) / n1.Length();

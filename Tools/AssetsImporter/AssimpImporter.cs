@@ -9,7 +9,6 @@ using System.Numerics;
 namespace AssetsImporter
 {
     using AAssimpContext = Assimp.AssimpContext;
-    using AFBXConvertToMetersConfig = Assimp.Configs.FBXConvertToMetersConfig;
     using APostProcessSteps = Assimp.PostProcessSteps;
     using APropertyConfig = Assimp.Configs.PropertyConfig;
     using AScene = Assimp.Scene;
@@ -24,8 +23,14 @@ namespace AssetsImporter
             {
                 var aScene = ReadFile(
                     fileName,
-                    APostProcessSteps.Triangulate,
-                    [new AFBXConvertToMetersConfig(true)]);
+                    APostProcessSteps.Triangulate |
+                    APostProcessSteps.SortByPrimitiveType |
+                    APostProcessSteps.CalculateTangentSpace |
+                    APostProcessSteps.JoinIdenticalVertices |
+                    APostProcessSteps.OptimizeMeshes |
+                    APostProcessSteps.RemoveRedundantMaterials |
+                    APostProcessSteps.ValidateDataStructure |
+                    APostProcessSteps.GlobalScale);
 
                 List<string> files = [];
 
@@ -121,10 +126,13 @@ namespace AssetsImporter
                 }
                 Debug.Assert(vertices.Length > 0 && indices.Length > 0);
                 Debug.Assert(indices.Length % 3 == 0);
+                Debug.Assert(indices.Max() == positions.Count - 1);
 
                 materialIndices.Add(aMesh.MaterialIndex);
 
-                if (settings.CalculateNormals)
+                bool importNormals = !settings.CalculateNormals;
+
+                if (importNormals)
                 {
                     if (aMesh.HasNormals)
                     {
@@ -136,7 +144,9 @@ namespace AssetsImporter
                     }
                 }
 
-                if (settings.CalculateTangents)
+                bool importTangents = !settings.CalculateTangents;
+
+                if (importTangents)
                 {
                     if (aMesh.HasTangentBasis)
                     {
@@ -184,7 +194,7 @@ namespace AssetsImporter
             return [.. models];
         }
 
-        public static void Import(string assetFilename, string contentFilename)
+        public static void PackForEngine(string assetFilename, string contentFilename)
         {
             string output = Path.GetFullPath(contentFilename);
             if (File.Exists(output))
@@ -203,8 +213,6 @@ namespace AssetsImporter
 
             // Pack the editor data (for engine)
             GeometryToEngine.PackForEngine(geometry, output);
-
-            Console.WriteLine("Asset imported successfully.");
         }
     }
 }

@@ -4,7 +4,6 @@ using PrimalLike;
 using PrimalLike.Common;
 using PrimalLike.Content;
 using PrimalLike.Graphics;
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -19,7 +18,6 @@ namespace DX12Windows.Content
 
         private uint modelId = IdDetail.InvalidId;
         private uint mtlId = IdDetail.InvalidId;
-        private uint entityId = IdDetail.InvalidId;
         private uint itemId = IdDetail.InvalidId;
 
         private readonly Dictionary<uint, uint> renderItemEntityMap = [];
@@ -29,11 +27,6 @@ namespace DX12Windows.Content
 
         public void Load(string assetsFolder, string outputsFolder)
         {
-            if (!Application.RegisterScript<RotatorScript>())
-            {
-                Console.WriteLine("Failed to register script");
-            }
-            
             CreateRenderItem(testModelFile);
         }
 
@@ -53,7 +46,7 @@ namespace DX12Windows.Content
             info.Type = MaterialTypes.Opaque;
             mtlId = ContentToEngine.CreateResource(info, AssetTypes.Material);
         }
-        private void RemoveItem(uint entityId, uint itemId, uint modelId)
+        private void RemoveItem(uint itemId, uint modelId)
         {
             if (IdDetail.IsValid(itemId))
             {
@@ -73,7 +66,7 @@ namespace DX12Windows.Content
 
         private uint CreateRenderItem(string model)
         {
-            entityId = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, Vector3.Zero, nameof(RotatorScript)).Id;
+            uint entityId = HelloWorldApp.CreateOneGameEntity<RotatorScript>(Vector3.Zero, Vector3.Zero).Id;
 
             // load a model, pretend it belongs to entity_id
             var _1 = new Thread(() => LoadModel(model));
@@ -100,7 +93,7 @@ namespace DX12Windows.Content
         }
         public void DestroyRenderItems()
         {
-            RemoveItem(entityId, itemId, modelId);
+            RemoveItem(itemId, modelId);
 
             // remove material
             if (IdDetail.IsValid(mtlId))

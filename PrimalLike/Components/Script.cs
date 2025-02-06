@@ -85,6 +85,11 @@ namespace PrimalLike.Components
 
         public static bool RegisterScript(string tag, Func<Entity, EntityScript> func)
         {
+            if (scriptRegistry.ContainsKey(tag))
+            {
+                return true;
+            }
+
             bool result = scriptRegistry.TryAdd(tag, func);
             Debug.Assert(result);
             return result;

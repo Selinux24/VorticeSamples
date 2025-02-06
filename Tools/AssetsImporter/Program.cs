@@ -53,7 +53,7 @@ namespace AssetsImporter
         {
             string contentFilename = Path.Combine(modelsFolder, Path.ChangeExtension(Path.GetFileName(assetFilename), ".model"));
 
-            AssimpImporter.Import(assetFilename, contentFilename);
+            AssimpImporter.PackForEngine(assetFilename, contentFilename);
         }
     }
 }
