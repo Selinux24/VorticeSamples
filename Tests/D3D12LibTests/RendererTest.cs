@@ -10,7 +10,6 @@ using PrimalLike.Graphics;
 using PrimalLike.Platform;
 using ShaderCompiler;
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.Numerics;
 using System.Threading;
@@ -57,9 +56,9 @@ namespace D3D12LibTests
                 Surface = Application.CreateRenderSurface(info);
             }
 
-            public override void CreateCamera(EntityInfo entityInfo)
+            public override void CreateCamera(Entity entity)
             {
-                Entity = Application.CreateEntity(entityInfo);
+                Entity = entity;
                 Camera = Application.CreateCamera(new PerspectiveCameraInitInfo(Entity.Id));
                 Camera.AspectRatio = (float)Surface.Window.Width / Surface.Window.Height;
             }
@@ -233,7 +232,8 @@ namespace D3D12LibTests
                         Position = new(0, 1f, 3f),
                     },
                 };
-                cameraSurfaces[i].CreateCamera(entityInfo);
+                Entity entity = Application.CreateEntity(entityInfo);
+                cameraSurfaces[i].CreateCamera(entity);
                 cameraSurfaces[i].UpdateFrameInfo([itemId], [10f]);
             }
         }

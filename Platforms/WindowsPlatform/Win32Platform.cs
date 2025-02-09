@@ -295,7 +295,7 @@ namespace WindowsPlatform
                     resized = wParam != SIZE_MINIMIZED;
                     break;
                 case WM_SYSCHAR:
-                    toggleFullscreen = wParam == VK_RETURN && (HiWord(lParam) & KF_ALTDOWN) != 0;
+                    toggleFullscreen = wParam == VK_RETURN && (HIWORD(lParam) & KF_ALTDOWN) != 0;
                     break;
                 case WM_KEYDOWN:
                     if (wParam == VK_ESCAPE)
@@ -306,6 +306,8 @@ namespace WindowsPlatform
                 default:
                     break;
             }
+
+            Win32Input.ProcessInputMessage(hwnd, msg, wParam, lParam);
 
             if (msg == WM_SYSCOMMAND && wParam == SC_KEYMENU)
             {
@@ -334,10 +336,6 @@ namespace WindowsPlatform
                 return callback(hwnd, msg, wParam, lParam);
             }
             return DefWindowProcW(hwnd, msg, wParam, lParam);
-        }
-        private static IntPtr HiWord(IntPtr l)
-        {
-            return (ushort)((l >> 16) & 0xffff);
         }
         private static void SetResized(IntPtr hwnd, out ClientArea clientArea)
         {

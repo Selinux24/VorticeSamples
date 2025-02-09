@@ -1,8 +1,6 @@
 ﻿using PrimalLike;
-using PrimalLike.Components;
 using PrimalLike.EngineAPI;
 using PrimalLike.Graphics;
-using System.Numerics;
 using WindowsPlatform;
 
 namespace DX12Windows
@@ -11,17 +9,17 @@ namespace DX12Windows
     {
         private FrameInfo frameInfo = new();
 
-        public Camera Camera { get; set; }
-        public Entity Entity { get; set; }
+        public Camera Camera { get; private set; }
+        public Entity Entity { get; private set; }
 
         public HelloWorldComponent(Win32WindowInfo info) : base(info)
         {
             Surface = Application.CreateRenderSurface(info);
         }
 
-        public override void CreateCamera(EntityInfo entityInfo)
+        public override void CreateCamera(Entity entity)
         {
-            Entity = Application.CreateEntity(entityInfo);
+            Entity = entity;
             Camera = Application.CreateCamera(new PerspectiveCameraInitInfo(Entity.Id));
             Camera.AspectRatio = (float)Surface.Window.Width / Surface.Window.Height;
         }

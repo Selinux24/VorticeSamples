@@ -1,5 +1,4 @@
 ﻿using PrimalLike;
-using PrimalLike.Common;
 using PrimalLike.Components;
 using PrimalLike.EngineAPI;
 using PrimalLike.Graphics;
@@ -45,7 +44,16 @@ namespace DX12Windows
         {
             return CreateOneGameEntity<T>(position, rotation, 1.0f);
         }
+        public static Entity CreateOneGameEntity<T>(Vector3 position, Quaternion rotation) where T : EntityScript
+        {
+            return CreateOneGameEntity<T>(position, rotation, 1.0f);
+        }
         public static Entity CreateOneGameEntity<T>(Vector3 position, Vector3 rotation, float scale) where T : EntityScript
+        {
+            var q = Quaternion.CreateFromYawPitchRoll(rotation.X, rotation.Y, rotation.Z);
+            return CreateOneGameEntity<T>(position, q, scale);
+        }
+        public static Entity CreateOneGameEntity<T>(Vector3 position, Quaternion rotation, float scale) where T : EntityScript
         {
             if (!RegisterScript<T>())
             {
@@ -57,7 +65,7 @@ namespace DX12Windows
                 Transform = new()
                 {
                     Position = position,
-                    Rotation = Quaternion.CreateFromYawPitchRoll(rotation.X, rotation.Y, rotation.Z),
+                    Rotation = rotation,
                     Scale = new(scale),
                 },
                 Script = new()

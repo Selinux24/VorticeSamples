@@ -2,7 +2,6 @@
 using DX12Windows.Content;
 using DX12Windows.Shaders;
 using PrimalLike;
-using PrimalLike.Components;
 using PrimalLike.EngineAPI;
 using System;
 using System.Collections.Generic;
@@ -39,6 +38,8 @@ namespace DX12Windows
             CreateWindow();
 
             GenerateLights();
+
+            InitializeInput();
 
             app.Run();
         }
@@ -101,15 +102,8 @@ namespace DX12Windows
             };
             renderComponent = Application.CreateRenderComponent<HelloWorldComponent>(windowInfo);
 
-            EntityInfo entityInfo = new()
-            {
-                Transform = new()
-                {
-                    Rotation = renderItem.InitialCameraRotation,
-                    Position = renderItem.InitialCameraPosition,
-                },
-            };
-            renderComponent.CreateCamera(entityInfo);
+            Entity entity = HelloWorldApp.CreateOneGameEntity<Scripts.CameraScript>(renderItem.InitialCameraPosition, renderItem.InitialCameraRotation);
+            renderComponent.CreateCamera(entity);
             renderComponent.UpdateFrameInfo(renderItem.GetRenderItems(), [10f]);
         }
         static IntPtr CustomWndProc(IntPtr hwnd, uint msg, IntPtr wParam, IntPtr lParam)
@@ -180,6 +174,8 @@ namespace DX12Windows
             Application.RemoveRenderComponent(renderComponent);
 
             RemoveLights();
+
+            Input.UnBind("move");
         }
         static void RemoveLights()
         {
@@ -191,6 +187,39 @@ namespace DX12Windows
             }
 
             lights.Clear();
+        }
+
+        static void InitializeInput()
+        {
+            InputSource source = new("move");
+            source.SourceType = InputSources.Keyboard;
+
+            source.Code = (uint)InputCodes.KeyA;
+            source.Multiplier = 1f;
+            source.Axis = InputAxis.X;
+            Input.Bind(source);
+
+            source.Code = (uint)InputCodes.KeyD;
+            source.Multiplier = -1f;
+            Input.Bind(source);
+
+            source.Code = (uint)InputCodes.KeyW;
+            source.Multiplier = 1f;
+            source.Axis = InputAxis.Z;
+            Input.Bind(source);
+
+            source.Code = (uint)InputCodes.KeyS;
+            source.Multiplier = -1f;
+            Input.Bind(source);
+
+            source.Code = (uint)InputCodes.KeyQ;
+            source.Multiplier = -1f;
+            source.Axis = InputAxis.Y;
+            Input.Bind(source);
+
+            source.Code = (uint)InputCodes.KeyE;
+            source.Multiplier = 1f;
+            Input.Bind(source);
         }
     }
 }

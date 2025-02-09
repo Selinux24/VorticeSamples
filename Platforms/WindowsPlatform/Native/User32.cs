@@ -125,8 +125,21 @@ namespace WindowsPlatform.Native
         [DllImport("user32.dll", SetLastError = true)]
         private static extern IntPtr GetWindowLongPtr(IntPtr hWnd, int nIndex);
 
+        [DllImport("user32.dll")]
+        public static extern short GetKeyState(int nVirtKey);
+        [DllImport("user32.dll")]
+        public static extern IntPtr SetCapture(IntPtr hWnd);
+        [DllImport("user32.dll")]
+        public static extern bool ReleaseCapture();
 
-
+        public static int GetWheelDeltaWParam(IntPtr wParam)
+        {
+            return (short)HIWORD(wParam);
+        }
+        public static IntPtr HIWORD(IntPtr l)
+        {
+            return (ushort)((l >> 16) & 0xffff);
+        }
 
         [StructLayout(LayoutKind.Sequential)]
         public partial struct NativeMessage

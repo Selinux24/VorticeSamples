@@ -1,4 +1,4 @@
-﻿using PrimalLike.Components;
+﻿using PrimalLike.EngineAPI;
 using PrimalLike.Platform;
 
 namespace PrimalLike.Graphics
@@ -21,8 +21,8 @@ namespace PrimalLike.Graphics
         /// <summary>
         /// Creates the camera.
         /// </summary>
-        /// <param name="entityInfo">Entity info</param>
-        public abstract void CreateCamera(EntityInfo entityInfo);
+        /// <param name="entity">Entity</param>
+        public abstract void CreateCamera(Entity entity);
 
         /// <summary>
         /// Gets the frame info.
