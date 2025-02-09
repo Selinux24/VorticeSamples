@@ -28,56 +28,100 @@ namespace PrimalLike.EngineAPI
         {
             get
             {
-                return GetValue<bool>(id, LightParameters.IsEnabled);
+                return GetValue<bool>(id, LightParametersTypes.IsEnabled);
             }
             set
             {
-                SetValue(id, LightParameters.IsEnabled, value);
+                SetValue(id, LightParametersTypes.IsEnabled, value);
             }
         }
         public float Intensity
         {
             get
             {
-                return GetValue<float>(id, LightParameters.Intensity);
+                return GetValue<float>(id, LightParametersTypes.Intensity);
             }
             set
             {
-                SetValue(id, LightParameters.Intensity, value);
+                SetValue(id, LightParametersTypes.Intensity, value);
             }
         }
         public Vector3 Color
         {
             get
             {
-                return GetValue<Vector3>(id, LightParameters.Color);
+                return GetValue<Vector3>(id, LightParametersTypes.Color);
             }
             set
             {
-                SetValue(id, LightParameters.Color, value);
+                SetValue(id, LightParametersTypes.Color, value);
+            }
+        }
+        public Vector3 Attenuation
+        {
+            get
+            {
+                return GetValue<Vector3>(id, LightParametersTypes.Attenuation);
+            }
+            set
+            {
+                SetValue(id, LightParametersTypes.Attenuation, value);
+            }
+        }
+        public float Range
+        {
+            get
+            {
+                return GetValue<float>(id, LightParametersTypes.Range);
+            }
+            set
+            {
+                SetValue(id, LightParametersTypes.Range, value);
+            }
+        }
+        public float Umbra
+        {
+            get
+            {
+                return GetValue<float>(id, LightParametersTypes.Umbra);
+            }
+            set
+            {
+                SetValue(id, LightParametersTypes.Umbra, value);
+            }
+        }
+        public float Penumbra
+        {
+            get
+            {
+                return GetValue<float>(id, LightParametersTypes.Penumbra);
+            }
+            set
+            {
+                SetValue(id, LightParametersTypes.Penumbra, value);
             }
         }
         public LightTypes LightType
         {
             get
             {
-                return (LightTypes)GetValue<uint>(id, LightParameters.LightType);
+                return (LightTypes)GetValue<uint>(id, LightParametersTypes.LightType);
             }
         }
         public EntityId EntityId
         {
             get
             {
-                return GetValue<EntityId>(id, LightParameters.EntityId);
+                return GetValue<EntityId>(id, LightParametersTypes.EntityId);
             }
         }
 
-        private T GetValue<T>(LightId id, LightParameters parameter) where T : unmanaged
+        private T GetValue<T>(LightId id, LightParametersTypes parameter) where T : unmanaged
         {
             Renderer.Gfx.GetParameter(id, lightSetKey, parameter, out T value);
             return value;
         }
-        private void SetValue<T>(LightId id, LightParameters parameter, T value) where T : unmanaged
+        private void SetValue<T>(LightId id, LightParametersTypes parameter, T value) where T : unmanaged
         {
             Renderer.Gfx.SetParameter(id, lightSetKey, parameter, value);
         }

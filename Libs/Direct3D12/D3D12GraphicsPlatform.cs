@@ -68,12 +68,12 @@ namespace Direct3D12
             D3D12Light.Remove(id, lightSetKey);
         }
         /// <inheritdoc/>
-        public void SetParameter<T>(uint id, ulong lightSetKey, LightParameters parameter, T value) where T : unmanaged
+        public void SetParameter<T>(uint id, ulong lightSetKey, LightParametersTypes parameter, T value) where T : unmanaged
         {
             D3D12Light.SetParameter(id, lightSetKey, parameter, value);
         }
         /// <inheritdoc/>
-        public void GetParameter<T>(uint id, ulong lightSetKey, LightParameters parameter, out T value) where T : unmanaged
+        public void GetParameter<T>(uint id, ulong lightSetKey, LightParametersTypes parameter, out T value) where T : unmanaged
         {
             D3D12Light.GetParameter(id, lightSetKey, parameter, out value);
         }

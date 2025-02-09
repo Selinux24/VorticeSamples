@@ -14,6 +14,8 @@ namespace DX12Windows.Scripts
         Vector3 desiredSpherical;
         Vector3 position;
         Vector3 spherical;
+        Vector3 move = Vector3.Zero;
+        float moveMagnitude = 0f;
         float dt;
         float positionAcceleration = 0f;
         bool movePosition = false;
@@ -25,6 +27,7 @@ namespace DX12Windows.Scripts
         public CameraScript(Entity entity) : base(entity)
         {
             inputSystem.AddHandler(InputSources.Mouse, this, MouseMove);
+            inputSystem.AddHandler((ulong)"move".GetHashCode(), this, OnMove);
 
             desiredPosition = position = Position;
 
@@ -39,10 +42,7 @@ namespace DX12Windows.Scripts
         {
             dt = deltaTime;
 
-            Input.Get("move", out var value);
-            Vector3 move = value.Current;
-
-            if (!(MathHelper.IsZero(move.X) && MathHelper.IsZero(move.Y) && MathHelper.IsZero(move.Z)))
+            if (moveMagnitude > float.Epsilon)
             {
                 float fpsScale = dt / 0.016667f;
                 Quaternion rot = Rotation;
@@ -58,7 +58,7 @@ namespace DX12Windows.Scripts
 
             if (movePosition || moveRotation)
             {
-                CameraSeek();
+                CameraSeek(dt);
             }
         }
         private void MouseMove(InputSources type, InputCodes code, ref InputValue mousePos)
@@ -83,13 +83,18 @@ namespace DX12Windows.Scripts
             desiredSpherical = spherical;
             moveRotation = true;
         }
-        private void CameraSeek()
+        private void OnMove(ulong binding, ref InputValue value)
+        {
+            move = value.Current;
+            moveMagnitude = move.Length();
+        }
+        private void CameraSeek(float dt)
         {
             Vector3 p = desiredPosition - position;
             Vector3 o = desiredSpherical - spherical;
 
-            movePosition = p.Length() > 1e-4f;
-            moveRotation = o.Length() > 1e-4f;
+            movePosition = p.Length() > float.Epsilon;
+            moveRotation = o.Length() > float.Epsilon;
 
             float scale = 0.2f * dt / 0.016667f;
 

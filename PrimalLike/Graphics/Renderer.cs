@@ -50,11 +50,11 @@ namespace PrimalLike.Graphics
         {
             gfx.RemoveLight(id, lightSetKey);
         }
-        public static void SetParameter<T>(LightId id, ulong lightSetKey, LightParameters parameter, T value) where T : unmanaged
+        public static void SetParameter<T>(LightId id, ulong lightSetKey, LightParametersTypes parameter, T value) where T : unmanaged
         {
             gfx.SetParameter(id, lightSetKey, parameter, value);
         }
-        public static void GetParameter<T>(LightId id, ulong lightSetKey, LightParameters parameter, out T value) where T : unmanaged
+        public static void GetParameter<T>(LightId id, ulong lightSetKey, LightParametersTypes parameter, out T value) where T : unmanaged
         {
             gfx.GetParameter(id, lightSetKey, parameter, out value);
         }

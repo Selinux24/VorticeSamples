@@ -109,5 +109,6 @@ namespace PrimalLike.EngineAPI
 
         KeyNumlock,
         KeyScrollock,
+        KeyTilde,
     }
 }

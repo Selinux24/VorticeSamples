@@ -20,6 +20,10 @@ namespace Direct3D12
             (set, id, value)=>SetIsEnabled(set, id, (bool)value),
             (set, id, value)=>SetIntensity(set, id, (float)value),
             (set, id, value)=>SetColor(set, id, (Vector3)value),
+            (set, id, value)=>SetAttenuation(set, id, (Vector3)value),
+            (set, id, value)=>SetRange(set, id, (float)value),
+            (set, id, value)=>SetUmbra(set, id, (float)value),
+            (set, id, value)=>SetPenumbra(set, id, (float)value),
             DummySet,
             DummySet,
         ];
@@ -28,6 +32,10 @@ namespace Direct3D12
             (set, id)=>GetIsEnabled(set, id),
             (set, id)=>GetIntensity(set, id),
             (set, id)=>GetColor(set, id),
+            (set, id)=>GetAttenuation(set, id),
+            (set, id)=>GetRange(set, id),
+            (set, id)=>GetUmbra(set, id),
+            (set, id)=>GetPenumbra(set, id),
             (set, id)=>GetLightType(set, id),
             (set, id)=>GetEntityId(set, id),
         ];
@@ -83,17 +91,17 @@ namespace Direct3D12
             Debug.Assert(lightSets.ContainsKey(lightSetKey));
             lightSets[lightSetKey].Remove(id);
         }
-        public static void SetParameter<T>(uint id, ulong lightSetKey, LightParameters parameter, T value) where T : unmanaged
+        public static void SetParameter<T>(uint id, ulong lightSetKey, LightParametersTypes parameter, T value) where T : unmanaged
         {
             Debug.Assert(lightSets.ContainsKey(lightSetKey));
-            Debug.Assert((uint)parameter < (uint)LightParameters.Count);
+            Debug.Assert((uint)parameter < (uint)LightParametersTypes.Count);
             Debug.Assert(setFunctions[(uint)parameter] != DummySet);
             setFunctions[(uint)parameter](lightSets[lightSetKey], id, value);
         }
-        public static void GetParameter<T>(uint id, ulong lightSetKey, LightParameters parameter, out T value) where T : unmanaged
+        public static void GetParameter<T>(uint id, ulong lightSetKey, LightParametersTypes parameter, out T value) where T : unmanaged
         {
             Debug.Assert(lightSets.ContainsKey(lightSetKey));
-            Debug.Assert((uint)parameter < (uint)LightParameters.Count);
+            Debug.Assert((uint)parameter < (uint)LightParametersTypes.Count);
             value = (T)getFunctions[(int)parameter](lightSets[lightSetKey], id);
         }
 
@@ -108,6 +116,22 @@ namespace Direct3D12
         private static void SetColor(LightSet set, uint id, Vector3 value)
         {
             set.Color(id, value);
+        }
+        private static void SetAttenuation(LightSet set, uint id, Vector3 value)
+        {
+            set.Attenuation(id, value);
+        }
+        private static void SetRange(LightSet set, uint id, float value)
+        {
+            set.Range(id, value);
+        }
+        private static void SetUmbra(LightSet set, uint id, float value)
+        {
+            set.Umbra(id, value);
+        }
+        private static void SetPenumbra(LightSet set, uint id, float value)
+        {
+            set.Penumbra(id, value);
         }
         private static void DummySet(LightSet set, uint id, object value)
         {
@@ -125,6 +149,22 @@ namespace Direct3D12
         private static Vector3 GetColor(LightSet set, uint id)
         {
             return set.Color(id);
+        }
+        private static Vector3 GetAttenuation(LightSet set, uint id)
+        {
+            return set.Attenuation(id);
+        }
+        private static float GetRange(LightSet set, uint id)
+        {
+            return set.Range(id);
+        }
+        private static float GetUmbra(LightSet set, uint id)
+        {
+            return set.Umbra(id);
+        }
+        private static float GetPenumbra(LightSet set, uint id)
+        {
+            return set.Penumbra(id);
         }
         private static LightTypes GetLightType(LightSet set, uint id)
         {

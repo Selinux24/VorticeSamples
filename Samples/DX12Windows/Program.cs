@@ -1,12 +1,10 @@
 ﻿using Direct3D12;
 using DX12Windows.Content;
+using DX12Windows.Lights;
 using DX12Windows.Shaders;
 using PrimalLike;
 using PrimalLike.EngineAPI;
 using System;
-using System.Collections.Generic;
-using System.Numerics;
-using Vortice.Mathematics;
 using WindowsPlatform;
 
 namespace DX12Windows
@@ -18,10 +16,6 @@ namespace DX12Windows
 
         private static HelloWorldApp app;
         private static HelloWorldComponent renderComponent;
-
-        private static readonly ulong leftSet = 0;
-        private static readonly ulong rightSet = 1;
-        private static readonly List<Light> lights = [];
 
         private static ITestRenderItem renderItem;
 
@@ -37,7 +31,7 @@ namespace DX12Windows
 
             CreateWindow();
 
-            GenerateLights();
+            LightGenerator.GenerateLights();
 
             InitializeInput();
 
@@ -122,71 +116,15 @@ namespace DX12Windows
             return Win32Window.DefaultWndProc(hwnd, msg, wParam, lParam);
         }
 
-        static Vector3 RGBToColor(byte r, byte g, byte b)
-        {
-            return new()
-            {
-                X = r / 255f,
-                Y = g / 255f,
-                Z = b / 255f
-            };
-        }
-        static void GenerateLights()
-        {
-            // LEFT_SET
-            LightInitInfo info = new()
-            {
-                EntityId = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, Vector3.Zero).Id,
-                LightType = LightTypes.Directional,
-                LightSetKey = leftSet,
-                Intensity = 1f,
-                Color = RGBToColor(174, 174, 174)
-            };
-            lights.Add(Application.CreateLight(info));
-
-            info.EntityId = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, new(MathHelper.PiOver2, 0, 0)).Id;
-            info.Color = RGBToColor(17, 27, 48);
-            lights.Add(Application.CreateLight(info));
-
-            info.EntityId = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, new(-MathHelper.PiOver2, 0, 0)).Id;
-            info.Color = RGBToColor(63, 47, 30);
-            lights.Add(Application.CreateLight(info));
-
-            // RIGHT_SET
-            info.EntityId = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, Vector3.Zero).Id;
-            info.LightSetKey = rightSet;
-            info.Color = RGBToColor(150, 100, 200);
-            lights.Add(Application.CreateLight(info));
-
-            info.EntityId = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, new(MathHelper.PiOver2, 0, 0)).Id;
-            info.Color = RGBToColor(17, 27, 48);
-            lights.Add(Application.CreateLight(info));
-
-            info.EntityId = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, new(-MathHelper.PiOver2, 0, 0)).Id;
-            info.Color = RGBToColor(63, 47, 30);
-            lights.Add(Application.CreateLight(info));
-        }
-
         static void AppShutdown(object sender, EventArgs e)
         {
             renderItem.DestroyRenderItems();
 
             Application.RemoveRenderComponent(renderComponent);
 
-            RemoveLights();
+            LightGenerator.RemoveLights();
 
             Input.UnBind("move");
-        }
-        static void RemoveLights()
-        {
-            foreach (var light in lights)
-            {
-                uint id = light.EntityId;
-                Application.RemoveLight(light.Id, light.LightSetKey);
-                Application.RemoveEntity(id);
-            }
-
-            lights.Clear();
         }
 
         static void InitializeInput()

@@ -72,7 +72,7 @@ namespace PrimalLike.Graphics
         /// <param name="lightSetKey">Lightset key</param>
         /// <param name="parameter">Parameter to set</param>
         /// <param name="data">Data to read-from the parameter value</param>
-        void SetParameter<T>(LightId id, ulong lightSetKey, LightParameters parameter, T data) where T : unmanaged;
+        void SetParameter<T>(LightId id, ulong lightSetKey, LightParametersTypes parameter, T data) where T : unmanaged;
         /// <summary>
         /// Gets a light parameter.
         /// </summary>
@@ -80,7 +80,7 @@ namespace PrimalLike.Graphics
         /// <param name="lightSetKey">Lightset key</param>
         /// <param name="parameter">Parameter to get</param>
         /// <param name="data">Data to write-in the parameter value</param>
-        void GetParameter<T>(LightId id, ulong lightSetKey, LightParameters parameter, out T data) where T : unmanaged;
+        void GetParameter<T>(LightId id, ulong lightSetKey, LightParametersTypes parameter, out T data) where T : unmanaged;
 
         /// <summary>
         /// Creates a camera.

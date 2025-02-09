@@ -126,7 +126,7 @@ namespace PrimalLike.Components
             world = toWorld[(int)index];
             inverseWorld = invWorld[(int)index];
         }
-        public static TransformFlags[] GetUpdatedComponentFlags(EntityId[] ids)
+        public static TransformFlags[] GetUpdatedComponentsFlags(EntityId[] ids)
         {
             Debug.Assert(ids.Length > 0);
             readWriteFlag = 1;

@@ -2,10 +2,10 @@
 
 namespace Direct3D12.Lights
 {
-    record LightOwner
+    record LightOwner()
     {
-        public uint EntityId;
-        public uint DataIndex;
+        public uint EntityId = uint.MaxValue;
+        public uint DataIndex = uint.MaxValue;
         public LightTypes LightType;
         public bool IsEnabled;
     }
