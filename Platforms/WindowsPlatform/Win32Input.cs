@@ -1,8 +1,9 @@
 ﻿using PrimalLike;
 using PrimalLike.EngineAPI;
+using System;
 using System.Diagnostics;
 using System.Numerics;
-using static WindowsPlatform.Native.User32;
+using static Native32.User32;
 
 namespace WindowsPlatform
 {
@@ -49,12 +50,12 @@ namespace WindowsPlatform
             }
         }
 
-        public static Vector2 GetMousePosition(nint lParam)
+        public static Vector2 GetMousePosition(IntPtr lParam)
         {
             return new(lParam & 0x0000ffff, lParam >> 16);
         }
 
-        public static nint ProcessInputMessage(nint hwnd, uint msg, nint wParam, nint lParam)
+        public static nint ProcessInputMessage(IntPtr hwnd, uint msg, IntPtr wParam, IntPtr lParam)
         {
             const uint WM_KEYDOWN = 0x0100;
             const uint WM_KEYUP = 0x0101;

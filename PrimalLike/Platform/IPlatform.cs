@@ -12,9 +12,8 @@ namespace PrimalLike.Platform
         /// Creates a new window.
         /// </summary>
         /// <param name="info">Initialization info</param>
-        /// <param name="setDefault">Sets the new window as the default window</param>
         /// <returns>Returns the created window</returns>
-        Window CreateWindow(IPlatformWindowInfo info, bool setDefault = true);
+        Window CreateWindow(IPlatformWindowInfo info);
         /// <summary>
         /// Removes a window.
         /// </summary>
@@ -36,13 +35,18 @@ namespace PrimalLike.Platform
         /// Gets if the window is fullscreen.
         /// </summary>
         /// <param name="id">Window id</param>
-        bool IsWindoFullscreen(WindowId id);
+        bool IsFullscreen(WindowId id);
         /// <summary>
         /// Sets the caption of the window.
         /// </summary>
         /// <param name="id">Window id</param>
         /// <param name="caption">Caption</param>
         void SetCaption(WindowId id, string caption);
+        /// <summary>
+        /// Gets the window size.
+        /// </summary>
+        /// <param name="id">Window id</param>
+        ClientArea Size(uint id);
         /// <summary>
         /// Resizes the window.
         /// </summary>
@@ -54,17 +58,17 @@ namespace PrimalLike.Platform
         /// Gets the window width.
         /// </summary>
         /// <param name="id">Window id</param>
-        uint GetWindowWidth(WindowId id);
+        uint GetWidth(WindowId id);
         /// <summary>
         /// Gets the window height.
         /// </summary>
         /// <param name="id">Window id</param>
-        uint GetWindowHeight(WindowId id);
+        uint GetHeight(WindowId id);
         /// <summary>
         /// Gets if the window is closed.
         /// </summary>
         /// <param name="id">Window id</param>
-        bool IsWindowClosed(WindowId id);
+        bool IsClosed(WindowId id);
 
         /// <summary>
         /// Runs the platform.

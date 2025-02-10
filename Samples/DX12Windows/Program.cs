@@ -5,7 +5,9 @@ using DX12Windows.Shaders;
 using PrimalLike;
 using PrimalLike.EngineAPI;
 using System;
+using System.Collections.Generic;
 using WindowsPlatform;
+using static Native32.User32;
 
 namespace DX12Windows
 {
@@ -18,6 +20,9 @@ namespace DX12Windows
         private static HelloWorldComponent renderComponent;
 
         private static ITestRenderItem renderItem;
+
+        private static readonly List<HelloWorldComponent> surfaces = [];
+        private static bool resized = false;
 
         static void Main()
         {
@@ -92,28 +97,94 @@ namespace DX12Windows
                 Caption = "DX12 for Windows",
                 ClientArea = new(50, 50, 800, 600),
                 IsFullScreen = false,
-                WndProc = CustomWndProc,
+                Callback = CustomWndProc,
             };
             renderComponent = Application.CreateRenderComponent<HelloWorldComponent>(windowInfo);
 
             Entity entity = HelloWorldApp.CreateOneGameEntity<Scripts.CameraScript>(renderItem.InitialCameraPosition, renderItem.InitialCameraRotation);
             renderComponent.CreateCamera(entity);
             renderComponent.UpdateFrameInfo(renderItem.GetRenderItems(), [10f]);
+
+            surfaces.Add(renderComponent);
         }
         static IntPtr CustomWndProc(IntPtr hwnd, uint msg, IntPtr wParam, IntPtr lParam)
         {
-            const uint WM_CAPTURECHANGED = 0x0215;
+            bool toggleFullscreen = false;
 
             switch (msg)
             {
-                case WM_CAPTURECHANGED:
-                    renderComponent.Resized();
-                    return 0;
-                default:
+                case WM_DESTROY:
+                {
+                    bool allClosed = true;
+                    for (int i = 0; i < surfaces.Count; i++)
+                    {
+                        if (!surfaces[i].Surface.Window.IsValid)
+                        {
+                            continue;
+                        }
+
+                        if (!surfaces[i].Surface.Window.IsClosed)
+                        {
+                            allClosed = false;
+                        }
+                    }
+                    if (allClosed)
+                    {
+                        _ = PostQuitMessage(0);
+                        return 0;
+                    }
+                }
+                break;
+                case WM_SIZE:
+                {
+                    resized = (wParam != SIZE_MINIMIZED);
                     break;
+                }
+                case WM_SYSCHAR:
+                {
+                    toggleFullscreen = wParam == VK_RETURN && (HIWORD(lParam) & KF_ALTDOWN) != 0;
+                    break;
+                }
+                case WM_KEYDOWN:
+                {
+                    if (wParam == VK_ESCAPE)
+                    {
+                        _ = PostMessage(hwnd, WM_CLOSE, 0, 0);
+                        return 0;
+                    }
+                    break;
+                }
             }
 
-            return Win32Window.DefaultWndProc(hwnd, msg, wParam, lParam);
+            if ((resized && GetAsyncKeyState((int)VK_LBUTTON) >= 0) || toggleFullscreen)
+            {
+                Window win = new((uint)GetWindowLongPtrW(hwnd, (int)WindowLongIndex.GWL_USERDATA));
+                for (int i = 0; i < surfaces.Count; i++)
+                {
+                    if (win.Id == surfaces[i].Surface.Window.Id)
+                    {
+                        if (toggleFullscreen)
+                        {
+                            win.SetFullscreen(!win.IsFullscreen);
+                            // The default window procedure will play a system notification sound
+                            // when pressing the Alt+Enter keyboard combination if WM_SYSCHAR is
+                            // not handled. By returning 0 we can tell the system that we handled
+                            // this message.
+                            return 0;
+                        }
+                        else
+                        {
+                            surfaces[i].Surface.Surface.Resize(win.Width, win.Height);
+                            surfaces[i].Camera.AspectRatio = (float)win.Width / win.Height;
+
+                            resized = false;
+                        }
+                        break;
+                    }
+                }
+            }
+
+            return DefWindowProcW(hwnd, msg, wParam, lParam);
         }
 
         static void AppShutdown(object sender, EventArgs e)

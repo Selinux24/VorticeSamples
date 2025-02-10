@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-namespace WindowsPlatform.Native
+[assembly: InternalsVisibleTo("WindowsPlatform")]
+[assembly: InternalsVisibleTo("DX12Windows")]
+namespace Native32
 {
 #pragma warning disable SYSLIB1054
 #pragma warning disable CA1069
@@ -127,6 +130,9 @@ namespace WindowsPlatform.Native
 
         [DllImport("user32.dll")]
         public static extern short GetKeyState(int nVirtKey);
+        [DllImport("user32.dll")]
+        public static extern short GetAsyncKeyState(int nVirtKey);
+
         [DllImport("user32.dll")]
         public static extern IntPtr SetCapture(IntPtr hWnd);
         [DllImport("user32.dll")]
@@ -528,6 +534,26 @@ namespace WindowsPlatform.Native
             SW_FORCEMINIMIZE = 11,
             SW_MAX = 11
         }
+
+        public const uint SIZE_MINIMIZED = 1;
+
+        public const uint WM_NCCREATE = 0x0081;
+        public const uint WM_DESTROY = 0x0002;
+        public const uint WM_SIZE = 0x0005;
+        public const uint WM_CLOSE = 0x0010;
+        public const uint WM_QUIT = 0x0012;
+        public const uint WM_KEYDOWN = 0x0100;
+        public const uint WM_SYSCHAR = 0x0106;
+        public const uint WM_SYSCOMMAND = 0x0112;
+        public const uint WM_CAPTURECHANGED = 0x0215;
+
+        public const uint WS_VISIBLE = 0x10000000;
+
+        public const uint VK_LBUTTON = 0x01;
+        public const uint VK_RETURN = 0x0D;
+        public const uint VK_ESCAPE = 0x1B;
+        public const uint KF_ALTDOWN = 0x2000;
+        public const uint SC_KEYMENU = 0xF100;
     }
 #pragma warning restore SYSLIB1054
 #pragma warning restore CA1069

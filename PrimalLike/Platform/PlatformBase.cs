@@ -32,7 +32,7 @@ namespace PrimalLike.Platform
         }
         public static bool IsWindoFullscreen(WindowId id)
         {
-            return platform.IsWindoFullscreen(id);
+            return platform.IsFullscreen(id);
         }
         public static void SetCaption(WindowId id, string caption)
         {
@@ -44,15 +44,15 @@ namespace PrimalLike.Platform
         }
         public static uint GetWindowWidth(WindowId id)
         {
-            return platform.GetWindowWidth(id);
+            return platform.GetWidth(id);
         }
         public static uint GetWindowHeight(WindowId id)
         {
-            return platform.GetWindowHeight(id);
+            return platform.GetHeight(id);
         }
         public static bool IsWindowClosed(WindowId id)
         {
-            return platform.IsWindowClosed(id);
+            return platform.IsClosed(id);
         }
 
         public static void Run()

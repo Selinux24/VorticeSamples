@@ -41,6 +41,11 @@ namespace Utilities
                 Debug.Assert(id < array.Count && !AlreadyRemoved(id));
                 return array[(int)id];
             }
+            set
+            {
+                Debug.Assert(id < array.Count && !AlreadyRemoved(id));
+                array[(int)id] = value;
+            }
         }
 
         /// <summary>

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 
-namespace WindowsPlatform.Native
+namespace Native32
 {
     static partial class Ole32
     {
