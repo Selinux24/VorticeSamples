@@ -19,7 +19,7 @@ namespace PrimalLike.EngineAPI
             public ulong Binding;
             public T Instance;
             public BindingCallbackDelegate Callback;
-        };
+        }
 
         readonly List<InputCallback>[] inputCallbacks;
         readonly List<BindingCallback> bindingCallbacks;

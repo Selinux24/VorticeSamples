@@ -148,7 +148,10 @@ namespace PrimalLike.Components
 
             if (readWriteFlag != 0)
             {
-                changesFromPreviousFrame.Clear();
+                for (int i = 0; i < changesFromPreviousFrame.Count; i++)
+                {
+                    changesFromPreviousFrame[i] = 0;
+                }
                 readWriteFlag = 0;
             }
 
