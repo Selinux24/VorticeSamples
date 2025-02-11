@@ -16,6 +16,7 @@ namespace DX12Windows.Lights
         private static readonly ulong rightSet = 1;
         private static readonly List<Light> lights = [];
         private static readonly Random rand = new();
+        private static readonly int maxRand = 37;
 
         static Vector3 RGBToColor(byte r, byte g, byte b)
         {
@@ -26,7 +27,7 @@ namespace DX12Windows.Lights
                 Z = b / 255f
             };
         }
-        public static void GenerateLights()
+        public static void GenerateLights(bool randomLights)
         {
             // LEFT_SET
             LightInitInfo info = new()
@@ -61,72 +62,90 @@ namespace DX12Windows.Lights
             info.Color = RGBToColor(163, 47, 30);
             lights.Add(Application.CreateLight(info));
 
-#if !RANDOM_LIGHTS
-            CreateLight(new(0, -3, 0), new(), LightTypes.Point, leftSet);
-            CreateLight(new(0, 0, 1), new(), LightTypes.Point, leftSet);
-            CreateLight(new(0, 3, 2.5f), new(), LightTypes.Point, leftSet);
-            CreateLight(new(0, 0, 7), new(0, 3.14f, 0), LightTypes.Spot, leftSet);
-#else
-    srand(37);
-
-    constexpr math::v3 scale{ 1.f, 0.5f, 1.f };
-    constexpr s32 dim{ 5 };
-    for (s32 x{ -dim }; x < dim; ++x)
-        for (s32 y{ 0 }; y < 2 * dim; ++y)
-            for (s32 z{ -dim }; z < dim; ++z)
+            if (randomLights)
             {
-                create_light({ (f32)(x * scale.x), (f32)(y * scale.y), (f32)(z * scale.z) },
-                             { 3.14f, random(), 0.f }, random() > 0.5f ? graphics::light::spot : graphics::light::point, left_set);
-                create_light({ (f32)(x * scale.x), (f32)(y * scale.y), (f32)(z * scale.z) },
-                             { 3.14f, random(), 0.f }, random() > 0.5f ? graphics::light::spot : graphics::light::point, right_set);
+                Vector3 scale = new(1f, 0.5f, 1f);
+                int dim = 5;
+                for (int x = -dim; x < dim; x++)
+                {
+                    for (int y = 0; y < 2 * dim; y++)
+                    {
+                        for (int z = -dim; z < dim; z++)
+                        {
+                            CreateLight(
+                                new(x * scale.X, y * scale.Y, z * scale.Z),
+                                new(3.14f, Random(), 0f),
+                                Random() > 0.5f ? LightTypes.Spot : LightTypes.Point,
+                                leftSet,
+                                true);
+                            CreateLight(
+                                new(x * scale.X, y * scale.Y, z * scale.Z),
+                                new(3.14f, Random(), 0f),
+                                Random() > 0.5f ? LightTypes.Spot : LightTypes.Point,
+                                rightSet,
+                                true);
+                        }
+                    }
+                }
             }
-#endif
+            else
+            {
+                CreateLight(new(0, -3, 0), new(), LightTypes.Point, leftSet, false);
+                CreateLight(new(0, 0, 1), new(), LightTypes.Point, leftSet, false);
+                CreateLight(new(0, 3, 2.5f), new(), LightTypes.Point, leftSet, false);
+                CreateLight(new(0, 0, 7), new(0, 3.14f, 0), LightTypes.Spot, leftSet, false);
+            }
         }
 
         static float Random(float min = 0f)
         {
-            return MathF.Min(min, rand.NextSingle() * invRandMax);
+            return MathF.Min(min, rand.Next(maxRand) * invRandMax);
         }
 
-        static void CreateLight(Vector3 position, Vector3 rotation, LightTypes type, ulong lightSetKey)
+        static void CreateLight(Vector3 position, Vector3 rotation, LightTypes type, ulong lightSetKey, bool randomLights)
         {
             uint entityId = HelloWorldApp.CreateOneGameEntity(position, rotation).Id;
 
-            LightInitInfo info = new();
-            info.EntityId = entityId;
-            info.LightType = type;
-            info.LightSetKey = lightSetKey;
-            info.Intensity = 1f;
-
-            info.Color = new(Random(0.2f), Random(0.2f), Random(0.2f));
-
-#if RANDOM_LIGHTS
-    if (type == graphics::light::point)
-    {
-        info.point_params.range = random(0.5f) * 2.f;
-        info.point_params.attenuation = { 1, 1, 1 };
-    }
-    else if (type == graphics::light::spot)
-    {
-        info.spot_params.range = random(0.5f) * 2.f;
-        info.spot_params.umbra = (random(0.5f) - 0.4f) * math::pi;
-        info.spot_params.penumbra = info.spot_params.umbra + (0.1f * math::pi);
-        info.spot_params.attenuation = { 1, 1, 1 };
-    }
-#else
-            if (type == LightTypes.Point)
+            LightInitInfo info = new()
             {
-                info.PointLight.Range = 1f;
-                info.PointLight.Attenuation = new(1, 1, 1);
-            }
-            else if (type == LightTypes.Spot)
+                EntityId = entityId,
+                LightType = type,
+                LightSetKey = lightSetKey,
+                Intensity = 1f,
+
+                Color = new(Random(0.2f), Random(0.2f), Random(0.2f))
+            };
+
+            if (randomLights)
             {
-                info.SpotLight.Range = 2f;
-                info.SpotLight.Umbra = 0.1f * MathF.PI;
-                info.SpotLight.Penumbra = info.SpotLight.Umbra + (0.1f * MathF.PI);
-                info.SpotLight.Attenuation = new(1, 1, 1);
+                if (type == LightTypes.Point)
+                {
+                    info.PointLight.Range = Random(0.5f) * 2f;
+                    info.PointLight.Attenuation = new(1, 1, 1);
+                }
+                else if (type == LightTypes.Spot)
+                {
+                    info.SpotLight.Range = Random(0.5f) * 2f;
+                    info.SpotLight.Umbra = (Random(0.5f) - 0.4f) * MathF.PI;
+                    info.SpotLight.Penumbra = info.SpotLight.Umbra + (0.1f * MathF.PI);
+                    info.SpotLight.Attenuation = new(1, 1, 1);
+                }
             }
-#endif
+            else
+            {
+                if (type == LightTypes.Point)
+                {
+                    info.PointLight.Range = 1f;
+                    info.PointLight.Attenuation = new(1, 1, 1);
+                }
+                else if (type == LightTypes.Spot)
+                {
+                    info.SpotLight.Range = 2f;
+                    info.SpotLight.Umbra = 0.1f * MathF.PI;
+                    info.SpotLight.Penumbra = info.SpotLight.Umbra + (0.1f * MathF.PI);
+                    info.SpotLight.Attenuation = new(1, 1, 1);
+                }
+            }
 
             var light = Application.CreateLight(info);
             Debug.Assert(light.IsValid);

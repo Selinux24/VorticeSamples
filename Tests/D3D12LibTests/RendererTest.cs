@@ -6,8 +6,6 @@ using PrimalLike.Common;
 using PrimalLike.Components;
 using PrimalLike.Content;
 using PrimalLike.EngineAPI;
-using PrimalLike.Graphics;
-using PrimalLike.Platform;
 using ShaderCompiler;
 using System;
 using System.Collections.Generic;
@@ -21,76 +19,6 @@ namespace D3D12LibTests
 {
     public class RendererTest
     {
-        class TestApp(IPlatformFactory platformFactory, IGraphicsPlatformFactory graphicsFactory)
-            : Application("Content/Game.bin", platformFactory, graphicsFactory)
-        {
-            public static TestApp Start<TPlatform, TGraphics>()
-                where TPlatform : IPlatformFactory, new()
-                where TGraphics : IGraphicsPlatformFactory, new()
-            {
-                return new TestApp(new TPlatform(), new TGraphics());
-            }
-        }
-
-        class TestScript : EntityScript
-        {
-            public TestScript() : base()
-            {
-            }
-            public TestScript(Entity entity) : base(entity)
-            {
-            }
-
-            public override void Update(float deltaTime)
-            {
-            }
-        }
-
-        class CameraSurface : RenderComponent
-        {
-            private FrameInfo frameInfo = new();
-
-            public Camera Camera { get; set; }
-            public Entity Entity { get; set; }
-
-            public CameraSurface(IPlatformWindowInfo info) : base(info)
-            {
-                Surface = Application.CreateRenderSurface(info);
-            }
-
-            public override void CreateCamera(Entity entity)
-            {
-                Entity = entity;
-                Camera = Application.CreateCamera(new PerspectiveCameraInitInfo(Entity.Id));
-                Camera.AspectRatio = (float)Surface.Window.Width / Surface.Window.Height;
-            }
-
-            public void UpdateFrameInfo(uint[] items, float[] thresholds)
-            {
-                frameInfo.CameraId = Camera.Id;
-                frameInfo.RenderItemIds = items;
-                frameInfo.RenderItemCount = (uint)items.Length;
-                frameInfo.Thresholds = thresholds;
-                frameInfo.LightSetKey = ulong.MaxValue;
-            }
-
-            public override FrameInfo GetFrameInfo()
-            {
-                return frameInfo;
-            }
-            public override void Resized()
-            {
-                Surface.Surface.Resize(Surface.Window.Width, Surface.Window.Height);
-                Camera.AspectRatio = (float)Surface.Window.Width / Surface.Window.Height;
-            }
-            public override void Remove()
-            {
-                Application.RemoveRenderSurface(Surface);
-                Application.RemoveCamera(Camera.Id);
-                Application.RemoveEntity(Entity.Id);
-            }
-        }
-
         private const string shadersSourceDir = "../../../../../Libs/Direct3D12/Shaders/";
         private const string shadersIncludeDir = "../../../../../Libs/Direct3D12/Shaders/";
         private const string shadersOutputPath = "./Content/engineShaders.bin";
@@ -106,6 +34,85 @@ namespace D3D12LibTests
         private TestApp app;
         private static readonly List<CameraSurface> cameraSurfaces = [];
         private static bool resized = false;
+        private static IntPtr CustomWndProc(IntPtr hwnd, uint msg, IntPtr wParam, IntPtr lParam)
+        {
+            bool toggleFullscreen = false;
+
+            switch (msg)
+            {
+                case WindowMessages.WM_DESTROY:
+                {
+                    bool allClosed = true;
+                    for (int i = 0; i < cameraSurfaces.Count; i++)
+                    {
+                        if (!cameraSurfaces[i].Surface.Window.IsValid)
+                        {
+                            continue;
+                        }
+
+                        if (!cameraSurfaces[i].Surface.Window.IsClosed)
+                        {
+                            allClosed = false;
+                        }
+                    }
+                    if (allClosed)
+                    {
+                        _ = PostQuitMessage(0);
+                        return 0;
+                    }
+                }
+                break;
+                case WindowMessages.WM_SIZE:
+                {
+                    resized = wParam != WM_SIZE_WPARAM.SIZE_MINIMIZED;
+                    break;
+                }
+                case WindowMessages.WM_SYSCHAR:
+                {
+                    toggleFullscreen = wParam == VirtualKeys.VK_RETURN && (HIWORD(lParam) & KeystrokeFlags.KF_ALTDOWN) != 0;
+                    break;
+                }
+                case WindowMessages.WM_KEYDOWN:
+                {
+                    if (wParam == VirtualKeys.VK_ESCAPE)
+                    {
+                        _ = PostMessage(hwnd, WindowMessages.WM_CLOSE, 0, 0);
+                        return 0;
+                    }
+                    break;
+                }
+            }
+
+            if ((resized && GetAsyncKeyState((int)VirtualKeys.VK_LBUTTON) >= 0) || toggleFullscreen)
+            {
+                Window win = new((uint)GetWindowLongPtrW(hwnd, WindowLongIndex.GWL_USERDATA));
+                for (int i = 0; i < cameraSurfaces.Count; i++)
+                {
+                    if (win.Id == cameraSurfaces[i].Surface.Window.Id)
+                    {
+                        if (toggleFullscreen)
+                        {
+                            win.SetFullscreen(!win.IsFullscreen);
+                            // The default window procedure will play a system notification sound
+                            // when pressing the Alt+Enter keyboard combination if WM_SYSCHAR is
+                            // not handled. By returning 0 we can tell the system that we handled
+                            // this message.
+                            return 0;
+                        }
+                        else
+                        {
+                            cameraSurfaces[i].Surface.Surface.Resize(win.Width, win.Height);
+                            cameraSurfaces[i].Camera.AspectRatio = (float)win.Width / win.Height;
+
+                            resized = false;
+                        }
+                        break;
+                    }
+                }
+            }
+
+            return DefWindowProcW(hwnd, msg, wParam, lParam);
+        }
 
         private uint itemId = IdDetail.InvalidId;
         private uint modelId = IdDetail.InvalidId;
@@ -222,85 +229,6 @@ namespace D3D12LibTests
                 cameraSurfaces[i].CreateCamera(entity);
                 cameraSurfaces[i].UpdateFrameInfo([itemId], [10f]);
             }
-        }
-        private static IntPtr CustomWndProc(IntPtr hwnd, uint msg, IntPtr wParam, IntPtr lParam)
-        {
-            bool toggleFullscreen = false;
-
-            switch (msg)
-            {
-                case WindowMessages.WM_DESTROY:
-                {
-                    bool allClosed = true;
-                    for (int i = 0; i < cameraSurfaces.Count; i++)
-                    {
-                        if (!cameraSurfaces[i].Surface.Window.IsValid)
-                        {
-                            continue;
-                        }
-
-                        if (!cameraSurfaces[i].Surface.Window.IsClosed)
-                        {
-                            allClosed = false;
-                        }
-                    }
-                    if (allClosed)
-                    {
-                        _ = PostQuitMessage(0);
-                        return 0;
-                    }
-                }
-                break;
-                case WindowMessages.WM_SIZE:
-                {
-                    resized = wParam != WM_SIZE_WPARAM.SIZE_MINIMIZED;
-                    break;
-                }
-                case WindowMessages.WM_SYSCHAR:
-                {
-                    toggleFullscreen = wParam == VirtualKeys.VK_RETURN && (HIWORD(lParam) & KeystrokeFlags.KF_ALTDOWN) != 0;
-                    break;
-                }
-                case WindowMessages.WM_KEYDOWN:
-                {
-                    if (wParam == VirtualKeys.VK_ESCAPE)
-                    {
-                        _ = PostMessage(hwnd, WindowMessages.WM_CLOSE, 0, 0);
-                        return 0;
-                    }
-                    break;
-                }
-            }
-
-            if ((resized && GetAsyncKeyState((int)VirtualKeys.VK_LBUTTON) >= 0) || toggleFullscreen)
-            {
-                Window win = new((uint)GetWindowLongPtrW(hwnd, WindowLongIndex.GWL_USERDATA));
-                for (int i = 0; i < cameraSurfaces.Count; i++)
-                {
-                    if (win.Id == cameraSurfaces[i].Surface.Window.Id)
-                    {
-                        if (toggleFullscreen)
-                        {
-                            win.SetFullscreen(!win.IsFullscreen);
-                            // The default window procedure will play a system notification sound
-                            // when pressing the Alt+Enter keyboard combination if WM_SYSCHAR is
-                            // not handled. By returning 0 we can tell the system that we handled
-                            // this message.
-                            return 0;
-                        }
-                        else
-                        {
-                            cameraSurfaces[i].Surface.Surface.Resize(win.Width, win.Height);
-                            cameraSurfaces[i].Camera.AspectRatio = (float)win.Width / win.Height;
-
-                            resized = false;
-                        }
-                        break;
-                    }
-                }
-            }
-
-            return DefWindowProcW(hwnd, msg, wParam, lParam);
         }
         private void CreateRenderItem()
         {

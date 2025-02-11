@@ -25,6 +25,10 @@ namespace PrimalLike
         /// Delta time since the last frame.
         /// </summary>
         public float DeltaTime { get; private set; } = 0f;
+        /// <summary>
+        /// Average delta time.
+        /// </summary>
+        public float AverageDeltaTime { get; private set; } = 0f;
 
         /// <summary>
         /// Constructor.
@@ -45,6 +49,7 @@ namespace PrimalLike
             Elapsed = elapsedTime;
 
             DeltaTime = (float)Elapsed.TotalSeconds;
+            AverageDeltaTime = (DeltaTime + AverageDeltaTime) / 2;
         }
         /// <summary>
         /// Stops the time.

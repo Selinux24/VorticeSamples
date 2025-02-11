@@ -5,17 +5,15 @@ using WindowsPlatform;
 
 namespace DX12Windows
 {
-    class HelloWorldComponent : RenderComponent
+    class HelloWorldComponent(Win32WindowInfo info) : RenderComponent(info)
     {
         private FrameInfo frameInfo = new();
+        private readonly float maxTime = 1f;
+        private float dt = 0;
+        private uint lightSetKey = 0;
 
         public Camera Camera { get; private set; }
         public Entity Entity { get; private set; }
-
-        public HelloWorldComponent(Win32WindowInfo info) : base(info)
-        {
-            Surface = Application.CreateRenderSurface(info);
-        }
 
         public override void CreateCamera(Entity entity)
         {
@@ -24,14 +22,20 @@ namespace DX12Windows
             Camera.AspectRatio = (float)Surface.Window.Width / Surface.Window.Height;
         }
 
-        public override FrameInfo GetFrameInfo()
+        public override FrameInfo GetFrameInfo(Time time)
         {
+            frameInfo.LastFrameTime = time.DeltaTime;
+            frameInfo.AverageFrameTime = time.AverageDeltaTime;
+
+            dt += time.DeltaTime;
+            if (dt > maxTime)
+            {
+                lightSetKey = (lightSetKey + 1) % 2;
+                dt %= maxTime;
+            }
+            frameInfo.LightSetKey = lightSetKey;
+
             return frameInfo;
-        }
-        public override void Resized()
-        {
-            Surface.Surface.Resize(Surface.Window.Width, Surface.Window.Height);
-            Camera.AspectRatio = (float)Surface.Window.Width / Surface.Window.Height;
         }
         public override void Remove()
         {

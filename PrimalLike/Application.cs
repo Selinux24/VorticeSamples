@@ -322,7 +322,7 @@ namespace PrimalLike
             FpsTimer.Begin();
             foreach (var rs in renderSurfaces)
             {
-                rs.Render();
+                rs.Render(time);
             }
             FpsTimer.End();
         }

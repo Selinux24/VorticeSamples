@@ -16,7 +16,7 @@ namespace PrimalLike.Graphics
         /// <summary>
         /// Gets the render surface.
         /// </summary>
-        public RenderSurface Surface { get; protected set; }
+        public RenderSurface Surface { get; private set; } = Application.CreateRenderSurface(info);
 
         /// <summary>
         /// Creates the camera.
@@ -27,24 +27,22 @@ namespace PrimalLike.Graphics
         /// <summary>
         /// Gets the frame info.
         /// </summary>
-        public abstract FrameInfo GetFrameInfo();
+        /// <param name="time">Game time</param>
+        public abstract FrameInfo GetFrameInfo(Time time);
         /// <summary>
         /// Renders the component.
         /// </summary>
-        public void Render()
+        /// <param name="time">Game time</param>
+        public virtual void Render(Time time)
         {
             if (!Surface.Surface.IsValid)
             {
                 return;
             }
 
-            var info = GetFrameInfo();
+            var info = GetFrameInfo(time);
             Surface.Surface.Render(info);
         }
-        /// <summary>
-        /// The component is resized.
-        /// </summary>
-        public abstract void Resized();
         /// <summary>
         /// Removes the component.
         /// </summary>
