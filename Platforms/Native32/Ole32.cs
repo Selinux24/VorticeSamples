@@ -5,10 +5,12 @@ namespace Native32
 {
     static partial class Ole32
     {
-        [LibraryImport("ole32.dll", EntryPoint = "CoInitializeEx", SetLastError = true)]
+        const string LibraryName = "ole32.dll";
+
+        [LibraryImport(LibraryName, SetLastError = true)]
         public static partial int CoInitializeEx(IntPtr pvReserved, COINIT dwCoInit);
 
-        [LibraryImport("ole32.dll", EntryPoint = "CoUninitialize", SetLastError = true)]
+        [LibraryImport(LibraryName, SetLastError = true)]
         public static partial int CoUninitialize();
 
         /// <summary>

@@ -10,10 +10,12 @@ using PrimalLike.Graphics;
 using PrimalLike.Platform;
 using ShaderCompiler;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
 using System.Threading;
 using WindowsPlatform;
+using static Native32.User32;
 
 namespace D3D12LibTests
 {
@@ -102,7 +104,8 @@ namespace D3D12LibTests
         ];
 
         private TestApp app;
-        private static CameraSurface[] cameraSurfaces;
+        private static readonly List<CameraSurface> cameraSurfaces = [];
+        private static bool resized = false;
 
         private uint itemId = IdDetail.InvalidId;
         private uint modelId = IdDetail.InvalidId;
@@ -178,32 +181,34 @@ namespace D3D12LibTests
                     Caption = "DX12 for Windows 1",
                     ClientArea = new(100, 100, 400, 800),
                     IsFullScreen = false,
+                    Callback = CustomWndProc,
                 },
                 new()
                 {
                     Caption = "DX12 for Windows 2",
                     ClientArea = new(150, 150, 800, 400),
                     IsFullScreen = false,
+                    Callback = CustomWndProc,
                 },
                 new()
                 {
                     Caption = "DX12 for Windows 3",
                     ClientArea = new(200, 200, 400, 400),
                     IsFullScreen = false,
+                    Callback = CustomWndProc,
                 },
                 new()
                 {
                     Caption = "DX12 for Windows 4",
                     ClientArea = new(250, 250, 800, 600),
                     IsFullScreen = false,
+                    Callback = CustomWndProc,
                 }
             ];
 
-            cameraSurfaces = new CameraSurface[initInfos.Length];
-
-            for (uint i = 0; i < initInfos.Length; i++)
+            for (int i = 0; i < initInfos.Length; i++)
             {
-                cameraSurfaces[i] = Application.CreateRenderComponent<CameraSurface>(initInfos[i]);
+                cameraSurfaces.Add(Application.CreateRenderComponent<CameraSurface>(initInfos[i]));
 
                 EntityInfo entityInfo = new()
                 {
@@ -217,6 +222,85 @@ namespace D3D12LibTests
                 cameraSurfaces[i].CreateCamera(entity);
                 cameraSurfaces[i].UpdateFrameInfo([itemId], [10f]);
             }
+        }
+        private static IntPtr CustomWndProc(IntPtr hwnd, uint msg, IntPtr wParam, IntPtr lParam)
+        {
+            bool toggleFullscreen = false;
+
+            switch (msg)
+            {
+                case WindowMessages.WM_DESTROY:
+                {
+                    bool allClosed = true;
+                    for (int i = 0; i < cameraSurfaces.Count; i++)
+                    {
+                        if (!cameraSurfaces[i].Surface.Window.IsValid)
+                        {
+                            continue;
+                        }
+
+                        if (!cameraSurfaces[i].Surface.Window.IsClosed)
+                        {
+                            allClosed = false;
+                        }
+                    }
+                    if (allClosed)
+                    {
+                        _ = PostQuitMessage(0);
+                        return 0;
+                    }
+                }
+                break;
+                case WindowMessages.WM_SIZE:
+                {
+                    resized = wParam != WM_SIZE_WPARAM.SIZE_MINIMIZED;
+                    break;
+                }
+                case WindowMessages.WM_SYSCHAR:
+                {
+                    toggleFullscreen = wParam == VirtualKeys.VK_RETURN && (HIWORD(lParam) & KeystrokeFlags.KF_ALTDOWN) != 0;
+                    break;
+                }
+                case WindowMessages.WM_KEYDOWN:
+                {
+                    if (wParam == VirtualKeys.VK_ESCAPE)
+                    {
+                        _ = PostMessage(hwnd, WindowMessages.WM_CLOSE, 0, 0);
+                        return 0;
+                    }
+                    break;
+                }
+            }
+
+            if ((resized && GetAsyncKeyState((int)VirtualKeys.VK_LBUTTON) >= 0) || toggleFullscreen)
+            {
+                Window win = new((uint)GetWindowLongPtrW(hwnd, WindowLongIndex.GWL_USERDATA));
+                for (int i = 0; i < cameraSurfaces.Count; i++)
+                {
+                    if (win.Id == cameraSurfaces[i].Surface.Window.Id)
+                    {
+                        if (toggleFullscreen)
+                        {
+                            win.SetFullscreen(!win.IsFullscreen);
+                            // The default window procedure will play a system notification sound
+                            // when pressing the Alt+Enter keyboard combination if WM_SYSCHAR is
+                            // not handled. By returning 0 we can tell the system that we handled
+                            // this message.
+                            return 0;
+                        }
+                        else
+                        {
+                            cameraSurfaces[i].Surface.Surface.Resize(win.Width, win.Height);
+                            cameraSurfaces[i].Camera.AspectRatio = (float)win.Width / win.Height;
+
+                            resized = false;
+                        }
+                        break;
+                    }
+                }
+            }
+
+            return DefWindowProcW(hwnd, msg, wParam, lParam);
         }
         private void CreateRenderItem()
         {
@@ -265,7 +349,7 @@ namespace D3D12LibTests
                 ContentToEngine.DestroyResource(modelId, AssetTypes.Mesh);
             }
 
-            for (int i = 0; i < cameraSurfaces.Length; i++)
+            for (int i = 0; i < cameraSurfaces.Count; i++)
             {
                 Application.RemoveRenderComponent(cameraSurfaces[i]);
             }

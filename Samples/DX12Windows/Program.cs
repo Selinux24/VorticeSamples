@@ -113,7 +113,7 @@ namespace DX12Windows
 
             switch (msg)
             {
-                case WM_DESTROY:
+                case WindowMessages.WM_DESTROY:
                 {
                     bool allClosed = true;
                     for (int i = 0; i < surfaces.Count; i++)
@@ -135,30 +135,30 @@ namespace DX12Windows
                     }
                 }
                 break;
-                case WM_SIZE:
+                case WindowMessages.WM_SIZE:
                 {
-                    resized = (wParam != SIZE_MINIMIZED);
+                    resized = wParam != WM_SIZE_WPARAM.SIZE_MINIMIZED;
                     break;
                 }
-                case WM_SYSCHAR:
+                case WindowMessages.WM_SYSCHAR:
                 {
-                    toggleFullscreen = wParam == VK_RETURN && (HIWORD(lParam) & KF_ALTDOWN) != 0;
+                    toggleFullscreen = wParam == VirtualKeys.VK_RETURN && (HIWORD(lParam) & KeystrokeFlags.KF_ALTDOWN) != 0;
                     break;
                 }
-                case WM_KEYDOWN:
+                case WindowMessages.WM_KEYDOWN:
                 {
-                    if (wParam == VK_ESCAPE)
+                    if (wParam == VirtualKeys.VK_ESCAPE)
                     {
-                        _ = PostMessage(hwnd, WM_CLOSE, 0, 0);
+                        _ = PostMessage(hwnd, WindowMessages.WM_CLOSE, 0, 0);
                         return 0;
                     }
                     break;
                 }
             }
 
-            if ((resized && GetAsyncKeyState((int)VK_LBUTTON) >= 0) || toggleFullscreen)
+            if ((resized && GetAsyncKeyState((int)VirtualKeys.VK_LBUTTON) >= 0) || toggleFullscreen)
             {
-                Window win = new((uint)GetWindowLongPtrW(hwnd, (int)WindowLongIndex.GWL_USERDATA));
+                Window win = new((uint)GetWindowLongPtrW(hwnd, WindowLongIndex.GWL_USERDATA));
                 for (int i = 0; i < surfaces.Count; i++)
                 {
                     if (win.Id == surfaces[i].Surface.Window.Id)

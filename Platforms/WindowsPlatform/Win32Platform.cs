@@ -89,7 +89,7 @@ namespace WindowsPlatform
                     _ = TranslateMessage(ref msg);
                     _ = DispatchMessageW(ref msg);
 
-                    if (msg.msg == WM_QUIT)
+                    if (msg.msg == WindowMessages.WM_QUIT)
                     {
                         Debug.WriteLine("WM_QUIT received.");
                         isRunning = false;

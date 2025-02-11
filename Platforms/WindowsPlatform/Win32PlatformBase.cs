@@ -4,17 +4,17 @@ using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Utilities;
+using static Native32.Kernel32;
 using static Native32.Ole32;
 using static Native32.User32;
-using static Native32.Kernel32;
 
 namespace WindowsPlatform
 {
     static class Win32PlatformBase
     {
         const string WINDOWCLASSNAME = nameof(Win32PlatformBase);
-        const WindowStyles FULL_SCREEN_STYLE = WindowStyles.WS_OVERLAPPED;
-        const WindowStyles WINDOWED_STYLE = WindowStyles.WS_OVERLAPPEDWINDOW;
+        const uint FULL_SCREEN_STYLE = WindowStyles.WS_OVERLAPPED;
+        const uint WINDOWED_STYLE = WindowStyles.WS_OVERLAPPEDWINDOW;
 
         private static readonly FreeList<WindowInfo> windows = new();
         private static bool resized = false;
@@ -28,7 +28,7 @@ namespace WindowsPlatform
         }
         private static WindowInfo GetFromHandle(IntPtr handle)
         {
-            uint id = (uint)GetWindowLongPtrW(handle, (int)WindowLongIndex.GWL_USERDATA);
+            uint id = (uint)GetWindowLongPtrW(handle, WindowLongIndex.GWL_USERDATA);
             return GetFromId(id);
         }
 
@@ -36,22 +36,22 @@ namespace WindowsPlatform
         {
             switch (msg)
             {
-                case WM_NCCREATE:
+                case WindowMessages.WM_NCCREATE:
                 {
                     // Put the window id in the user data field of window's data buffer.
                     SetLastError(0);
                     uint id = windows.Add(new());
                     windows[id].Hwnd = hwnd;
-                    SetWindowLongPtrW(hwnd, (int)WindowLongIndex.GWL_USERDATA, (IntPtr)id);
+                    SetWindowLongPtrW(hwnd, WindowLongIndex.GWL_USERDATA, (IntPtr)id);
                     Debug.Assert(GetLastError() == 0);
                 }
                 break;
-                case WM_DESTROY:
+                case WindowMessages.WM_DESTROY:
                     WindowInfo info = GetFromHandle(hwnd);
                     info.IsClosed = true;
                     break;
-                case WM_SIZE:
-                    resized = wParam != SIZE_MINIMIZED;
+                case WindowMessages.WM_SIZE:
+                    resized = wParam != WM_SIZE_WPARAM.SIZE_MINIMIZED;
                     break;
 
                 default:
@@ -60,7 +60,7 @@ namespace WindowsPlatform
 
             Win32Input.ProcessInputMessage(hwnd, msg, wParam, lParam);
 
-            if (resized && GetKeyState((int)VK_LBUTTON) >= 0)
+            if (resized && GetKeyState((int)VirtualKeys.VK_LBUTTON) >= 0)
             {
                 WindowInfo info = GetFromHandle(hwnd);
                 Debug.Assert(info.Hwnd != IntPtr.Zero);
@@ -83,7 +83,7 @@ namespace WindowsPlatform
             }
             return DefWindowProcW(hwnd, msg, wParam, lParam);
         }
-      
+
         public static void ResizeWindow(WindowInfo info, ref RECT area)
         {
             // Adjust the window size for correct device size
@@ -142,14 +142,14 @@ namespace WindowsPlatform
                     GetWindowRect(info.Hwnd, out var rect);
                     info.TopLeft.X = (int)rect.Left;
                     info.TopLeft.Y = (int)rect.Top;
-                    SetWindowLongPtrW(info.Hwnd, (int)WindowLongIndex.GWL_STYLE, 0);
-                    ShowWindow(info.Hwnd, (int)ShowWindowCommands.SW_MAXIMIZE);
+                    SetWindowLongPtrW(info.Hwnd, WindowLongIndex.GWL_STYLE, 0);
+                    ShowWindow(info.Hwnd, ShowWindowCommands.SW_MAXIMIZE);
                 }
                 else
                 {
-                    SetWindowLongPtrW(info.Hwnd, (int)WindowLongIndex.GWL_STYLE, (IntPtr)info.Style);
+                    SetWindowLongPtrW(info.Hwnd, WindowLongIndex.GWL_STYLE, (IntPtr)info.Style);
                     ResizeWindow(info, ref info.ClientArea);
-                    ShowWindow(info.Hwnd, (int)ShowWindowCommands.SW_SHOWNORMAL);
+                    ShowWindow(info.Hwnd, ShowWindowCommands.SW_SHOWNORMAL);
                 }
             }
         }
@@ -232,10 +232,10 @@ namespace WindowsPlatform
                 SetWindowLongPtrW(info.Hwnd, 0, callbackPtr);
             }
 
-            ShowWindow(info.Hwnd, (int)ShowWindowCommands.SW_SHOWNORMAL);
+            ShowWindow(info.Hwnd, ShowWindowCommands.SW_SHOWNORMAL);
             UpdateWindow(info.Hwnd);
 
-            uint id = (uint)GetWindowLongPtrW(info.Hwnd, (int)WindowLongIndex.GWL_USERDATA);
+            uint id = (uint)GetWindowLongPtrW(info.Hwnd, WindowLongIndex.GWL_USERDATA);
             windows[id] = info;
 
             return new Window(id);
@@ -255,8 +255,8 @@ namespace WindowsPlatform
                 hIcon = IntPtr.Zero,
                 hCursor = LoadCursorW(IntPtr.Zero, (int)IDC_STANDARD_CURSORS.IDC_ARROW),
                 hbrBackground = default,
-                lpszMenuName = null,
-                lpszClassName = WINDOWCLASSNAME,
+                lpszMenuName = IntPtr.Zero,
+                lpszClassName = Marshal.StringToHGlobalUni(WINDOWCLASSNAME),
                 hIconSm = IntPtr.Zero,
             };
 
