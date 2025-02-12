@@ -31,12 +31,12 @@ namespace Direct3D12.Lights
             {
                 if (n == 0) return 0;
 
-                Debug.Assert(n > 0 && n < 32);
+                Debug.Assert(n > 0 && n <= 32);
                 return Bits(n - 1) | (1u << (n - 1));
             }
         }
 
-        static readonly uint dirtybitsmask = U32SetBits.Bits(D3D12Graphics.FrameBufferCount);
+        static readonly uint dirtyBitsMask = U32SetBits.Bits(D3D12Graphics.FrameBufferCount);
 
         public LightSet()
         {
@@ -108,7 +108,6 @@ namespace Direct3D12.Lights
                     Debug.Assert(cullableOwners.Count == cullableLights.Count);
                     Debug.Assert(cullableOwners.Count == cullingInfo.Count);
                     Debug.Assert(cullableOwners.Count == cullableEntityIds.Count);
-                    Debug.Assert(cullableOwners.Count == cullableOwners.Count);
                     Debug.Assert(cullableOwners.Count == dirtyBits.Count);
                 }
 
@@ -117,7 +116,7 @@ namespace Direct3D12.Lights
                 uint id = owners.Add(new() { EntityId = info.EntityId, DataIndex = index, LightType = info.LightType, IsEnabled = info.IsEnabled });
                 cullableEntityIds[(int)index] = owners[id].EntityId;
                 cullableOwners[(int)index] = id;
-                dirtyBits[(int)index] = dirtybitsmask;
+                dirtyBits[(int)index] = dirtyBitsMask;
                 Enable(id, info.IsEnabled);
                 UpdateTransform(index);
 
@@ -247,7 +246,7 @@ namespace Direct3D12.Lights
                 var light = cullableLights[(int)index];
                 light.Intensity = intensity;
                 cullableLights[(int)index] = light;
-                dirtyBits[(int)index] = dirtybitsmask;
+                dirtyBits[(int)index] = dirtyBitsMask;
             }
         }
 
@@ -273,7 +272,7 @@ namespace Direct3D12.Lights
                 var light = cullableLights[(int)index];
                 light.Color = color;
                 cullableLights[(int)index] = light;
-                dirtyBits[(int)index] = dirtybitsmask;
+                dirtyBits[(int)index] = dirtyBitsMask;
             }
         }
 
@@ -288,7 +287,7 @@ namespace Direct3D12.Lights
             var light = cullableLights[(int)index];
             light.Attenuation = attenuation;
             cullableLights[(int)index] = light;
-            dirtyBits[(int)index] = dirtybitsmask;
+            dirtyBits[(int)index] = dirtyBitsMask;
         }
 
         public void Range(uint id, float range)
@@ -302,7 +301,7 @@ namespace Direct3D12.Lights
             var light = cullableLights[(int)index];
             light.Range = range;
             cullableLights[(int)index] = light;
-            dirtyBits[(int)index] = dirtybitsmask;
+            dirtyBits[(int)index] = dirtyBitsMask;
         }
 
         public void Umbra(uint id, float umbra)
@@ -318,7 +317,7 @@ namespace Direct3D12.Lights
             var light = cullableLights[(int)index];
             light.CosUmbra = MathF.Cos(umbra * 0.5f);
             cullableLights[(int)index] = light;
-            dirtyBits[(int)index] = dirtybitsmask;
+            dirtyBits[(int)index] = dirtyBitsMask;
 
             if (Penumbra(id) < umbra)
             {
@@ -343,7 +342,7 @@ namespace Direct3D12.Lights
             var info = cullingInfo[(int)index];
             info.ConeRadius = CalculateConeRadius(Range(id), cullableLights[(int)index].CosPenumbra);
             cullingInfo[(int)index] = info;
-            dirtyBits[(int)index] = dirtybitsmask;
+            dirtyBits[(int)index] = dirtyBitsMask;
         }
 
         public bool IsEnabled(uint id)
@@ -529,20 +528,11 @@ namespace Direct3D12.Lights
             return owners.Size > 0;
         }
 
-
         private static float CalculateConeRadius(float range, float cosPenumbra)
         {
             float sinPenumbra = MathF.Sqrt(1f - cosPenumbra * cosPenumbra);
 
-            if (cosPenumbra >= 0.707107f)
-            {
-                // if penumbra half angle is less than 45 degrees
-                return sinPenumbra * range / cosPenumbra;
-            }
-            else
-            {
-                return sinPenumbra * range;
-            }
+            return sinPenumbra * range;
         }
 
         private void UpdateTransform(uint index)
@@ -559,7 +549,7 @@ namespace Direct3D12.Lights
                 cInfo.Direction = parameters.Direction = entity.Orientation;
             }
 
-            dirtyBits[(int)index] = dirtybitsmask;
+            dirtyBits[(int)index] = dirtyBitsMask;
         }
 
         private void AddCullableLightParameters(LightInitInfo info, uint index)
@@ -608,45 +598,72 @@ namespace Direct3D12.Lights
         {
             Debug.Assert(index1 != index2);
 
-            //swap light parameter indices
             Debug.Assert(index1 < cullableOwners.Count);
             Debug.Assert(index2 < cullableOwners.Count);
-            var owner1 = owners[cullableOwners[(int)index1]];
-            var owner2 = owners[cullableOwners[(int)index2]];
-            Debug.Assert(owner1.DataIndex == index1);
-            Debug.Assert(owner2.DataIndex == index2);
-            owner1.DataIndex = index2;
-            owner2.DataIndex = index1;
-
-            // swap light parameters
             Debug.Assert(index1 < cullableLights.Count);
             Debug.Assert(index2 < cullableLights.Count);
-            (cullableLights[(int)index1], cullableLights[(int)index2]) = (cullableLights[(int)index2], cullableLights[(int)index1]);
-
-            // swap culling info
             Debug.Assert(index1 < cullingInfo.Count);
             Debug.Assert(index2 < cullingInfo.Count);
-            (cullingInfo[(int)index1], cullingInfo[(int)index2]) = (cullingInfo[(int)index2], cullingInfo[(int)index1]);
-
-            // swap entity ids
             Debug.Assert(index1 < cullableEntityIds.Count);
             Debug.Assert(index2 < cullableEntityIds.Count);
-            (cullableEntityIds[(int)index1], cullableEntityIds[(int)index2]) = (cullableEntityIds[(int)index2], cullableEntityIds[(int)index1]);
+            Debug.Assert(IdDetail.IsValid(cullableOwners[(int)index1]) || IdDetail.IsValid(cullableOwners[(int)index2]));
 
-            // swap owner indices
-            (cullableOwners[(int)index1], cullableOwners[(int)index2]) = (cullableOwners[(int)index2], cullableOwners[(int)index1]);
+            if (!IdDetail.IsValid(cullableOwners[(int)index2]))
+            {
+                (index1, index2) = (index2, index1);
+            }
 
-            Debug.Assert(owners[cullableOwners[(int)index1]].EntityId == cullableEntityIds[(int)index1]);
-            Debug.Assert(owners[cullableOwners[(int)index2]].EntityId == cullableEntityIds[(int)index2]);
+            if (!IdDetail.IsValid(cullableOwners[(int)index1]))
+            {
+                var owner2 = owners[cullableOwners[(int)index2]];
+                Debug.Assert(owner2.DataIndex == index2);
+                owner2.DataIndex = index1;
 
-            // set dirty bits
-            Debug.Assert(index1 < dirtyBits.Count);
-            Debug.Assert(index2 < dirtyBits.Count);
-            dirtyBits[(int)index1] = dirtybitsmask;
-            dirtyBits[(int)index2] = dirtybitsmask;
+                cullableLights[(int)index1] = cullableLights[(int)index2];
+                cullingInfo[(int)index1] = cullingInfo[(int)index2];
+                cullableEntityIds[(int)index1] = cullableEntityIds[(int)index2];
+                (cullableOwners[(int)index1], cullableOwners[(int)index2]) = (cullableOwners[(int)index2], cullableOwners[(int)index1]);
+                dirtyBits[(int)index1] = dirtyBitsMask;
+                Debug.Assert(owners[cullableOwners[(int)index1]].EntityId == cullableEntityIds[(int)index1]);
+                Debug.Assert(IdDetail.IsValid(cullableOwners[(int)index2]));
+            }
+            else
+            {
+                var owner1 = owners[cullableOwners[(int)index1]];
+                var owner2 = owners[cullableOwners[(int)index2]];
+                Debug.Assert(owner1.DataIndex == index1);
+                Debug.Assert(owner2.DataIndex == index2);
+                owner1.DataIndex = index2;
+                owner2.DataIndex = index1;
+
+                // swap light parameters
+                Debug.Assert(index1 < cullableLights.Count);
+                Debug.Assert(index2 < cullableLights.Count);
+                (cullableLights[(int)index1], cullableLights[(int)index2]) = (cullableLights[(int)index2], cullableLights[(int)index1]);
+
+                // swap culling info
+                Debug.Assert(index1 < cullingInfo.Count);
+                Debug.Assert(index2 < cullingInfo.Count);
+                (cullingInfo[(int)index1], cullingInfo[(int)index2]) = (cullingInfo[(int)index2], cullingInfo[(int)index1]);
+
+                // swap entity ids
+                Debug.Assert(index1 < cullableEntityIds.Count);
+                Debug.Assert(index2 < cullableEntityIds.Count);
+                (cullableEntityIds[(int)index1], cullableEntityIds[(int)index2]) = (cullableEntityIds[(int)index2], cullableEntityIds[(int)index1]);
+
+                // swap owner indices
+                (cullableOwners[(int)index1], cullableOwners[(int)index2]) = (cullableOwners[(int)index2], cullableOwners[(int)index1]);
+
+                Debug.Assert(owners[cullableOwners[(int)index1]].EntityId == cullableEntityIds[(int)index1]);
+                Debug.Assert(owners[cullableOwners[(int)index2]].EntityId == cullableEntityIds[(int)index2]);
+
+                // set dirty bits
+                Debug.Assert(index1 < dirtyBits.Count);
+                Debug.Assert(index2 < dirtyBits.Count);
+                dirtyBits[(int)index1] = dirtyBitsMask;
+                dirtyBits[(int)index2] = dirtyBitsMask;
+            }
         }
-
-
         public bool GetDirtyBit(uint index, uint value)
         {
             return (dirtyBits[(int)index] & value) != 0;

@@ -109,6 +109,16 @@ namespace PrimalLike.EngineAPI
 
         KeyNumlock,
         KeyScrollock,
+        KeyColon,
+        KeyPlus,
+        KeyComma,
+        KeyMinus,
+        KeyPeriod,
+        KeyQuestion,
+        KeyBracketOpen,
+        KeyPipe,
+        KeyBracketClose,
+        KeyQuote,
         KeyTilde,
     }
 }
