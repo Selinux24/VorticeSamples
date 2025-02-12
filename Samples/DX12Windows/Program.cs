@@ -103,7 +103,10 @@ namespace DX12Windows
 
             Entity entity = HelloWorldApp.CreateOneGameEntity<Scripts.CameraScript>(renderItem.InitialCameraPosition, renderItem.InitialCameraRotation);
             renderComponent.CreateCamera(entity);
-            renderComponent.UpdateFrameInfo(renderItem.GetRenderItems(), [10f]);
+
+            var renderItems = renderItem.GetRenderItems();
+            var thresholds = new float[renderItems.Length];
+            renderComponent.UpdateFrameInfo(renderItem.GetRenderItems(), thresholds);
 
             surfaces.Add(renderComponent);
         }

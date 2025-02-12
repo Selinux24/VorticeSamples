@@ -1,5 +1,6 @@
 ﻿using PrimalLike.EngineAPI;
 using PrimalLike.Platform;
+using System.Diagnostics;
 
 namespace PrimalLike.Graphics
 {
@@ -41,6 +42,9 @@ namespace PrimalLike.Graphics
             }
 
             var info = GetFrameInfo(time);
+            Debug.Assert(info.RenderItemCount > 0);
+            Debug.Assert(info.RenderItemIds.Length == info.RenderItemCount);
+            Debug.Assert(info.Thresholds.Length == info.RenderItemCount);
             Surface.Surface.Render(info);
         }
         /// <summary>
