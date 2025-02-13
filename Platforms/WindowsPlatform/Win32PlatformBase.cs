@@ -75,6 +75,11 @@ namespace WindowsPlatform
                 resized = false;
             }
 
+            if (msg == WindowMessages.WM_SYSCOMMAND && wParam == SystemMenuCommands.SC_KEYMENU)
+            {
+                return 0;
+            }
+
             var callbackPtr = GetWindowLongPtrW(hwnd, 0);
             if (callbackPtr != IntPtr.Zero)
             {

@@ -247,7 +247,7 @@ namespace Direct3D12
             return gpassMainBuffer.GetResource() != null && gpassDepthBuffer.GetResource() != null;
         }
 
-        private static void FillPerObjectData(D3D12FrameInfo d3d12Info)
+        private static void FillPerObjectData(ref D3D12FrameInfo d3d12Info)
         {
             uint renderItemsCount = frameCache.Size();
             uint currentEntityId = uint.MaxValue;
@@ -293,7 +293,7 @@ namespace Direct3D12
                 break;
             }
         }
-        private static void PrepareRenderFrame(D3D12FrameInfo d3d12Info)
+        private static void PrepareRenderFrame(ref D3D12FrameInfo d3d12Info)
         {
             Debug.Assert(d3d12Info.Camera != null);
             Debug.Assert(d3d12Info.FrameInfo.RenderItemIds != null && d3d12Info.FrameInfo.RenderItemCount > 0);
@@ -314,7 +314,7 @@ namespace Direct3D12
             Material.GetMaterials(itemsCache.MaterialIds, ref materialsCache);
             frameCache.SetMaterials(materialsCache);
 
-            FillPerObjectData(d3d12Info);
+            FillPerObjectData(ref d3d12Info);
         }
 
         public static void Shutdown()
@@ -340,9 +340,9 @@ namespace Direct3D12
             CreateBuffers(dimensionWidth, dimensionHeight);
         }
 
-        public static void DepthPrePass(ID3D12GraphicsCommandList cmdList, D3D12FrameInfo d3d12Info)
+        public static void DepthPrePass(ID3D12GraphicsCommandList cmdList, ref D3D12FrameInfo d3d12Info)
         {
-            PrepareRenderFrame(d3d12Info);
+            PrepareRenderFrame(ref d3d12Info);
 
             uint itemsCount = frameCache.Size();
 
@@ -375,9 +375,11 @@ namespace Direct3D12
             }
         }
 
-        public static void Render(ID3D12GraphicsCommandList cmdList, D3D12FrameInfo d3d12Info)
+        public static void Render(ID3D12GraphicsCommandList cmdList, ref D3D12FrameInfo d3d12Info)
         {
             uint itemsCount = frameCache.Size();
+            uint frameIndex = d3d12Info.FrameIndex;
+            uint lightCullingId = d3d12Info.LightCullingId;
 
             ID3D12RootSignature currentRootSignature = null;
             ID3D12PipelineState currentPipelineState = null;
@@ -389,7 +391,10 @@ namespace Direct3D12
                     currentRootSignature = frameCache.RootSignatures[i];
                     cmdList.SetGraphicsRootSignature(currentRootSignature);
                     cmdList.SetGraphicsRootConstantBufferView((uint)OpaqueRootParameter.GlobalShaderData, d3d12Info.GlobalShaderData);
-                    cmdList.SetGraphicsRootShaderResourceView((uint)OpaqueRootParameter.DirectionalLights, D3D12Light.NonCullableLightBuffer(d3d12Info.FrameIndex));
+                    cmdList.SetGraphicsRootShaderResourceView((uint)OpaqueRootParameter.DirectionalLights, D3D12Light.NonCullableLightBuffer(frameIndex));
+                    cmdList.SetGraphicsRootShaderResourceView((uint)OpaqueRootParameter.CullableLights, D3D12Light.CullableLightBuffer(frameIndex));
+                    cmdList.SetGraphicsRootShaderResourceView((uint)OpaqueRootParameter.LightGrid, D3D12LightCulling.LightGridOpaque(lightCullingId, frameIndex));
+                    cmdList.SetGraphicsRootShaderResourceView((uint)OpaqueRootParameter.LightIndexList, D3D12LightCulling.LightIndexListOpaque(lightCullingId, frameIndex));
                 }
 
                 if (currentPipelineState != frameCache.GPassPipelineStates[i])

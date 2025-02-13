@@ -64,8 +64,9 @@ namespace DX12Windows.Lights
 
             if (randomLights)
             {
-                Vector3 scale = new(1f, 0.5f, 1f);
-                int dim = 5;
+                float scale1 = 2f;
+                Vector3 scale = new(1f * scale1, 0.5f * scale1, 1f * scale1);
+                int dim = 13;
                 for (int x = -dim; x < dim; x++)
                 {
                     for (int y = 0; y < 2 * dim; y++)
@@ -91,9 +92,9 @@ namespace DX12Windows.Lights
             else
             {
                 CreateLight(new(0, -3, 0), new(), LightTypes.Point, leftSet, false);
-                CreateLight(new(0, 0, 1), new(), LightTypes.Point, leftSet, false);
+                CreateLight(new(0, 0.2f, 1f), new(), LightTypes.Point, leftSet, false);
                 CreateLight(new(0, 3, 2.5f), new(), LightTypes.Point, leftSet, false);
-                CreateLight(new(0, 0, 7), new(0, 3.14f, 0), LightTypes.Spot, leftSet, false);
+                CreateLight(new(0, 0.1f, 7), new(0, 3.14f, 0), LightTypes.Spot, leftSet, false);
             }
         }
 
@@ -141,7 +142,7 @@ namespace DX12Windows.Lights
                 else if (type == LightTypes.Spot)
                 {
                     info.SpotLight.Range = 2f;
-                    info.SpotLight.Umbra = 0.1f * MathF.PI;
+                    info.SpotLight.Umbra = 0.7f * MathF.PI;
                     info.SpotLight.Penumbra = info.SpotLight.Umbra + (0.1f * MathF.PI);
                     info.SpotLight.Attenuation = new(1, 1, 1);
                 }

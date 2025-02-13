@@ -466,15 +466,15 @@ namespace Direct3D12
             D3D12GPass.AddTransitionsForDepthPrePass(resourceBarriers);
             resourceBarriers.Apply(cmdList);
             D3D12GPass.SetRenderTargetsForDepthPrePass(cmdList);
-            D3D12GPass.DepthPrePass(cmdList, d3d12Info);
+            D3D12GPass.DepthPrePass(cmdList, ref d3d12Info);
 
             // Geometry and lighting pass
-            D3D12Light.UpdateLightBuffers(d3d12Info);
-            D3D12LightCulling.CullLights(cmdList, d3d12Info, resourceBarriers);
+            D3D12Light.UpdateLightBuffers(ref d3d12Info);
+            D3D12LightCulling.CullLights(cmdList, ref d3d12Info, resourceBarriers);
             D3D12GPass.AddTransitionsForGPass(resourceBarriers);
             resourceBarriers.Apply(cmdList);
             D3D12GPass.SetRenderTargetsForGPass(cmdList);
-            D3D12GPass.Render(cmdList, d3d12Info);
+            D3D12GPass.Render(cmdList, ref d3d12Info);
 
             // Post-process
             resourceBarriers.AddTransitionBarrier(
@@ -486,7 +486,7 @@ namespace Direct3D12
             resourceBarriers.Apply(cmdList);
 
             // Will write to the current back buffer, so back buffer is a render target
-            D3D12PostProcess.PostProcess(cmdList, d3d12Info, surface.GetRtv().Cpu);
+            D3D12PostProcess.PostProcess(cmdList, ref d3d12Info, surface.GetRtv().Cpu);
 
             // after post process
             cmdList.ResourceBarrierTransition(

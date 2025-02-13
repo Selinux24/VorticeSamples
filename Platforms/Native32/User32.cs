@@ -127,8 +127,6 @@ namespace Native32
 
         [LibraryImport(LibraryName)]
         public static partial short GetKeyState(int nVirtKey);
-        [LibraryImport(LibraryName)]
-        public static partial short GetAsyncKeyState(int nVirtKey);
 
         [LibraryImport(LibraryName)]
         public static partial IntPtr SetCapture(IntPtr hWnd);
@@ -562,6 +560,11 @@ namespace Native32
         public readonly struct KeystrokeFlags
         {
             public const uint KF_ALTDOWN = 0x2000;
+        }
+
+        public readonly struct SystemMenuCommands
+        {
+            public const uint SC_KEYMENU = 0xF100;
         }
     }
 }

@@ -159,7 +159,7 @@ namespace DX12Windows
                 }
             }
 
-            if ((resized && GetAsyncKeyState((int)VirtualKeys.VK_LBUTTON) >= 0) || toggleFullscreen)
+            if ((resized && GetKeyState((int)VirtualKeys.VK_LBUTTON) >= 0) || toggleFullscreen)
             {
                 Window win = new((uint)GetWindowLongPtrW(hwnd, WindowLongIndex.GWL_USERDATA));
                 for (int i = 0; i < surfaces.Count; i++)

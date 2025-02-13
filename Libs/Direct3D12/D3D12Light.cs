@@ -175,7 +175,7 @@ namespace Direct3D12
             return set.EntityId(id);
         }
 
-        public static void UpdateLightBuffers(D3D12FrameInfo d3d12Info)
+        public static void UpdateLightBuffers(ref D3D12FrameInfo d3d12Info)
         {
             ulong lightSetKey = d3d12Info.FrameInfo.LightSetKey;
             if (lightSetKey == ulong.MaxValue)
@@ -200,6 +200,16 @@ namespace Direct3D12
             var lightBuffer = lightBuffers[frameIndex];
             return lightBuffer.NonCullableLights();
         }
+        public static ulong CullableLightBuffer(uint frameIndex)
+        {
+            var lightBuffer = lightBuffers[frameIndex];
+            return lightBuffer.CullableLights();
+        }
+        public static ulong CullingInfoBuffer(uint frameIndex)
+        {
+            var lightBuffer = lightBuffers[frameIndex];
+            return lightBuffer.CullingInfo();
+        }
         public static uint NonCullableLightCount(ulong lightSetKey)
         {
             if (lightSetKey == ulong.MaxValue)
@@ -209,6 +219,16 @@ namespace Direct3D12
 
             Debug.Assert(lightSets.ContainsKey(lightSetKey));
             return lightSets[lightSetKey].NonCullableLightCount();
+        }
+        public static uint CullableLightCount(ulong lightSetKey)
+        {
+            if (lightSetKey == ulong.MaxValue)
+            {
+                return 0;
+            }
+
+            Debug.Assert(lightSets.ContainsKey(lightSetKey));
+            return lightSets[lightSetKey].CullableLightCount();
         }
     }
 }

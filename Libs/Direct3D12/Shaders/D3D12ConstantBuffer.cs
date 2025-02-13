@@ -9,21 +9,24 @@ namespace Direct3D12.Shaders
     {
         unsafe struct ConstantBuffer
         {
+            private readonly object mutex = new();
+            private readonly D3D12Buffer buffer;
             private byte* cpuAddress;
             private uint cpuOffset;
-            private readonly object mutex = new();
 
-            public readonly D3D12Buffer Buffer;
+            public readonly ID3D12Resource Buffer => buffer.Buffer;
+            public readonly ulong GpuAddress => buffer.GpuAddress;
+            public readonly uint Size => buffer.Size;
 
             public ConstantBuffer(D3D12BufferInitInfo info)
             {
-                Buffer = new(info, true);
+                buffer = new(info, true);
 
-                D3D12Helpers.NameD3D12Object(Buffer.Buffer, Buffer.Size, "Constant Buffer - size");
+                D3D12Helpers.NameD3D12Object(buffer.Buffer, buffer.Size, "Constant Buffer - size");
 
                 fixed (byte** cpuAddress = &this.cpuAddress)
                 {
-                    D3D12Helpers.DxCall(Buffer.Buffer.Map(0, cpuAddress));
+                    D3D12Helpers.DxCall(buffer.Buffer.Map(0, cpuAddress));
                     Debug.Assert(this.cpuAddress != null);
                 }
             }
@@ -43,8 +46,8 @@ namespace Direct3D12.Shaders
                 {
                     uint size = (uint)Marshal.SizeOf<T>();
                     uint alignedSize = (uint)D3D12Helpers.AlignSizeForConstantBuffer(size);
-                    Debug.Assert(cpuOffset + alignedSize <= Buffer.Size);
-                    if (cpuOffset + alignedSize <= Buffer.Size)
+                    Debug.Assert(cpuOffset + alignedSize <= buffer.Size);
+                    if (cpuOffset + alignedSize <= buffer.Size)
                     {
                         byte* address = cpuAddress + cpuOffset;
                         cpuOffset += alignedSize;
@@ -69,7 +72,7 @@ namespace Direct3D12.Shaders
                     Debug.Assert(address <= cpuAddress + cpuOffset);
                     Debug.Assert(address >= cpuAddress);
                     ulong offset = (ulong)(address - cpuAddress);
-                    return Buffer.GpuAddress + offset;
+                    return buffer.GpuAddress + offset;
                 }
             }
             public void Clear()
@@ -78,7 +81,7 @@ namespace Direct3D12.Shaders
             }
             public void Release()
             {
-                Buffer.Release();
+                buffer.Release();
                 cpuAddress = null;
                 cpuOffset = 0;
             }
@@ -86,9 +89,9 @@ namespace Direct3D12.Shaders
 
         private ConstantBuffer cBuffer = new(info);
 
-        public ID3D12Resource Buffer { get => cBuffer.Buffer.Buffer; }
-        public ulong GpuAddress { get => cBuffer.Buffer.GpuAddress; }
-        public uint Size { get => cBuffer.Buffer.Size; }
+        public ID3D12Resource Buffer { get => cBuffer.Buffer; }
+        public ulong GpuAddress { get => cBuffer.GpuAddress; }
+        public uint Size { get => cBuffer.Size; }
 
         ~D3D12ConstantBuffer()
         {

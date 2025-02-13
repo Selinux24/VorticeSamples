@@ -11,6 +11,7 @@ namespace Direct3D12
         private D3D12DescriptorHandle dsv;
 
         public D3D12DescriptorHandle GetDsv() { return dsv; }
+        public D3D12DescriptorHandle GetSrv() { return texture.Srv; }
         public ID3D12Resource GetResource() { return texture.Resource; }
 
         public D3D12DepthBuffer()

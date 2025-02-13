@@ -10,6 +10,7 @@ namespace Direct3D12.Shaders
         FillColorPs,
         PostProcessPs,
         GridFrustumsCs,
+        LightCullingCs,
 
         Count,
     }
