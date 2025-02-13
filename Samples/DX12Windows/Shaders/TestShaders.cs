@@ -37,12 +37,7 @@ namespace DX12Windows.Shaders
                 extraArgs.Add(defines[i]);
                 bool compiledVs = Compiler.Compile(info, shadersIncludeDir, extraArgs, out var vertexShader);
                 Debug.Assert(compiledVs);
-                vertexShaders[i] = new()
-                {
-                    ByteCodeSize = (ulong)vertexShader.ByteCode.Length,
-                    ByteCode = vertexShader.ByteCode,
-                    Hash = vertexShader.Hash.HashDigest
-                };
+                vertexShaders[i] = new(vertexShader.ByteCode, vertexShader.Hash.HashDigest);
             }
 
             VsId = ContentToEngine.AddShaderGroup(vertexShaders, keys);
@@ -53,12 +48,7 @@ namespace DX12Windows.Shaders
 
             PrimalLike.Content.CompiledShader[] pixelShaders =
             [
-                new PrimalLike.Content.CompiledShader()
-                {
-                    ByteCodeSize = (ulong)pixelShader.ByteCode.Length,
-                    ByteCode = pixelShader.ByteCode,
-                    Hash = pixelShader.Hash.HashDigest
-                }
+                new PrimalLike.Content.CompiledShader(pixelShader.ByteCode, pixelShader.Hash.HashDigest)
             ];
 
             PsId = ContentToEngine.AddShaderGroup(pixelShaders, [uint.MaxValue]);

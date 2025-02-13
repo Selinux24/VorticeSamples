@@ -185,7 +185,7 @@ namespace Direct3D12
                 !D3D12PostProcess.Initialize() ||
                 !D3D12Upload.Initialize() ||
                 !D3D12Content.Initialize() ||
-                !D3D12Light.Initialize())
+                !D3D12LightCulling.Initialize())
             {
                 return FailedInit();
             }
@@ -204,7 +204,7 @@ namespace Direct3D12
             }
 
             // shutdown modules
-            D3D12Light.Shutdown();
+            D3D12LightCulling.Shutdown();
             D3D12Content.Shutdown();
             D3D12Upload.Shutdown();
             D3D12PostProcess.Shutdown();
@@ -376,8 +376,8 @@ namespace Direct3D12
                 InvViewProjection = camera.InverseViewProjection,
                 CameraPosition = camera.Position,
                 CameraDirection = camera.Direction,
-                ViewWidth = surface.Width,
-                ViewHeight = surface.Height,
+                ViewWidth = surface.GetViewport().Width,
+                ViewHeight = surface.GetViewport().Height,
                 NumDirectionalLights = D3D12Light.NonCullableLightCount(info.LightSetKey),
                 DeltaTime = deltaTime
             };
@@ -391,6 +391,7 @@ namespace Direct3D12
                 GlobalShaderData = dataBuffer,
                 SurfaceWidth = surface.Width,
                 SurfaceHeight = surface.Height,
+                LightCullingId = surface.LightCullingId,
                 FrameIndex = frameIdx,
                 DeltaTime = deltaTime
             };
@@ -469,6 +470,7 @@ namespace Direct3D12
 
             // Geometry and lighting pass
             D3D12Light.UpdateLightBuffers(d3d12Info);
+            D3D12LightCulling.CullLights(cmdList, d3d12Info, resourceBarriers);
             D3D12GPass.AddTransitionsForGPass(resourceBarriers);
             resourceBarriers.Apply(cmdList);
             D3D12GPass.SetRenderTargetsForGPass(cmdList);

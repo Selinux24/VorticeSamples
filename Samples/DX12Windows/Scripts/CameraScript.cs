@@ -93,8 +93,8 @@ namespace DX12Windows.Scripts
             Vector3 p = desiredPosition - position;
             Vector3 o = desiredSpherical - spherical;
 
-            movePosition = p.Length() > float.Epsilon;
-            moveRotation = o.Length() > float.Epsilon;
+            movePosition = p.LengthSquared() > float.Epsilon;
+            moveRotation = o.LengthSquared() > float.Epsilon;
 
             float scale = 0.2f * dt / 0.016667f;
 

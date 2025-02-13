@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using Vortice.Dxc;
 
@@ -39,7 +40,9 @@ namespace ShaderCompiler
 
             foreach (var file in engineShaderFiles)
             {
-                if (!Compile(file.Info, shadersIncludeDir, extraArgs, out var compiledShader))
+                string[] fileArgs = [.. (file.ExtraArguments ?? []), .. (extraArgs ?? [])];
+
+                if (!Compile(file.Info, shadersIncludeDir, fileArgs, out var compiledShader))
                 {
                     return false;
                 }

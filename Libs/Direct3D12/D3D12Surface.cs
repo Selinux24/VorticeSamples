@@ -1,4 +1,5 @@
-﻿using PrimalLike.EngineAPI;
+﻿using PrimalLike.Common;
+using PrimalLike.EngineAPI;
 using System;
 using System.Diagnostics;
 using Vortice.Direct3D12;
@@ -29,6 +30,7 @@ namespace Direct3D12
         private PresentFlags presentFlags = 0;
         private Viewport viewport;
         private RectI scissorRect;
+        private uint lightCullingId = uint.MaxValue;
 
         /// <summary>
         /// Gets the width of the surface.
@@ -38,6 +40,10 @@ namespace Direct3D12
         /// Gets the height of the surface.
         /// </summary>
         public uint Height { get => (uint)viewport.Height; }
+        /// <summary>
+        /// Gets the light culling id.
+        /// </summary>
+        public uint LightCullingId { get => lightCullingId; }
         /// <summary>
         /// Gets the current render target backbuffer resource.
         /// </summary>
@@ -86,6 +92,11 @@ namespace Direct3D12
         }
         private void Release()
         {
+            if (IdDetail.IsValid(lightCullingId))
+            {
+                D3D12LightCulling.RemoveCuller(lightCullingId);
+            }
+
             for (int i = 0; i < BufferCount; i++)
             {
                 renderTargetData[i].Resource?.Dispose();
@@ -155,6 +166,9 @@ namespace Direct3D12
             }
 
             FinalizeSwapChainCreation();
+
+            Debug.Assert(!IdDetail.IsValid(lightCullingId));
+            lightCullingId = D3D12LightCulling.AddCuller();
         }
         /// <summary>
         /// Finishes the swap chain creation.

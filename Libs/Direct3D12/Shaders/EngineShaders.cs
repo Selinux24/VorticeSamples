@@ -7,7 +7,10 @@ namespace Direct3D12.Shaders
     public enum EngineShaders : uint
     {
         FullScreenTriangleVs = 0,
-        FillColorPs = 1,
-        PostProcessPs = 2,
+        FillColorPs,
+        PostProcessPs,
+        GridFrustumsCs,
+
+        Count,
     }
 }

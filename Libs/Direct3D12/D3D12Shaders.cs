@@ -11,7 +11,7 @@ namespace Direct3D12
 {
     class D3D12Shaders
     {
-        private static readonly CompiledShader?[] engineShaders = new CompiledShader?[Enum.GetValues(typeof(EngineShaders)).Length];
+        private static readonly CompiledShader?[] engineShaders = new CompiledShader?[(int)EngineShaders.Count];
         private static byte[] engineShadersBlob;
 
         public static bool Initialize()
@@ -24,7 +24,7 @@ namespace Direct3D12
             bool result = Application.LoadEngineShaders(out engineShadersBlob);
             Debug.Assert(engineShadersBlob != null && engineShadersBlob.Length > 0);
 
-            int egCount = Enum.GetValues(typeof(EngineShaders)).Length;
+            int egCount = (int)EngineShaders.Count;
 
             using var stream = new MemoryStream(engineShadersBlob);
             using var reader = new BinaryReader(stream, Encoding.UTF8, false);
@@ -37,10 +37,7 @@ namespace Direct3D12
                 nint pt = Marshal.AllocHGlobal(size);
                 Marshal.Copy(data, 0, pt, size);
 
-                engineShaders[i] = new()
-                {
-                    ByteCode = data
-                };
+                engineShaders[i] = new(data);
             }
 
             Debug.Assert(reader.BaseStream.Position == reader.BaseStream.Length);
@@ -50,7 +47,7 @@ namespace Direct3D12
 
         public static void Shutdown()
         {
-            int egCount = Enum.GetValues(typeof(EngineShaders)).Length;
+            int egCount = (int)EngineShaders.Count;
             for (uint i = 0; i < egCount; i++)
             {
                 engineShaders[i] = null;
@@ -60,7 +57,7 @@ namespace Direct3D12
 
         public static ReadOnlyMemory<byte> GetEngineShader(EngineShaders id)
         {
-            int egCount = Enum.GetValues(typeof(EngineShaders)).Length;
+            int egCount = (int)EngineShaders.Count;
             Debug.Assert((int)id < egCount);
             CompiledShader? shader = engineShaders[(int)id];
             Debug.Assert(shader.HasValue && shader.Value.IsValid());

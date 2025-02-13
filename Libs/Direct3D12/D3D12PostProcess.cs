@@ -10,7 +10,10 @@ namespace Direct3D12
     {
         public enum PostProcessRootParameters : uint
         {
-            MainBuffer = 0,
+            GlobalShaderData,
+            MainBuffer,
+            // TODO: temporary for visualizing light culling. Remove later.
+            Frustums,
 
             Count,
         }
@@ -39,7 +42,9 @@ namespace Direct3D12
 
             // Create FX root signature
             var parameters = new RootParameter1[(uint)PostProcessRootParameters.Count];
+            parameters[(uint)PostProcessRootParameters.GlobalShaderData] = D3D12Helpers.AsCbv(ShaderVisibility.Pixel, 0);
             parameters[(uint)PostProcessRootParameters.MainBuffer] = D3D12Helpers.AsConstants(1, ShaderVisibility.Pixel, 1);
+            parameters[(uint)PostProcessRootParameters.Frustums] = D3D12Helpers.AsSrv(ShaderVisibility.Pixel, 0);
 
             var rootSignature = new D3D12RootSignatureDesc(parameters);
             rootSignature.Flags &= ~RootSignatureFlags.DenyPixelShaderRootAccess;
@@ -72,12 +77,17 @@ namespace Direct3D12
             fxPso = null;
         }
 
-        public static void PostProcess(ID3D12GraphicsCommandList cmdList, D3D12FrameInfo info, CpuDescriptorHandle targetRtv)
+        public static void PostProcess(ID3D12GraphicsCommandList cmdList, D3D12FrameInfo d3d12Info, CpuDescriptorHandle targetRtv)
         {
+            uint frameIndex = d3d12Info.FrameIndex;
+            uint lightCullingId = d3d12Info.LightCullingId;
+
             cmdList.SetGraphicsRootSignature(fxRootSig);
             cmdList.SetPipelineState(fxPso);
 
+            cmdList.SetGraphicsRootConstantBufferView((uint)PostProcessRootParameters.GlobalShaderData, d3d12Info.GlobalShaderData);
             cmdList.SetGraphicsRoot32BitConstant((uint)PostProcessRootParameters.MainBuffer, D3D12GPass.MainBuffer.GetSrv().Index, 0);
+            cmdList.SetGraphicsRootShaderResourceView((uint)PostProcessRootParameters.Frustums, D3D12LightCulling.Frustums(lightCullingId, frameIndex));
             cmdList.IASetPrimitiveTopology(PrimitiveTopology.TriangleList);
             // NOTE: we don't need to clear the render target, because each pixel will 
             //       be overwritten by pixels from gpass main buffer.
