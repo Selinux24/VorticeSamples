@@ -1,5 +1,4 @@
 ﻿using Direct3D12;
-using Direct3D12.Shaders;
 using NUnit.Framework;
 using PrimalLike;
 using PrimalLike.Common;
@@ -19,8 +18,8 @@ namespace D3D12LibTests
 {
     public class RendererTest
     {
-        private const string shadersSourceDir = "../../../../../Libs/Direct3D12/Shaders/";
-        private const string shadersIncludeDir = "../../../../../Libs/Direct3D12/Shaders/";
+        private const string shadersSourceDir = "../../../../../Libs/Direct3D12/Hlsl/";
+        private const string shadersIncludeDir = "../../../../../Libs/Direct3D12/Hlsl/";
         private const string shadersOutputPath = "./Content/engineShaders.bin";
         private const string testModelFile = "./Content/Model.model";
 
@@ -30,6 +29,7 @@ namespace D3D12LibTests
             new ((int)EngineShaders.FillColorPs, new (Path.Combine(shadersSourceDir, "FillColor.hlsl"), "FillColorPS", ShaderStage.Pixel)),
             new ((int)EngineShaders.PostProcessPs, new (Path.Combine(shadersSourceDir, "PostProcess.hlsl"), "PostProcessPS", ShaderStage.Pixel)),
             new ((int)EngineShaders.GridFrustumsCs, new (Path.Combine(shadersSourceDir, "GridFrustums.hlsl"), "ComputeGridFrustumsCS", ShaderStage.Compute), ["-D", "TILE_SIZE=16"]),
+            new ((int)EngineShaders.LightCullingCs, new (Path.Combine(shadersSourceDir, "CullLights.hlsl"), "CullLightsCS", ShaderStage.Compute), ["-D", "TILE_SIZE=16"]),
         ];
 
         private TestApp app;
@@ -77,7 +77,7 @@ namespace D3D12LibTests
                 {
                     if (wParam == VirtualKeys.VK_ESCAPE)
                     {
-                        _ = PostMessage(hwnd, WindowMessages.WM_CLOSE, 0, 0);
+                        _ = PostMessageW(hwnd, WindowMessages.WM_CLOSE, 0, 0);
                         return 0;
                     }
                     break;

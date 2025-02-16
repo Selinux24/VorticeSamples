@@ -1,5 +1,4 @@
-﻿using Direct3D12.Shaders;
-using PrimalLike;
+﻿using PrimalLike;
 using PrimalLike.Content;
 using System;
 using System.Diagnostics;

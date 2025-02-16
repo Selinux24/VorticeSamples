@@ -8,10 +8,10 @@ namespace Direct3D12
     class D3D12DepthBuffer : IDisposable
     {
         private readonly D3D12Texture texture;
-        private D3D12DescriptorHandle dsv;
+        private DescriptorHandle dsv;
 
-        public D3D12DescriptorHandle GetDsv() { return dsv; }
-        public D3D12DescriptorHandle GetSrv() { return texture.Srv; }
+        public DescriptorHandle GetDsv() { return dsv; }
+        public DescriptorHandle GetSrv() { return texture.Srv; }
         public ID3D12Resource GetResource() { return texture.Resource; }
 
         public D3D12DepthBuffer()

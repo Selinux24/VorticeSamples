@@ -1,4 +1,4 @@
-﻿using Direct3D12.Shaders;
+﻿using Direct3D12;
 using ShaderCompiler;
 using System;
 using System.IO;
@@ -7,8 +7,8 @@ namespace DX12Windows.Shaders
 {
     static class EngineShadersHelper
     {
-        private const string shadersSourceDir = "../../../../../Libs/Direct3D12/Shaders/";
-        private const string shadersIncludeDir = "../../../../../Libs/Direct3D12/Shaders/";
+        private const string shadersSourceDir = "../../../../../Libs/Direct3D12/Hlsl/";
+        private const string shadersIncludeDir = "../../../../../Libs/Direct3D12/Hlsl/";
         private const string shadersOutputPath = "./Content/engineShaders.bin";
 
         private static readonly EngineShaderInfo[] engineShaderFiles =

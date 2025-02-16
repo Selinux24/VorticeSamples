@@ -10,8 +10,8 @@ namespace DX12Windows.Shaders
 {
     static class TestShaders
     {
-        private const string shadersSourcePath = "./Shaders/";
-        private const string shadersIncludeDir = "../../../../../Libs/Direct3D12/Shaders/";
+        private const string shadersSourcePath = "./Hlsl/";
+        private const string shadersIncludeDir = "../../../../../Libs/Direct3D12/Hlsl/";
 
         public static uint VsId { get; private set; } = IdDetail.InvalidId;
         public static uint PsId { get; private set; } = IdDetail.InvalidId;

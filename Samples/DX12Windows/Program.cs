@@ -26,7 +26,16 @@ namespace DX12Windows
 
         static void Main()
         {
-            while (ChooseScene() == -1) { }
+            int opt = -1;
+            while (opt == -1)
+            {
+                opt = ChooseScene();
+            }
+
+            if (opt != 1)
+            {
+                return;
+            }
 
             EngineShadersHelper.Compile();
 
@@ -106,6 +115,10 @@ namespace DX12Windows
 
             var renderItems = renderItem.GetRenderItems();
             var thresholds = new float[renderItems.Length];
+            for (int i = 0; i < renderItems.Length; i++)
+            {
+                thresholds[i] = 0.1f;
+            }
             renderComponent.UpdateFrameInfo(renderItem.GetRenderItems(), thresholds);
 
             surfaces.Add(renderComponent);
@@ -152,7 +165,7 @@ namespace DX12Windows
                 {
                     if (wParam == VirtualKeys.VK_ESCAPE)
                     {
-                        _ = PostMessage(hwnd, WindowMessages.WM_CLOSE, 0, 0);
+                        _ = PostMessageW(hwnd, WindowMessages.WM_CLOSE, 0, 0);
                         return 0;
                     }
                     break;

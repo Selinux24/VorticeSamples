@@ -1,5 +1,5 @@
 ﻿
-namespace Direct3D12.Shaders
+namespace Direct3D12
 {
     /// <summary>
     /// Built-in engine shaders.

@@ -1,7 +1,7 @@
 ﻿using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-namespace Direct3D12.Shaders
+namespace Direct3D12.Helpers
 {
     unsafe static class BuffersHelper
     {

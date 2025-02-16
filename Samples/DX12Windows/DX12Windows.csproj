@@ -22,7 +22,7 @@
     <Content Include="Content\model.model">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="Shaders\TestShader.hlsl">
+    <Content Include="Hlsl\TestShader.hlsl">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

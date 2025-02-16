@@ -1,4 +1,5 @@
 ﻿using Direct3D12.Content;
+using Direct3D12.Lights;
 using PrimalLike.EngineAPI;
 using PrimalLike.Graphics;
 using System;

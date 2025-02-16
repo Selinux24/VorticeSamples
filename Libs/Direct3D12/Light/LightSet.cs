@@ -32,7 +32,7 @@ namespace Direct3D12.Lights
                 if (n == 0) return 0;
 
                 Debug.Assert(n > 0 && n <= 32);
-                return Bits(n - 1) | (1u << (n - 1));
+                return Bits(n - 1) | 1u << n - 1;
             }
         }
 
@@ -40,7 +40,7 @@ namespace Direct3D12.Lights
 
         public LightSet()
         {
-            Debug.Assert(U32SetBits.Bits(D3D12Graphics.FrameBufferCount) < (1u << 8), "That's quite a large frame buffer count!");
+            Debug.Assert(U32SetBits.Bits(D3D12Graphics.FrameBufferCount) < 1u << 8, "That's quite a large frame buffer count!");
         }
 
         public Light Add(LightInitInfo info)
@@ -538,16 +538,18 @@ namespace Direct3D12.Lights
         private void UpdateTransform(uint index)
         {
             var entity = new Entity(cullableEntityIds[(int)index]);
+
             var parameters = cullableLights[(int)index];
-            parameters.Position = entity.Position;
-
             var cInfo = cullingInfo[(int)index];
-            cInfo.Position = parameters.Position;
 
+            cInfo.Position = parameters.Position = entity.Position;
             if (parameters.Type == (uint)LightTypes.Spot)
             {
                 cInfo.Direction = parameters.Direction = entity.Orientation;
             }
+
+            cullableLights[(int)index] = parameters;
+            cullingInfo[(int)index] = cInfo;
 
             dirtyBits[(int)index] = dirtyBitsMask;
         }
@@ -557,6 +559,7 @@ namespace Direct3D12.Lights
             Debug.Assert(info.LightType != LightTypes.Directional && index < cullableLights.Count);
 
             var parameters = cullableLights[(int)index];
+
             parameters.Type = (uint)info.LightType;
             Debug.Assert(parameters.Type < (uint)LightTypes.Count);
             parameters.Color = info.Color;
@@ -576,6 +579,7 @@ namespace Direct3D12.Lights
                 parameters.CosUmbra = MathF.Cos(p.Umbra * 0.5f);
                 parameters.CosPenumbra = MathF.Cos(p.Penumbra * 0.5f);
             }
+
             cullableLights[(int)index] = parameters;
         }
         private void AddLightCullingInfo(LightInitInfo info, uint index)

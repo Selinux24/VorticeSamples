@@ -1,4 +1,6 @@
 ﻿using Direct3D12.Content;
+using Direct3D12.Delight;
+using Direct3D12.Lights;
 using Direct3D12.Shaders;
 using PrimalLike.Components;
 using PrimalLike.Graphics;
@@ -16,27 +18,6 @@ namespace Direct3D12
     static class D3D12GPass
     {
         #region Structures
-
-        [StructLayout(LayoutKind.Sequential)]
-        struct FrameConstants
-        {
-            public float Width;
-            public float Height;
-            public int Frame;
-        }
-
-        [StructLayout(LayoutKind.Sequential)]
-        struct PipelineStateStream
-        {
-            public PipelineStateSubObjectTypeRootSignature RootSignature;
-            public PipelineStateSubObjectTypeVertexShader Vs;
-            public PipelineStateSubObjectTypePixelShader Ps;
-            public PipelineStateSubObjectTypePrimitiveTopology PrimitiveTopology;
-            public PipelineStateSubObjectTypeRenderTargetFormats RenderTargetFormats;
-            public PipelineStateSubObjectTypeDepthStencilFormat DepthStencilFormat;
-            public PipelineStateSubObjectTypeRasterizer Rasterizer;
-            public PipelineStateSubObjectTypeDepthStencil1 Depth;
-        }
 
         struct GPassCache()
         {
@@ -253,8 +234,6 @@ namespace Direct3D12
             uint currentEntityId = uint.MaxValue;
             ulong currentGpuAddress = 0;
 
-            var cbuffer = D3D12Graphics.CBuffer;
-
             for (uint i = 0; i < renderItemsCount; i++)
             {
                 if (currentEntityId != frameCache.EntityIds[i])
@@ -270,7 +249,7 @@ namespace Direct3D12
                         WorldViewProjection = wvp
                     };
 
-                    currentGpuAddress = cbuffer.Write(data);
+                    currentGpuAddress = D3D12Graphics.CBuffer.Write(data);
                 }
 
                 Debug.Assert(currentGpuAddress != 0);

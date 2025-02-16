@@ -1,5 +1,5 @@
 ﻿
-namespace Direct3D12
+namespace Direct3D12.Content
 {
     public enum OpaqueRootParameter : uint
     {

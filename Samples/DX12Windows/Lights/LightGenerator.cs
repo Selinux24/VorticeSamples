@@ -10,13 +10,13 @@ namespace DX12Windows.Lights
 {
     static class LightGenerator
     {
-        const float invRandMax = 1f / int.MaxValue;
+        private const int randMax = 0x7fff;
+        private const float invRandMax = 1f / randMax;
 
         private static readonly ulong leftSet = 0;
         private static readonly ulong rightSet = 1;
         private static readonly List<Light> lights = [];
-        private static readonly Random rand = new();
-        private static readonly int maxRand = 37;
+        private static readonly Random rand = new(37);
 
         static Vector3 RGBToColor(byte r, byte g, byte b)
         {
@@ -100,7 +100,9 @@ namespace DX12Windows.Lights
 
         static float Random(float min = 0f)
         {
-            return MathF.Min(min, rand.Next(maxRand) * invRandMax);
+            float v = rand.Next(0, randMax) * invRandMax;
+
+            return MathF.Max(min, v);
         }
 
         static void CreateLight(Vector3 position, Vector3 rotation, LightTypes type, ulong lightSetKey, bool randomLights)

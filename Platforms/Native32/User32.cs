@@ -72,7 +72,7 @@ namespace Native32
         public static partial int TranslateMessage(ref NativeMessage lpMsg);
 
         [LibraryImport(LibraryName)]
-        public static partial int PostMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
+        public static partial int PostMessageW(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
 
         [LibraryImport(LibraryName)]
         public static partial int PostQuitMessage(int nExitCode);

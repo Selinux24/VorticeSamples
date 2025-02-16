@@ -1,10 +1,10 @@
-﻿using Direct3D12.Shaders;
+﻿using Direct3D12.Delight;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Vortice.Direct3D;
 using Vortice.Direct3D12;
 
-namespace Direct3D12
+namespace Direct3D12.Fx
 {
     static class D3D12PostProcess
     {

@@ -1,4 +1,5 @@
-﻿using PrimalLike.Common;
+﻿using Direct3D12.Delight;
+using PrimalLike.Common;
 using PrimalLike.EngineAPI;
 using System;
 using System.Diagnostics;
@@ -19,7 +20,7 @@ namespace Direct3D12
         struct RenderTargetData
         {
             public ID3D12Resource Resource;
-            public D3D12DescriptorHandle Rtv;
+            public DescriptorHandle Rtv;
         }
 
         private IDXGISwapChain4 swapChain;
@@ -51,7 +52,7 @@ namespace Direct3D12
         /// <summary>
         /// Gets the current render target view descriptor handle.
         /// </summary>
-        public D3D12DescriptorHandle GetRtv() { return renderTargetData[currentBbIndex].Rtv; }
+        public DescriptorHandle GetRtv() { return renderTargetData[currentBbIndex].Rtv; }
         /// <summary>
         /// Gets the viewport.
         /// </summary>

@@ -9,10 +9,10 @@ namespace Direct3D12
         public const int MaxMips = 14;
 
         private ID3D12Resource resource;
-        private D3D12DescriptorHandle srv;
+        private DescriptorHandle srv;
 
         public ID3D12Resource Resource { get => resource; }
-        public D3D12DescriptorHandle Srv { get => srv; }
+        public DescriptorHandle Srv { get => srv; }
 
         public D3D12Texture()
         {

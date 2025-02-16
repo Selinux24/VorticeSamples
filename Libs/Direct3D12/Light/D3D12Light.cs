@@ -1,12 +1,10 @@
-﻿using Direct3D12.Lights;
-using Direct3D12.Shaders;
-using PrimalLike.Common;
+﻿using PrimalLike.Common;
 using PrimalLike.EngineAPI;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
 
-namespace Direct3D12
+namespace Direct3D12.Lights
 {
     public static class D3D12Light
     {
@@ -57,7 +55,7 @@ namespace Direct3D12
 
             for (uint i = 0; i < D3D12Graphics.FrameBufferCount; i++)
             {
-                lightBuffers[i].Release();
+                lightBuffers[i].Dispose();
             }
         }
         private static bool ValidateLights()
@@ -184,31 +182,28 @@ namespace Direct3D12
             }
 
             Debug.Assert(lightSets.ContainsKey(lightSetKey));
-            LightSet set = lightSets[lightSetKey];
+            var set = lightSets[lightSetKey];
             if (!set.HasLights())
             {
                 return;
             }
 
             set.UpdateTransforms();
+
             uint frameIndex = d3d12Info.FrameIndex;
-            D3D12LightBuffer lightBuffer = lightBuffers[frameIndex];
-            lightBuffer.UpdateLightBuffers(set, lightSetKey, frameIndex);
+            lightBuffers[frameIndex].UpdateLightBuffers(set, lightSetKey, frameIndex);
         }
         public static ulong NonCullableLightBuffer(uint frameIndex)
         {
-            var lightBuffer = lightBuffers[frameIndex];
-            return lightBuffer.NonCullableLights();
+            return lightBuffers[frameIndex].NonCullableLights();
         }
         public static ulong CullableLightBuffer(uint frameIndex)
         {
-            var lightBuffer = lightBuffers[frameIndex];
-            return lightBuffer.CullableLights();
+            return lightBuffers[frameIndex].CullableLights();
         }
         public static ulong CullingInfoBuffer(uint frameIndex)
         {
-            var lightBuffer = lightBuffers[frameIndex];
-            return lightBuffer.CullingInfo();
+            return lightBuffers[frameIndex].CullingInfo();
         }
         public static uint NonCullableLightCount(ulong lightSetKey)
         {

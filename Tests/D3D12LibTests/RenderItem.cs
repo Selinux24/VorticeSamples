@@ -13,8 +13,8 @@ namespace D3D12LibTests
 {
     class RenderItem
     {
-        private const string shadersSourcePath = "./Shaders/";
-        private const string shadersIncludeDir = "../../../../../Libs/Direct3D12/Shaders/";
+        private const string shadersSourcePath = "./Hlsl/";
+        private const string shadersIncludeDir = "../../../../../Libs/Direct3D12/Hlsl/";
 
         private static uint modelId = IdDetail.InvalidId;
         private static uint vsId = IdDetail.InvalidId;

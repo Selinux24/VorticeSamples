@@ -5,7 +5,7 @@ using Vortice.Direct3D12;
 
 namespace Direct3D12
 {
-    class D3D12DescriptorHeap : IDisposable
+    class DescriptorHeap : IDisposable
     {
         private readonly DescriptorHeapType type;
         private readonly object mutex = new();
@@ -28,7 +28,7 @@ namespace Direct3D12
         public int DescriptorSize { get => (int)descriptorSize; }
         public bool IsShaderVisible { get => gpuStart.Ptr != 0; }
 
-        public D3D12DescriptorHeap(DescriptorHeapType type)
+        public DescriptorHeap(DescriptorHeapType type)
         {
             this.type = type;
 
@@ -38,7 +38,7 @@ namespace Direct3D12
                 deferredFreeIndices[i] = [];
             }
         }
-        ~D3D12DescriptorHeap()
+        ~DescriptorHeap()
         {
             Dispose(false);
         }
@@ -85,13 +85,13 @@ namespace Direct3D12
                 var device = D3D12Graphics.Device;
                 Debug.Assert(device != null);
 
-                DescriptorHeapDescription desc;
-                desc.Flags = isShaderVisible
-                    ? DescriptorHeapFlags.ShaderVisible
-                    : DescriptorHeapFlags.None;
-                desc.DescriptorCount = capacity;
-                desc.Type = type;
-                desc.NodeMask = 0;
+                DescriptorHeapDescription desc = new()
+                {
+                    Flags = isShaderVisible ? DescriptorHeapFlags.ShaderVisible : DescriptorHeapFlags.None,
+                    DescriptorCount = capacity,
+                    Type = type,
+                    NodeMask = 0
+                };
 
                 if (!D3D12Helpers.DxCall(device.CreateDescriptorHeap(desc, out heap)))
                 {
@@ -112,7 +112,7 @@ namespace Direct3D12
                     Debug.Assert(deferredFreeIndices[i].Count == 0);
                 }
 
-                descriptorSize = (uint)device.GetDescriptorHandleIncrementSize(type);
+                descriptorSize = device.GetDescriptorHandleIncrementSize(type);
                 cpuStart = heap.GetCPUDescriptorHandleForHeapStart();
                 gpuStart = isShaderVisible ?
                     heap.GetGPUDescriptorHandleForHeapStart() :
@@ -135,13 +135,13 @@ namespace Direct3D12
 
                 foreach (var index in indices)
                 {
-                    freeHandles[size--] = index;
+                    freeHandles[--size] = index;
                 }
                 indices.Clear();
             }
         }
 
-        public D3D12DescriptorHandle Allocate()
+        public DescriptorHandle Allocate()
         {
             lock (mutex)
             {
@@ -152,7 +152,7 @@ namespace Direct3D12
                 uint offset = index * descriptorSize;
                 size++;
 
-                D3D12DescriptorHandle handle = new();
+                DescriptorHandle handle = new();
                 handle.Cpu.Ptr = cpuStart.Ptr + offset;
                 if (IsShaderVisible)
                 {
@@ -164,7 +164,7 @@ namespace Direct3D12
                 return handle;
             }
         }
-        public void Free(ref D3D12DescriptorHandle handle)
+        public void Free(ref DescriptorHandle handle)
         {
             if (!handle.IsValid())
             {

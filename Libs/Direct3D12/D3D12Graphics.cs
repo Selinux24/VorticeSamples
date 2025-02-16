@@ -1,4 +1,5 @@
 ﻿using Direct3D12.Shaders;
+using PrimalLike.EngineAPI;
 using PrimalLike.Graphics;
 using SharpGen.Runtime;
 using System;
@@ -13,7 +14,9 @@ using Vortice.DXGI;
 [assembly: InternalsVisibleTo("D3D12LibTests")]
 namespace Direct3D12
 {
-    using PrimalLike.EngineAPI;
+    using Direct3D12.Delight;
+    using Direct3D12.Fx;
+    using Direct3D12.Lights;
 #if DEBUG
     using Vortice.Direct3D12.Debug;
     using Vortice.DXGI.Debug;
@@ -41,12 +44,12 @@ namespace Direct3D12
         private static D3D12Command gfxCommand;
         private static readonly FreeList<D3D12Surface> surfaces = new();
         private static readonly D3D12ResourceBarrier resourceBarriers = new();
-        private static readonly D3D12ConstantBuffer[] constantBuffers = new D3D12ConstantBuffer[FrameBufferCount];
+        private static readonly ConstantBuffer[] constantBuffers = new ConstantBuffer[FrameBufferCount];
 
-        private static readonly D3D12DescriptorHeap rtvDescHeap = new(DescriptorHeapType.RenderTargetView);
-        private static readonly D3D12DescriptorHeap dsvDescHeap = new(DescriptorHeapType.DepthStencilView);
-        private static readonly D3D12DescriptorHeap srvDescHeap = new(DescriptorHeapType.ConstantBufferViewShaderResourceViewUnorderedAccessView);
-        private static readonly D3D12DescriptorHeap uavDescHeap = new(DescriptorHeapType.ConstantBufferViewShaderResourceViewUnorderedAccessView);
+        private static readonly DescriptorHeap rtvDescHeap = new(DescriptorHeapType.RenderTargetView);
+        private static readonly DescriptorHeap dsvDescHeap = new(DescriptorHeapType.DepthStencilView);
+        private static readonly DescriptorHeap srvDescHeap = new(DescriptorHeapType.ConstantBufferViewShaderResourceViewUnorderedAccessView);
+        private static readonly DescriptorHeap uavDescHeap = new(DescriptorHeapType.ConstantBufferViewShaderResourceViewUnorderedAccessView);
 
         private static readonly List<IUnknown>[] deferredReleases = new List<IUnknown>[FrameBufferCount];
         private static readonly bool[] deferredReleasesFlags = new bool[FrameBufferCount];
@@ -59,23 +62,23 @@ namespace Direct3D12
         /// <summary>
         /// Gets the RTV descriptor heap.
         /// </summary>
-        internal static D3D12DescriptorHeap RtvHeap { get => rtvDescHeap; }
+        internal static DescriptorHeap RtvHeap { get => rtvDescHeap; }
         /// <summary>
         /// Gets the DSV descriptor heap.
         /// </summary>
-        internal static D3D12DescriptorHeap DsvHeap { get => dsvDescHeap; }
+        internal static DescriptorHeap DsvHeap { get => dsvDescHeap; }
         /// <summary>
         /// Gets the SRV descriptor heap.
         /// </summary>
-        internal static D3D12DescriptorHeap SrvHeap { get => srvDescHeap; }
+        internal static DescriptorHeap SrvHeap { get => srvDescHeap; }
         /// <summary>
         /// Gets the UAV descriptor heap.
         /// </summary>
-        internal static D3D12DescriptorHeap UavHeap { get => uavDescHeap; }
+        internal static DescriptorHeap UavHeap { get => uavDescHeap; }
         /// <summary>
         /// Gets the constant buffer.
         /// </summary>
-        internal static D3D12ConstantBuffer CBuffer { get => constantBuffers[CurrentFrameIndex]; }
+        internal static ConstantBuffer CBuffer { get => constantBuffers[CurrentFrameIndex]; }
         /// <summary>
         /// Gets the current frame index.
         /// </summary>
@@ -169,7 +172,7 @@ namespace Direct3D12
 
             for (uint i = 0; i < FrameBufferCount; i++)
             {
-                constantBuffers[i] = new D3D12ConstantBuffer(D3D12ConstantBuffer.GetDefaultInitInfo(1024 * 1024));
+                constantBuffers[i] = new ConstantBuffer(ConstantBuffer.GetDefaultInitInfo(1024 * 1024));
                 D3D12Helpers.NameD3D12Object(constantBuffers[i].Buffer, i, "Global Constant Buffer");
             }
 
@@ -362,7 +365,7 @@ namespace Direct3D12
             }
         }
 
-        private static D3D12FrameInfo GetD3D12FrameInfo(FrameInfo info, D3D12ConstantBuffer cbuffer, D3D12Surface surface, uint frameIdx, float deltaTime)
+        private static D3D12FrameInfo GetD3D12FrameInfo(FrameInfo info, D3D12Surface surface, uint frameIdx, float deltaTime)
         {
             var camera = D3D12Camera.Get(info.CameraId);
             camera.Update();
@@ -382,13 +385,13 @@ namespace Direct3D12
                 DeltaTime = deltaTime
             };
 
-            ulong dataBuffer = cbuffer.Write(data);
+            ulong globalShaderDataAddress = CBuffer.Write(data);
 
             return new()
             {
                 FrameInfo = info,
                 Camera = camera,
-                GlobalShaderData = dataBuffer,
+                GlobalShaderData = globalShaderDataAddress,
                 SurfaceWidth = surface.Width,
                 SurfaceHeight = surface.Height,
                 LightCullingId = surface.LightCullingId,
@@ -437,8 +440,7 @@ namespace Direct3D12
             int frameIdx = CurrentFrameIndex;
 
             // Reset (clear) the global constant buffer for the current frame.
-            var cbuffer = constantBuffers[frameIdx];
-            cbuffer.Clear();
+            CBuffer.Clear();
 
             if (deferredReleasesFlags[frameIdx])
             {
@@ -446,7 +448,7 @@ namespace Direct3D12
             }
 
             var surface = surfaces[id];
-            var d3d12Info = GetD3D12FrameInfo(info, cbuffer, surface, (uint)frameIdx, 16.7f);
+            var d3d12Info = GetD3D12FrameInfo(info, surface, (uint)frameIdx, 16.7f);
 
             D3D12GPass.SetSize(d3d12Info.SurfaceWidth, d3d12Info.SurfaceHeight);
 
