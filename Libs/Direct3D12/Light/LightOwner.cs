@@ -1,6 +1,6 @@
 ﻿using PrimalLike.EngineAPI;
 
-namespace Direct3D12.Lights
+namespace Direct3D12.Light
 {
     record LightOwner()
     {

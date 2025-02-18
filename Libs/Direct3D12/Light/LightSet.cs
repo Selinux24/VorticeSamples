@@ -7,23 +7,11 @@ using System.Diagnostics;
 using System.Numerics;
 using Utilities;
 
-namespace Direct3D12.Lights
+namespace Direct3D12.Light
 {
     class LightSet
     {
-        // NOTE: these are NOT tightly packed
-        private readonly FreeList<LightOwner> owners = new();
-        private readonly List<Shaders.DirectionalLightParameters> nonCullableLights = [];
-        private readonly List<uint> nonCullableOwners = [];
-
-        // NOTE: these are tightly packed
-        private readonly List<Shaders.LightParameters> cullableLights = [];
-        private readonly List<Shaders.LightCullingLightInfo> cullingInfo = [];
-        private readonly List<uint> cullableEntityIds = [];
-        private readonly List<uint> cullableOwners = [];
-        private readonly List<uint> dirtyBits = [];
-
-        uint enabledLightCount = 0; // number of cullable lights
+        #region Structures & Enumerations
 
         public static class U32SetBits
         {
@@ -38,12 +26,32 @@ namespace Direct3D12.Lights
 
         static readonly uint dirtyBitsMask = U32SetBits.Bits(D3D12Graphics.FrameBufferCount);
 
+        #endregion
+
+        // NOTE: these are NOT tightly packed
+        private readonly FreeList<LightOwner> owners = new();
+        private readonly List<Shaders.DirectionalLightParameters> nonCullableLights = [];
+        private readonly List<uint> nonCullableOwners = [];
+
+        // NOTE: these are tightly packed
+        private readonly List<Shaders.LightParameters> cullableLights = [];
+        private readonly List<Shaders.LightCullingLightInfo> cullingInfo = [];
+        private readonly List<Shaders.Sphere> boundingSpheres = [];
+        private readonly List<uint> cullableEntityIds = [];
+        private readonly List<uint> cullableOwners = [];
+        private readonly List<uint> dirtyBits = [];
+
+        private uint enabledLightCount = 0; // number of cullable lights
+        private uint somethingIsDirty = 0; // flag is set if any of cullable lights where changed.
+
+        public bool SomethingIsDirty => somethingIsDirty != 0;
+
         public LightSet()
         {
             Debug.Assert(U32SetBits.Bits(D3D12Graphics.FrameBufferCount) < 1u << 8, "That's quite a large frame buffer count!");
         }
 
-        public Light Add(LightInitInfo info)
+        public PrimalLike.EngineAPI.Light Add(LightInitInfo info)
         {
             if (info.LightType == LightTypes.Directional)
             {
@@ -102,11 +110,13 @@ namespace Direct3D12.Lights
                     index = (uint)cullableOwners.Count;
                     cullableLights.Add(default);
                     cullingInfo.Add(default);
+                    boundingSpheres.Add(default);
                     cullableEntityIds.Add(default);
                     cullableOwners.Add(default);
-                    dirtyBits.Add(default);
+                    MakeDirty(index);
                     Debug.Assert(cullableOwners.Count == cullableLights.Count);
                     Debug.Assert(cullableOwners.Count == cullingInfo.Count);
+                    Debug.Assert(cullableOwners.Count == boundingSpheres.Count);
                     Debug.Assert(cullableOwners.Count == cullableEntityIds.Count);
                     Debug.Assert(cullableOwners.Count == dirtyBits.Count);
                 }
@@ -196,7 +206,7 @@ namespace Direct3D12.Lights
             uint dataIndex = owners[id].DataIndex;
 
             // NOTE: this is a reference to _enabled_light_count and will change its value!
-            // NOTE: ditry_bits is going to be set by swap_cullable_lightsm so we don't set it here.
+            // NOTE: dirty_bits is going to be set by swap_cullable_lights, so we don't set it here.
             if (isEnabled)
             {
                 if (dataIndex > enabledLightCount)
@@ -246,7 +256,7 @@ namespace Direct3D12.Lights
                 var light = cullableLights[(int)index];
                 light.Intensity = intensity;
                 cullableLights[(int)index] = light;
-                dirtyBits[(int)index] = dirtyBitsMask;
+                MakeDirty(index);
             }
         }
 
@@ -272,7 +282,7 @@ namespace Direct3D12.Lights
                 var light = cullableLights[(int)index];
                 light.Color = color;
                 cullableLights[(int)index] = light;
-                dirtyBits[(int)index] = dirtyBitsMask;
+                MakeDirty(index);
             }
         }
 
@@ -287,7 +297,7 @@ namespace Direct3D12.Lights
             var light = cullableLights[(int)index];
             light.Attenuation = attenuation;
             cullableLights[(int)index] = light;
-            dirtyBits[(int)index] = dirtyBitsMask;
+            MakeDirty(index);
         }
 
         public void Range(uint id, float range)
@@ -298,10 +308,30 @@ namespace Direct3D12.Lights
             Debug.Assert(owners[cullableOwners[(int)index]].DataIndex == index);
             Debug.Assert(owner.LightType != LightTypes.Directional);
             Debug.Assert(index < cullableLights.Count);
+
             var light = cullableLights[(int)index];
+            var cInfo = cullingInfo[(int)index];
+            var sphere = boundingSpheres[(int)index];
+
             light.Range = range;
-            cullableLights[(int)index] = light;
-            dirtyBits[(int)index] = dirtyBitsMask;
+#if USE_BOUNDING_SPHERES
+            cInfo.CosPenumbra = -1f;
+#endif
+            sphere.Radius = range;
+            MakeDirty(index);
+
+            if (owner.LightType == LightTypes.Spot)
+            {
+                CalculateConeBoundingSphere(light, ref sphere);
+#if USE_BOUNDING_SPHERES
+                cInfo.CosPenumbra = light.CosPenumbra;
+#else
+                cInfo.ConeRadius = CalculateConeRadius(range, light.CosPenumbra);
+#endif
+            }
+
+            cullingInfo[(int)index] = cInfo;
+            boundingSpheres[(int)index] = sphere;
         }
 
         public void Umbra(uint id, float umbra)
@@ -317,7 +347,7 @@ namespace Direct3D12.Lights
             var light = cullableLights[(int)index];
             light.CosUmbra = MathF.Cos(umbra * 0.5f);
             cullableLights[(int)index] = light;
-            dirtyBits[(int)index] = dirtyBitsMask;
+            MakeDirty(index);
 
             if (Penumbra(id) < umbra)
             {
@@ -336,13 +366,21 @@ namespace Direct3D12.Lights
             penumbra = Math.Clamp(penumbra, Umbra(id), MathF.PI);
 
             var light = cullableLights[(int)index];
-            light.CosPenumbra = MathF.Cos(penumbra * 0.5f);
-            cullableLights[(int)index] = light;
+            var cInfo = cullingInfo[(int)index];
+            var sphere = boundingSpheres[(int)index];
 
-            var info = cullingInfo[(int)index];
-            info.ConeRadius = CalculateConeRadius(Range(id), cullableLights[(int)index].CosPenumbra);
-            cullingInfo[(int)index] = info;
-            dirtyBits[(int)index] = dirtyBitsMask;
+            light.CosPenumbra = MathF.Cos(penumbra * 0.5f);
+            CalculateConeBoundingSphere(light, ref sphere);
+#if USE_BOUNDING_SPHERES
+            cInfo.CosPenumbra = light.CosPenumbra;
+#else
+            cInfo.ConeRadius = CalculateConeRadius(Range(id), light.CosPenumbra);
+#endif
+
+            cullableLights[(int)index] = light;
+            cullingInfo[(int)index] = cInfo;
+            boundingSpheres[(int)index] = sphere;
+            MakeDirty(index);
         }
 
         public bool IsEnabled(uint id)
@@ -522,6 +560,32 @@ namespace Direct3D12.Lights
             Debug.Assert(index < cullingInfo.Count);
             return cullingInfo[(int)index];
         }
+        public void BoundingSpheres(out Shaders.Sphere[] spheres)
+        {
+            spheres = new Shaders.Sphere[cullableOwners.Count];
+
+            uint index = 0;
+            for (uint i = 0; i < spheres.Length; i++)
+            {
+                if (!IdDetail.IsValid(cullableOwners[(int)i]))
+                {
+                    continue;
+                }
+
+                LightOwner owner = owners[cullableOwners[(int)i]];
+                if (owner.IsEnabled)
+                {
+                    Debug.Assert(owners[cullableOwners[(int)i]].DataIndex == i);
+                    spheres[index] = boundingSpheres[(int)i];
+                    index++;
+                }
+            }
+        }
+        public Shaders.Sphere BoundingSphere(uint index)
+        {
+            Debug.Assert(index < cullingInfo.Count);
+            return boundingSpheres[(int)index];
+        }
 
         public bool HasLights()
         {
@@ -534,6 +598,25 @@ namespace Direct3D12.Lights
 
             return sinPenumbra * range;
         }
+        private static void CalculateConeBoundingSphere(Shaders.LightParameters parameters, ref Shaders.Sphere sphere)
+        {
+            var tip = parameters.Position;
+            var direction = parameters.Direction;
+            float coneCos = parameters.CosPenumbra;
+            Debug.Assert(coneCos > 0f);
+
+            if (coneCos >= 0.707107f)
+            {
+                sphere.Radius = parameters.Range / (2f * coneCos);
+                sphere.Center = tip + sphere.Radius * direction;
+            }
+            else
+            {
+                sphere.Center = tip + coneCos * parameters.Range * direction;
+                float coneSin = MathF.Sqrt(1f - coneCos * coneCos);
+                sphere.Radius = coneSin * parameters.Range;
+            }
+        }
 
         private void UpdateTransform(uint index)
         {
@@ -541,17 +624,20 @@ namespace Direct3D12.Lights
 
             var parameters = cullableLights[(int)index];
             var cInfo = cullingInfo[(int)index];
+            var sphere = boundingSpheres[(int)index];
 
-            cInfo.Position = parameters.Position = entity.Position;
-            if (parameters.Type == (uint)LightTypes.Spot)
+            cInfo.Position = parameters.Position = sphere.Center = entity.Position;
+            if (owners[cullableOwners[(int)index]].LightType == LightTypes.Spot)
             {
                 cInfo.Direction = parameters.Direction = entity.Orientation;
+                CalculateConeBoundingSphere(parameters, ref sphere);
             }
 
             cullableLights[(int)index] = parameters;
             cullingInfo[(int)index] = cInfo;
+            boundingSpheres[(int)index] = sphere;
 
-            dirtyBits[(int)index] = dirtyBitsMask;
+            MakeDirty(index);
         }
 
         private void AddCullableLightParameters(LightInitInfo info, uint index)
@@ -559,19 +645,22 @@ namespace Direct3D12.Lights
             Debug.Assert(info.LightType != LightTypes.Directional && index < cullableLights.Count);
 
             var parameters = cullableLights[(int)index];
+#if !USE_BOUNDING_SPHERES
 
             parameters.Type = (uint)info.LightType;
             Debug.Assert(parameters.Type < (uint)LightTypes.Count);
+#endif
+
             parameters.Color = info.Color;
             parameters.Intensity = info.Intensity;
 
-            if (parameters.Type == (uint)LightTypes.Point)
+            if (info.LightType == LightTypes.Point)
             {
                 var p = info.PointLight;
                 parameters.Attenuation = p.Attenuation;
                 parameters.Range = p.Range;
             }
-            else if (parameters.Type == (uint)LightTypes.Spot)
+            else if (info.LightType == LightTypes.Spot)
             {
                 var p = info.SpotLight;
                 parameters.Attenuation = p.Attenuation;
@@ -590,13 +679,23 @@ namespace Direct3D12.Lights
             Debug.Assert(parameters.Type == (uint)info.LightType);
 
             var cInfo = cullingInfo[(int)index];
-            cInfo.Range = parameters.Range;
+            var sphere = boundingSpheres[(int)index];
+            cInfo.Range = sphere.Radius = parameters.Range;
+#if USE_BOUNDING_SPHERES
+            cInfo.CosPenumbra = -1f;
+#else
             cInfo.Type = parameters.Type;
+#endif
             if (info.LightType == LightTypes.Spot)
             {
+#if USE_BOUNDING_SPHERES
+                cInfo.CosPenumbra = parameters.CosPenumbra;
+#else
                 cInfo.ConeRadius = CalculateConeRadius(parameters.Range, parameters.CosPenumbra);
+#endif
             }
             cullingInfo[(int)index] = cInfo;
+            boundingSpheres[(int)index] = sphere;
         }
         private void SwapCullableLights(uint index1, uint index2)
         {
@@ -608,6 +707,8 @@ namespace Direct3D12.Lights
             Debug.Assert(index2 < cullableLights.Count);
             Debug.Assert(index1 < cullingInfo.Count);
             Debug.Assert(index2 < cullingInfo.Count);
+            Debug.Assert(index1 < boundingSpheres.Count);
+            Debug.Assert(index2 < boundingSpheres.Count);
             Debug.Assert(index1 < cullableEntityIds.Count);
             Debug.Assert(index2 < cullableEntityIds.Count);
             Debug.Assert(IdDetail.IsValid(cullableOwners[(int)index1]) || IdDetail.IsValid(cullableOwners[(int)index2]));
@@ -625,11 +726,12 @@ namespace Direct3D12.Lights
 
                 cullableLights[(int)index1] = cullableLights[(int)index2];
                 cullingInfo[(int)index1] = cullingInfo[(int)index2];
+                boundingSpheres[(int)index1] = boundingSpheres[(int)index2];
                 cullableEntityIds[(int)index1] = cullableEntityIds[(int)index2];
                 (cullableOwners[(int)index1], cullableOwners[(int)index2]) = (cullableOwners[(int)index2], cullableOwners[(int)index1]);
-                dirtyBits[(int)index1] = dirtyBitsMask;
+                MakeDirty(index1);
                 Debug.Assert(owners[cullableOwners[(int)index1]].EntityId == cullableEntityIds[(int)index1]);
-                Debug.Assert(IdDetail.IsValid(cullableOwners[(int)index2]));
+                Debug.Assert(!IdDetail.IsValid(cullableOwners[(int)index2]));
             }
             else
             {
@@ -650,6 +752,11 @@ namespace Direct3D12.Lights
                 Debug.Assert(index2 < cullingInfo.Count);
                 (cullingInfo[(int)index1], cullingInfo[(int)index2]) = (cullingInfo[(int)index2], cullingInfo[(int)index1]);
 
+                // swap bounding spheres
+                Debug.Assert(index1 < boundingSpheres.Count);
+                Debug.Assert(index2 < boundingSpheres.Count);
+                (boundingSpheres[(int)index1], boundingSpheres[(int)index2]) = (boundingSpheres[(int)index2], boundingSpheres[(int)index1]);
+
                 // swap entity ids
                 Debug.Assert(index1 < cullableEntityIds.Count);
                 Debug.Assert(index2 < cullableEntityIds.Count);
@@ -664,9 +771,18 @@ namespace Direct3D12.Lights
                 // set dirty bits
                 Debug.Assert(index1 < dirtyBits.Count);
                 Debug.Assert(index2 < dirtyBits.Count);
-                dirtyBits[(int)index1] = dirtyBitsMask;
-                dirtyBits[(int)index2] = dirtyBitsMask;
+                MakeDirty(index1);
+                MakeDirty(index2);
             }
+        }
+        private void MakeDirty(uint index)
+        {
+            Debug.Assert(index < dirtyBits.Count);
+            somethingIsDirty = dirtyBits[(int)index] = dirtyBitsMask;
+        }
+        public void SetDirtyFlag(uint value)
+        {
+            somethingIsDirty &= ~value;
         }
         public bool GetDirtyBit(uint index, uint value)
         {

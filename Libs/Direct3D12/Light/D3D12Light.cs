@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
 
-namespace Direct3D12.Lights
+namespace Direct3D12.Light
 {
     public static class D3D12Light
     {
@@ -50,7 +50,7 @@ namespace Direct3D12.Lights
 
         public static void Shutdown()
         {
-            // make sure to remove all light before shutting down graphics.
+            // make sure to remove all lights before shutting down graphics.
             Debug.Assert(ValidateLights());
 
             for (uint i = 0; i < D3D12Graphics.FrameBufferCount; i++)
@@ -70,7 +70,7 @@ namespace Direct3D12.Lights
             return !hasLights;
         }
 
-        public static Light Create(LightInitInfo info)
+        public static PrimalLike.EngineAPI.Light Create(LightInitInfo info)
         {
             Debug.Assert(IdDetail.IsValid(info.EntityId));
             if (lightSets.TryGetValue(info.LightSetKey, out var value))
@@ -204,6 +204,10 @@ namespace Direct3D12.Lights
         public static ulong CullingInfoBuffer(uint frameIndex)
         {
             return lightBuffers[frameIndex].CullingInfo();
+        }
+        public static ulong BoundingSpheresBuffer(uint frameIndex)
+        {
+            return lightBuffers[frameIndex].BoundingSpheres();
         }
         public static uint NonCullableLightCount(ulong lightSetKey)
         {

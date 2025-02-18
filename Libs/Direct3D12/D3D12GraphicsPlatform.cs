@@ -1,5 +1,5 @@
 ﻿using Direct3D12.Content;
-using Direct3D12.Lights;
+using Direct3D12.Light;
 using PrimalLike.EngineAPI;
 using PrimalLike.Graphics;
 using System;
@@ -59,7 +59,7 @@ namespace Direct3D12
         }
 
         /// <inheritdoc/>
-        public Light CreateLight(LightInitInfo info)
+        public PrimalLike.EngineAPI.Light CreateLight(LightInitInfo info)
         {
             return D3D12Light.Create(info);
         }

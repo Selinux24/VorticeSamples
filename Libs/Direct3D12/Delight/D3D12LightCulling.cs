@@ -1,4 +1,4 @@
-﻿using Direct3D12.Lights;
+﻿using Direct3D12.Light;
 using PrimalLike.Common;
 using System;
 using System.Diagnostics;
@@ -21,6 +21,7 @@ namespace Direct3D12.Delight
             FrustumsOutOrIndexCounter,
             FrustumsIn,
             CullingInfo,
+            BoundingSpheres,
             LightGridOpaque,
             LightIndexListOpaque,
 
@@ -30,7 +31,7 @@ namespace Direct3D12.Delight
         {
             public D3D12Buffer Frustums;
             public D3D12Buffer LightGridAndIndexList;
-            public StructuredBuffer LightIndexCounter;
+            public UavClearableBuffer LightIndexCounter;
             public Shaders.LightCullingDispatchParameters GridFrustumsDispatchParams = new();
             public Shaders.LightCullingDispatchParameters LightCullingDispatchParams = new();
             public uint FrustumCount = 0;
@@ -81,7 +82,7 @@ namespace Direct3D12.Delight
 
         #endregion
 
-        const uint LightCullingTileSize = 16;
+        const uint LightCullingTileSize = 32;
         const uint MaxLightsPerTile = 256;
 
         private static ID3D12RootSignature lightCullingRootSignature = null;
@@ -112,6 +113,7 @@ namespace Direct3D12.Delight
 
             parameters[(uint)LightCullingRootParameters.FrustumsIn] = D3D12Helpers.AsSrv(ShaderVisibility.All, 0);
             parameters[(uint)LightCullingRootParameters.CullingInfo] = D3D12Helpers.AsSrv(ShaderVisibility.All, 1);
+            parameters[(uint)LightCullingRootParameters.BoundingSpheres] = D3D12Helpers.AsSrv(ShaderVisibility.All, 2);
 
             parameters[(uint)LightCullingRootParameters.FrustumsOutOrIndexCounter] = D3D12Helpers.AsUav(ShaderVisibility.All, 0);
             parameters[(uint)LightCullingRootParameters.LightGridOpaque] = D3D12Helpers.AsUav(ShaderVisibility.All, 1);
@@ -209,6 +211,7 @@ namespace Direct3D12.Delight
             cmdList.SetComputeRootUnorderedAccessView((uint)LightCullingRootParameters.FrustumsOutOrIndexCounter, culler.LightIndexCounter.GpuAddress);
             cmdList.SetComputeRootShaderResourceView((uint)LightCullingRootParameters.FrustumsIn, culler.Frustums.GpuAddress);
             cmdList.SetComputeRootShaderResourceView((uint)LightCullingRootParameters.CullingInfo, D3D12Light.CullingInfoBuffer(d3d12Info.FrameIndex));
+            cmdList.SetComputeRootShaderResourceView((uint)LightCullingRootParameters.BoundingSpheres, D3D12Light.BoundingSpheresBuffer(d3d12Info.FrameIndex));
             cmdList.SetComputeRootUnorderedAccessView((uint)LightCullingRootParameters.LightGridOpaque, culler.LightGridAndIndexList.GpuAddress);
             cmdList.SetComputeRootUnorderedAccessView((uint)LightCullingRootParameters.LightIndexListOpaque, culler.LightIndexListOpaqueBuffer);
 
@@ -232,10 +235,10 @@ namespace Direct3D12.Delight
             culler.ViewHeight = d3d12Info.SurfaceHeight;
 
             Resize(ref culler);
-            CalculateGridFrustums(ref culler, cmdList, ref d3d12Info, barriers);
+            CalculateGridFrustums(culler, cmdList, ref d3d12Info, barriers);
         }
         private static void CalculateGridFrustums(
-            ref CullingParameters culler,
+            CullingParameters culler,
             ID3D12GraphicsCommandList cmdList,
             ref D3D12FrameInfo d3d12Info,
             D3D12ResourceBarrier barriers)
@@ -294,23 +297,23 @@ namespace Direct3D12.Delight
         private static void ResizeBuffers(ref CullingParameters culler)
         {
             uint alignment = (uint)Marshal.SizeOf<Vector4>();
-            uint frustumBufferStride = (uint)Marshal.SizeOf<Shaders.Frustum>();
+            uint frustumsBufferStride = (uint)Marshal.SizeOf<Shaders.Frustum>();
             uint lightGridBufferStride = (uint)Marshal.SizeOf<UInt2>();
-            uint lightIndexBufferStride = sizeof(uint);
+            uint lightIndexListBufferStride = sizeof(uint);
 
             uint frustumCount = culler.FrustumCount;
-            uint frustumBufferSize = frustumBufferStride * frustumCount;
+            uint frustumsBufferSize = frustumsBufferStride * frustumCount;
             uint lightGridBufferSize = MathHelper.AlignUp(lightGridBufferStride * frustumCount, alignment);
-            uint lightIndexBufferSize = MathHelper.AlignUp(lightIndexBufferStride * frustumCount * MaxLightsPerTile, alignment);
-            uint lightGridAndIndexListBufferSize = lightGridBufferSize + lightIndexBufferSize;
+            uint lightIndexListBufferSize = MathHelper.AlignUp(lightIndexListBufferStride * frustumCount * MaxLightsPerTile, alignment);
+            uint lightGridAndIndexListBufferSize = lightGridBufferSize + lightIndexListBufferSize;
 
-            if (frustumBufferSize > (culler.Frustums?.Size ?? 0))
+            if (frustumsBufferSize > (culler.Frustums?.Size ?? 0))
             {
                 D3D12BufferInitInfo info = new()
                 {
                     Alignment = alignment,
                     Flags = ResourceFlags.AllowUnorderedAccess,
-                    Size = frustumBufferSize,
+                    Size = frustumsBufferSize,
                 };
 
                 culler.Frustums = new D3D12Buffer(info, false);
@@ -333,8 +336,7 @@ namespace Direct3D12.Delight
 
                 if (culler.LightIndexCounter?.Buffer == null)
                 {
-                    info = StructuredBuffer.GetDefaultInitInfo((uint)Marshal.SizeOf<Int4>(), 1);
-                    info.CreateUav = true;
+                    info = UavClearableBuffer.GetDefaultInitInfo(1);
                     culler.LightIndexCounter = new(info);
                     D3D12Helpers.NameD3D12Object(culler.LightIndexCounter.Buffer, D3D12Graphics.CurrentFrameIndex, "Light Index Counter Buffer");
                 }

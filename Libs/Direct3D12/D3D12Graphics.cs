@@ -1,5 +1,4 @@
-﻿using Direct3D12.Shaders;
-using PrimalLike.EngineAPI;
+﻿using PrimalLike.EngineAPI;
 using PrimalLike.Graphics;
 using SharpGen.Runtime;
 using System;
@@ -16,7 +15,7 @@ namespace Direct3D12
 {
     using Direct3D12.Delight;
     using Direct3D12.Fx;
-    using Direct3D12.Lights;
+    using Direct3D12.Light;
 #if DEBUG
     using Vortice.Direct3D12.Debug;
     using Vortice.DXGI.Debug;
@@ -370,7 +369,7 @@ namespace Direct3D12
             var camera = D3D12Camera.Get(info.CameraId);
             camera.Update();
 
-            GlobalShaderData data = new()
+            Shaders.GlobalShaderData data = new()
             {
                 View = camera.View,
                 Projection = camera.Projection,

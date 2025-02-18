@@ -1,7 +1,6 @@
 ﻿using Direct3D12.Content;
 using Direct3D12.Delight;
-using Direct3D12.Lights;
-using Direct3D12.Shaders;
+using Direct3D12.Light;
 using PrimalLike.Components;
 using PrimalLike.Graphics;
 using System;
@@ -242,7 +241,7 @@ namespace Direct3D12
                     Transform.GetTransformMatrices(currentEntityId, out var world, out var invWorld);
                     var wvp = Matrix4x4.Multiply(world, d3d12Info.Camera.ViewProjection);
 
-                    PerObjectData data = new()
+                    Shaders.PerObjectData data = new()
                     {
                         World = world,
                         InvWorld = invWorld,

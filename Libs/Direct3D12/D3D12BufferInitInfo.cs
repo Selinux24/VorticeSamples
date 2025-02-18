@@ -10,9 +10,6 @@ namespace Direct3D12
         public ResourceStates InitialState;
         public ResourceFlags Flags;
         public uint Size;
-        public uint Stride;
-        public uint ElementCount;
         public uint Alignment;
-        public bool CreateUav;
     }
 }

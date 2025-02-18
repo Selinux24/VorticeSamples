@@ -8,6 +8,19 @@
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseEditor|AnyCPU'">
     <Optimize>True</Optimize>
+    <DefineConstants>$(DefineConstants);USE_BOUNDING_SPHERES</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <DefineConstants>$(DefineConstants);USE_BOUNDING_SPHERES</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <DefineConstants>$(DefineConstants);USE_BOUNDING_SPHERES</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugEditor|AnyCPU'">
+    <DefineConstants>$(DefineConstants);USE_BOUNDING_SPHERES</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>

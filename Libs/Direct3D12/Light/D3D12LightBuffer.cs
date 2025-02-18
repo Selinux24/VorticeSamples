@@ -1,13 +1,14 @@
 ﻿using Direct3D12.Helpers;
-using Direct3D12.Shaders;
 using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
-namespace Direct3D12.Lights
+namespace Direct3D12.Light
 {
     class D3D12LightBuffer : IDisposable
     {
+        #region Structures & Enumerations
+
         unsafe struct LightBuffer()
         {
             private D3D12Buffer buffer = new();
@@ -47,7 +48,9 @@ namespace Direct3D12.Lights
                     buffer.Buffer,
                     frameIndex,
                     type == LightBufferTypes.NonCullableLight ? "Non-cullable Light Buffer" :
-                    type == LightBufferTypes.CullableLight ? "Cullable Light Buffer" : "Light Culling Info Buffer");
+                    type == LightBufferTypes.CullableLight ? "Cullable Light Buffer" :
+                    type == LightBufferTypes.CullingInfo ? "Light Culling Info Buffer" :
+                    "Bounding Spheres Buffer");
 
                 fixed (byte** cpuAddress = &this.cpuAddress)
                 {
@@ -67,9 +70,12 @@ namespace Direct3D12.Lights
             NonCullableLight,
             CullableLight,
             CullingInfo,
+            BoundingSpheres,
 
             Count,
         }
+
+        #endregion
 
         private readonly LightBuffer[] buffers;
         private ulong currentLightSetKey;
@@ -107,75 +113,83 @@ namespace Direct3D12.Lights
 
         public void UpdateLightBuffers(LightSet set, ulong lightSetKey, uint frameIndex)
         {
-            uint[] sizes = new uint[(uint)LightBufferTypes.Count];
-            sizes[(uint)LightBufferTypes.NonCullableLight] = set.NonCullableLightCount() * (uint)Marshal.SizeOf<DirectionalLightParameters>();
-            sizes[(uint)LightBufferTypes.CullableLight] = set.CullableLightCount() * (uint)Marshal.SizeOf<LightParameters>();
-            sizes[(uint)LightBufferTypes.CullingInfo] = set.CullableLightCount() * (uint)Marshal.SizeOf<LightCullingLightInfo>();
-
-            uint[] currentSizes = new uint[(uint)LightBufferTypes.Count];
-            currentSizes[(uint)LightBufferTypes.NonCullableLight] = buffers[(uint)LightBufferTypes.NonCullableLight].Size;
-            currentSizes[(uint)LightBufferTypes.CullableLight] = buffers[(uint)LightBufferTypes.CullableLight].Size;
-            currentSizes[(uint)LightBufferTypes.CullingInfo] = buffers[(uint)LightBufferTypes.CullingInfo].Size;
-
-            if (currentSizes[(uint)LightBufferTypes.NonCullableLight] < sizes[(uint)LightBufferTypes.NonCullableLight])
+            uint nonCullableLightCount = set.NonCullableLightCount();
+            if (nonCullableLightCount > 0)
             {
-                buffers[(uint)LightBufferTypes.NonCullableLight].Resize(LightBufferTypes.NonCullableLight, sizes[(uint)LightBufferTypes.NonCullableLight], frameIndex);
-            }
+                uint neededSize = nonCullableLightCount * (uint)Marshal.SizeOf<Shaders.DirectionalLightParameters>();
+                uint currentSize = buffers[(uint)LightBufferTypes.NonCullableLight].Size;
 
-            set.NonCullableLights(out var lights);
-            buffers[(uint)LightBufferTypes.NonCullableLight].Write(lights);
+                if (currentSize < neededSize)
+                {
+                    buffers[(uint)LightBufferTypes.NonCullableLight].Resize(LightBufferTypes.NonCullableLight, neededSize, frameIndex);
+                }
+
+                set.NonCullableLights(out var lights);
+                buffers[(uint)LightBufferTypes.NonCullableLight].Write(lights);
+            }
 
             // Update cullable light buffers
-            bool buffersResized = false;
-            if (currentSizes[(uint)LightBufferTypes.CullableLight] < sizes[(uint)LightBufferTypes.CullableLight])
+            uint cullableLightCount = set.CullableLightCount();
+            if (cullableLightCount > 0)
             {
-                Debug.Assert(currentSizes[(uint)LightBufferTypes.CullingInfo] < sizes[(uint)LightBufferTypes.CullingInfo]);
-                buffers[(uint)LightBufferTypes.CullableLight].Resize(LightBufferTypes.CullableLight, sizes[(uint)LightBufferTypes.CullableLight], frameIndex);
-                buffers[(uint)LightBufferTypes.CullingInfo].Resize(LightBufferTypes.CullingInfo, sizes[(uint)LightBufferTypes.CullingInfo], frameIndex);
-                buffersResized = true;
-            }
+                uint neededLightBufferSize = cullableLightCount * (uint)Marshal.SizeOf<Shaders.LightParameters>();
+                uint neededCullingBufferSize = cullableLightCount * (uint)Marshal.SizeOf<Shaders.LightCullingLightInfo>();
+                uint neededSpheresBufferSize = cullableLightCount * (uint)Marshal.SizeOf<Shaders.Sphere>();
+                uint currentLightBufferSize = buffers[(uint)LightBufferTypes.CullableLight].Size;
 
-            bool allLightsUpdated = false;
-            if (buffersResized || currentLightSetKey != lightSetKey)
-            {
-                set.CullableLights(out var cullableLights);
-                set.CullingInfo(out var cullinginfo);
-                buffers[(uint)LightBufferTypes.CullableLight].Write(cullableLights);
-                buffers[(uint)LightBufferTypes.CullingInfo].Write(cullinginfo);
-
-                currentLightSetKey = lightSetKey;
-                allLightsUpdated = true;
-            }
-
-            Debug.Assert(currentLightSetKey == lightSetKey);
-            uint indexMask = (uint)(1 << (int)frameIndex);
-
-            if (allLightsUpdated)
-            {
-                for (uint i = 0; i < set.CullableLightCount(); i++)
+                bool buffersResized = false;
+                if (currentLightBufferSize < neededLightBufferSize)
                 {
-                    set.SetDirtyBit(i, indexMask);
+                    // NOTE: we create buffers about 150% larger than needed to avoid recreating them
+                    //       everytime a few lights are added.
+                    buffers[(uint)LightBufferTypes.CullableLight].Resize(LightBufferTypes.CullableLight, (neededLightBufferSize * 3) >> 1, frameIndex);
+                    buffers[(uint)LightBufferTypes.CullingInfo].Resize(LightBufferTypes.CullingInfo, (neededCullingBufferSize * 3) >> 1, frameIndex);
+                    buffers[(uint)LightBufferTypes.BoundingSpheres].Resize(LightBufferTypes.BoundingSpheres, (neededSpheresBufferSize * 3) >> 1, frameIndex);
+                    buffersResized = true;
                 }
-            }
-            else
-            {
-                for (uint i = 0; i < set.CullableLightCount(); i++)
+
+                uint indexMask = (uint)(1 << (int)frameIndex);
+
+                if (buffersResized || currentLightSetKey != lightSetKey)
                 {
-                    if (!set.GetDirtyBit(i, indexMask))
+                    set.CullableLights(out var cullableLights);
+                    set.CullingInfo(out var cullinginfo);
+                    set.BoundingSpheres(out var boundingSpheres);
+                    buffers[(uint)LightBufferTypes.CullableLight].Write(cullableLights);
+                    buffers[(uint)LightBufferTypes.CullingInfo].Write(cullinginfo);
+                    buffers[(uint)LightBufferTypes.BoundingSpheres].Write(boundingSpheres);
+                    currentLightSetKey = lightSetKey;
+
+                    for (uint i = 0; i < cullableLightCount; i++)
                     {
-                        continue;
+                        set.SetDirtyBit(i, indexMask);
                     }
-
-                    Debug.Assert(i * Marshal.SizeOf<LightParameters>() < sizes[(uint)LightBufferTypes.CullableLight]);
-                    Debug.Assert(i * Marshal.SizeOf<LightCullingLightInfo>() < sizes[(uint)LightBufferTypes.CullingInfo]);
-
-                    var cullableLight = set.CullableLights(i);
-                    var cullingInfo = set.CullingInfo(i);
-                    buffers[(uint)LightBufferTypes.CullableLight].Write(i, cullableLight);
-                    buffers[(uint)LightBufferTypes.CullingInfo].Write(i, cullingInfo);
-
-                    set.SetDirtyBit(i, indexMask);
                 }
+                else if (set.SomethingIsDirty)
+                {
+                    for (uint i = 0; i < cullableLightCount; i++)
+                    {
+                        if (!set.GetDirtyBit(i, indexMask))
+                        {
+                            continue;
+                        }
+
+                        Debug.Assert(i * Marshal.SizeOf<Shaders.LightParameters>() < neededLightBufferSize);
+                        Debug.Assert(i * Marshal.SizeOf<Shaders.LightCullingLightInfo>() < neededCullingBufferSize);
+
+                        var cullableLight = set.CullableLights(i);
+                        var cullingInfo = set.CullingInfo(i);
+                        var boundingSphere = set.BoundingSphere(i);
+                        buffers[(uint)LightBufferTypes.CullableLight].Write(i, cullableLight);
+                        buffers[(uint)LightBufferTypes.CullingInfo].Write(i, cullingInfo);
+                        buffers[(uint)LightBufferTypes.BoundingSpheres].Write(i, boundingSphere);
+
+                        set.SetDirtyBit(i, indexMask);
+                    }
+                }
+
+                set.SetDirtyFlag(indexMask);
+                Debug.Assert(currentLightSetKey == lightSetKey);
             }
         }
 
@@ -190,6 +204,10 @@ namespace Direct3D12.Lights
         public ulong CullingInfo()
         {
             return buffers[(uint)LightBufferTypes.CullingInfo].GpuAddress;
+        }
+        public ulong BoundingSpheres()
+        {
+            return buffers[(uint)LightBufferTypes.BoundingSpheres].GpuAddress;
         }
     }
 }
