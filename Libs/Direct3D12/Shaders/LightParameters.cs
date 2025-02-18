@@ -10,15 +10,17 @@ namespace Direct3D12.Shaders
         public float Intensity;
 
         public Vector3 Direction;
-        public uint Type;
-
-        public Vector3 Color;
         public float Range;
 
-        public Vector3 Attenuation;
+        public Vector3 Color;
         public float CosUmbra;      // Cosine of the hald angle of umbra
 
+        public Vector3 Attenuation;
         public float CosPenumbra;   // Cosine of the hald angle of penumbra
+
+#if !USE_BOUNDING_SPHERES
+        public uint Type;
         public Vector3 _pad;
+#endif
     }
 }

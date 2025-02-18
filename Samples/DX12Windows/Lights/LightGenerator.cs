@@ -16,9 +16,14 @@ namespace DX12Windows.Lights
         private static readonly ulong leftSet = 0;
         private static readonly ulong rightSet = 1;
         private static readonly List<Light> lights = [];
+        private static readonly List<Light> disabledLights = [];
         private static readonly Random rand = new(37);
 
-        static Vector3 RGBToColor(byte r, byte g, byte b)
+#if ANIMATE_LIGHTS
+        private static float t = 0;
+#endif
+
+        private static Vector3 RGBToColor(byte r, byte g, byte b)
         {
             return new()
             {
@@ -27,6 +32,13 @@ namespace DX12Windows.Lights
                 Z = b / 255f
             };
         }
+        private static float Random(float min = 0f)
+        {
+            float v = rand.Next(0, randMax) * invRandMax;
+
+            return MathF.Max(min, v);
+        }
+
         public static void GenerateLights(bool randomLights)
         {
             // LEFT_SET
@@ -64,9 +76,9 @@ namespace DX12Windows.Lights
 
             if (randomLights)
             {
-                float scale1 = 2f;
+                float scale1 = 1f;
                 Vector3 scale = new(1f * scale1, 0.5f * scale1, 1f * scale1);
-                int dim = 13;
+                int dim = 20;
                 for (int x = -dim; x < dim; x++)
                 {
                     for (int y = 0; y < 2 * dim; y++)
@@ -75,13 +87,13 @@ namespace DX12Windows.Lights
                         {
                             CreateLight(
                                 new(x * scale.X, y * scale.Y, z * scale.Z),
-                                new(3.14f, Random(), 0f),
+                                new(Random() * 3.14f, Random() * 3.14f, Random() * 3.14f),
                                 Random() > 0.5f ? LightTypes.Spot : LightTypes.Point,
                                 leftSet,
                                 true);
                             CreateLight(
                                 new(x * scale.X, y * scale.Y, z * scale.Z),
-                                new(3.14f, Random(), 0f),
+                                new(Random() * 3.14f, Random() * 3.14f, Random() * 3.14f),
                                 Random() > 0.5f ? LightTypes.Spot : LightTypes.Point,
                                 rightSet,
                                 true);
@@ -97,15 +109,7 @@ namespace DX12Windows.Lights
                 CreateLight(new(0, 0.1f, 7), new(0, 3.14f, 0), LightTypes.Spot, leftSet, false);
             }
         }
-
-        static float Random(float min = 0f)
-        {
-            float v = rand.Next(0, randMax) * invRandMax;
-
-            return MathF.Max(min, v);
-        }
-
-        static void CreateLight(Vector3 position, Vector3 rotation, LightTypes type, ulong lightSetKey, bool randomLights)
+        private static void CreateLight(Vector3 position, Vector3 rotation, LightTypes type, ulong lightSetKey, bool randomLights)
         {
             uint entityId = HelloWorldApp.CreateOneGameEntity(position, rotation).Id;
 
@@ -144,7 +148,7 @@ namespace DX12Windows.Lights
                 else if (type == LightTypes.Spot)
                 {
                     info.SpotLight.Range = 2f;
-                    info.SpotLight.Umbra = 0.7f * MathF.PI;
+                    info.SpotLight.Umbra = 0.1f * MathF.PI;
                     info.SpotLight.Penumbra = info.SpotLight.Umbra + (0.1f * MathF.PI);
                     info.SpotLight.Attenuation = new(1, 1, 1);
                 }
@@ -165,6 +169,97 @@ namespace DX12Windows.Lights
             }
 
             lights.Clear();
+        }
+
+        public static void TestLights(float dt, bool randomLights)
+        {
+#if ANIMATE_LIGHTS
+            t += 0.05f;
+            for (int i = 0; i < lights.Count; i++)
+            {
+                float sine = MathF.Sin(t + lights[i].Id);
+                sine *= sine;
+                lights[i].Intensity = 2f * sine;
+            }
+#else
+            uint count = (uint)(Random(0.1f) * 100);
+            for (int i = 0; i < count; i++)
+            {
+                if (lights.Count < 0)
+                {
+                    break;
+                }
+                int index = (int)(Random() * (lights.Count - 1));
+                Light light = lights[index];
+                light.IsEnabled = false;
+                lights.RemoveAt(index);
+                disabledLights.Add(light);
+            }
+
+            count = (uint)(Random(0.1f) * 50);
+            for (int i = 0; i < count; i++)
+            {
+                if (lights.Count < 0)
+                {
+                    break;
+                }
+                int index = (int)(Random() * (lights.Count - 1));
+                Light light = lights[index];
+                uint id = light.EntityId;
+                Application.RemoveLight(light.Id, light.LightSetKey);
+                Application.RemoveEntity(id);
+                lights.RemoveAt(index);
+            }
+
+            count = (uint)(Random(0.1f) * 50);
+            for (int i = 0; i < count; i++)
+            {
+                if (disabledLights.Count < 0)
+                {
+                    break;
+                }
+                int index = (int)(Random() * (disabledLights.Count - 1));
+                Light light = disabledLights[index];
+                uint id = light.EntityId;
+                Application.RemoveLight(light.Id, light.LightSetKey);
+                Application.RemoveEntity(id);
+                disabledLights.RemoveAt(index);
+            }
+
+            count = (uint)(Random(0.1f) * 100);
+            for (int i = 0; i < count; i++)
+            {
+                if (disabledLights.Count < 0)
+                {
+                    break;
+                }
+                int index = (int)(Random() * (disabledLights.Count - 1));
+                Light light = disabledLights[index];
+                light.IsEnabled = true;
+                disabledLights.RemoveAt(index);
+                lights.Add(light);
+            }
+
+            float scale1 = 1;
+            Vector3 scale = new(1f * scale1, 0.5f * scale1, 1f * scale1);
+            count = (uint)(Random(0.1f) * 50);
+
+            for (int i = 0; i < count; i++)
+            {
+                Vector3 p1 = new((Random() * 2 - 1f) * 13f * scale.X, Random() * 2 * 13f * scale.Y, (Random() * 2 - 1f) * 13f * scale.Z);
+                Vector3 p2 = new((Random() * 2 - 1f) * 13f * scale.X, Random() * 2 * 13f * scale.Y, (Random() * 2 - 1f) * 13f * scale.Z);
+                CreateLight(
+                    p1,
+                    new Vector3(Random() * 3.14f, Random() * 3.14f, Random() * 3.14f),
+                    Random() > 0.5f ? LightTypes.Spot : LightTypes.Point, leftSet,
+                    randomLights);
+                CreateLight(
+                    p2,
+                    new Vector3(Random() * 3.14f, Random() * 3.14f, Random() * 3.14f),
+                    Random() > 0.5f ? LightTypes.Spot : LightTypes.Point, rightSet,
+                    randomLights);
+            }
+#endif
         }
     }
 }

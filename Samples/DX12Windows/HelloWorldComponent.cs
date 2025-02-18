@@ -33,7 +33,7 @@ namespace DX12Windows
                 lightSetKey = (lightSetKey + 1) % 2;
                 dt %= maxTime;
             }
-            frameInfo.LightSetKey = lightSetKey;
+            //frameInfo.LightSetKey = lightSetKey;
 
             return frameInfo;
         }

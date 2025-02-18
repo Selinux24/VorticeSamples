@@ -5,7 +5,6 @@ using PrimalLike;
 using PrimalLike.Common;
 using PrimalLike.Content;
 using PrimalLike.Graphics;
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -36,7 +35,7 @@ namespace DX12Windows.Content
         private readonly Dictionary<uint, uint> renderItemEntityMap = [];
 
         public Vector3 InitialCameraPosition { get; } = new(13.76f, 3f, -1.1f);
-        public Quaternion InitialCameraRotation { get; } = Quaternion.CreateFromYawPitchRoll(-2.1f, -0.117f, 0f);
+        public Quaternion InitialCameraRotation { get; } = Quaternion.CreateFromYawPitchRoll(-1.70f, -0.137f, 0f);
 
         public void Load(string assetsFolder, string outputsFolder)
         {

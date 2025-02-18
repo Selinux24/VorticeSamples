@@ -113,7 +113,7 @@ namespace Direct3D12.Light
                     boundingSpheres.Add(default);
                     cullableEntityIds.Add(default);
                     cullableOwners.Add(default);
-                    MakeDirty(index);
+                    dirtyBits.Add(default);
                     Debug.Assert(cullableOwners.Count == cullableLights.Count);
                     Debug.Assert(cullableOwners.Count == cullingInfo.Count);
                     Debug.Assert(cullableOwners.Count == boundingSpheres.Count);
@@ -126,7 +126,7 @@ namespace Direct3D12.Light
                 uint id = owners.Add(new() { EntityId = info.EntityId, DataIndex = index, LightType = info.LightType, IsEnabled = info.IsEnabled });
                 cullableEntityIds[(int)index] = owners[id].EntityId;
                 cullableOwners[(int)index] = id;
-                dirtyBits[(int)index] = dirtyBitsMask;
+                MakeDirty(index);
                 Enable(id, info.IsEnabled);
                 UpdateTransform(index);
 
@@ -676,10 +676,10 @@ namespace Direct3D12.Light
             Debug.Assert(info.LightType != LightTypes.Directional && index < cullingInfo.Count);
 
             var parameters = cullableLights[(int)index];
-            Debug.Assert(parameters.Type == (uint)info.LightType);
 
             var cInfo = cullingInfo[(int)index];
             var sphere = boundingSpheres[(int)index];
+
             cInfo.Range = sphere.Radius = parameters.Range;
 #if USE_BOUNDING_SPHERES
             cInfo.CosPenumbra = -1f;
@@ -694,6 +694,7 @@ namespace Direct3D12.Light
                 cInfo.ConeRadius = CalculateConeRadius(parameters.Range, parameters.CosPenumbra);
 #endif
             }
+
             cullingInfo[(int)index] = cInfo;
             boundingSpheres[(int)index] = sphere;
         }
@@ -775,22 +776,23 @@ namespace Direct3D12.Light
                 MakeDirty(index2);
             }
         }
+        
         private void MakeDirty(uint index)
         {
             Debug.Assert(index < dirtyBits.Count);
             somethingIsDirty = dirtyBits[(int)index] = dirtyBitsMask;
         }
-        public void SetDirtyFlag(uint value)
-        {
-            somethingIsDirty &= ~value;
-        }
         public bool GetDirtyBit(uint index, uint value)
         {
             return (dirtyBits[(int)index] & value) != 0;
         }
-        public void SetDirtyBit(uint index, uint value)
+        public void ClearDirtyBit(uint index, uint value)
         {
             dirtyBits[(int)index] &= ~value;
+        }
+        public void ClearDirty(uint value)
+        {
+            somethingIsDirty &= ~value;
         }
     }
 }

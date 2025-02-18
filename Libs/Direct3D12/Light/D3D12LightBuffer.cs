@@ -20,7 +20,7 @@ namespace Direct3D12.Light
             public readonly void Write<T>(T[] lights) where T : unmanaged
             {
                 Debug.Assert(cpuAddress != null);
-                Debug.Assert(buffer.Size == D3D12Helpers.AlignSizeForConstantBuffer((ulong)(Marshal.SizeOf<T>() * lights.Length)));
+                Debug.Assert(buffer.Size >= D3D12Helpers.AlignSizeForConstantBuffer((ulong)(Marshal.SizeOf<T>() * lights.Length)));
 
                 BuffersHelper.WriteArray(cpuAddress, lights);
             }
@@ -162,7 +162,7 @@ namespace Direct3D12.Light
 
                     for (uint i = 0; i < cullableLightCount; i++)
                     {
-                        set.SetDirtyBit(i, indexMask);
+                        set.ClearDirtyBit(i, indexMask);
                     }
                 }
                 else if (set.SomethingIsDirty)
@@ -184,11 +184,11 @@ namespace Direct3D12.Light
                         buffers[(uint)LightBufferTypes.CullingInfo].Write(i, cullingInfo);
                         buffers[(uint)LightBufferTypes.BoundingSpheres].Write(i, boundingSphere);
 
-                        set.SetDirtyBit(i, indexMask);
+                        set.ClearDirtyBit(i, indexMask);
                     }
                 }
 
-                set.SetDirtyFlag(indexMask);
+                set.ClearDirty(indexMask);
                 Debug.Assert(currentLightSetKey == lightSetKey);
             }
         }
