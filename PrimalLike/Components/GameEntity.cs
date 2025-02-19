@@ -29,28 +29,28 @@ namespace PrimalLike.Components
             {
                 id = (EntityId)generations.Count;
                 generations.Add(0);
-                Transforms.Add(default);
-                Scripts.Add(default);
-                Geometries.Add(default);
+                Transforms.Add(new());
+                Scripts.Add(new());
+                Geometries.Add(new());
             }
 
             Entity entity = new(id);
             IdType index = IdDetail.Index(id);
 
-            Debug.Assert(Transforms[(int)index] == null || !Transforms[(int)index].IsValid());
+            Debug.Assert(!Transforms[(int)index].IsValid());
             Transforms[(int)index] = Transform.Create(info.Transform, entity);
             Debug.Assert(Transforms[(int)index].IsValid());
 
             if (info.Script != null && info.Script?.ScriptCreator != null)
             {
-                Debug.Assert(Scripts[(int)index] == null || !Scripts[(int)index].IsValid());
+                Debug.Assert(!Scripts[(int)index].IsValid());
                 Scripts[(int)index] = Script.Create(info.Script.Value, entity);
                 Debug.Assert(Scripts[(int)index].IsValid());
             }
 
             if (info.Geometry != null)
             {
-                Debug.Assert(Geometries[(int)index] == null || !Geometries[(int)index].IsValid());
+                Debug.Assert(!Geometries[(int)index].IsValid());
                 Geometries[(int)index] = Geometry.Create(info.Geometry.Value, entity);
                 Debug.Assert(Geometries[(int)index].IsValid());
             }
@@ -62,13 +62,13 @@ namespace PrimalLike.Components
             IdType index = IdDetail.Index(id);
             Debug.Assert(IsAlive(id));
 
-            if (Scripts[(int)index]?.IsValid() ?? false)
+            if (Scripts[(int)index].IsValid())
             {
                 Script.Remove(Scripts[(int)index]);
                 Scripts[(int)index] = new();
             }
 
-            if (Geometries[(int)index]?.IsValid() ?? false)
+            if (Geometries[(int)index].IsValid())
             {
                 Geometry.Remove(Geometries[(int)index]);
                 Geometries[(int)index] = new();

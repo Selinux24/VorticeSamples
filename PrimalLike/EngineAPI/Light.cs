@@ -5,7 +5,7 @@ using System.Numerics;
 
 namespace PrimalLike.EngineAPI
 {
-    public class Light
+    public readonly struct Light
     {
         private readonly LightId id;
         private readonly ulong lightSetKey;
@@ -20,9 +20,9 @@ namespace PrimalLike.EngineAPI
             this.lightSetKey = lightSetKey;
         }
 
-        public LightId Id { get => id; }
-        public ulong LightSetKey { get => lightSetKey; }
-        public bool IsValid { get => IdDetail.IsValid(id); }
+        public readonly LightId Id { get => id; }
+        public readonly ulong LightSetKey { get => lightSetKey; }
+        public readonly bool IsValid { get => IdDetail.IsValid(id); }
 
         public bool IsEnabled
         {

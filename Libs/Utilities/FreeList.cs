@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
@@ -11,10 +10,22 @@ namespace Utilities
     /// quickly, and ensuring that existing elements remain in the same position in which they were added.
     /// </summary>
     /// <typeparam name="T">Data type</typeparam>
-    public class FreeList<T>
+    /// <remarks>
+    /// Create a new FreeList with a specified capacity.
+    /// </remarks>
+    /// <param name="count">Capacity</param>
+    public class FreeList<T>(uint count)
     {
-        private readonly List<uint> indices;
-        private readonly List<T> array;
+        struct Idx(uint index)
+        {
+            public uint Index = index;
+            public bool Removed = false;
+        }
+
+        private const uint InitialCapacity = 1024;
+
+        private Idx[] indices = new Idx[count];
+        private T[] array = new T[count];
         private uint nextFreeIndex = uint.MaxValue;
         private uint size = 0;
 
@@ -25,7 +36,7 @@ namespace Utilities
         /// <summary>
         /// Maximum number of elements that can be added to the list.
         /// </summary>
-        public uint Capacity => (uint)array.Capacity;
+        public uint Capacity => (uint)array.LongLength;
         /// <summary>
         /// Indicates if the list is empty.
         /// </summary>
@@ -38,12 +49,12 @@ namespace Utilities
         {
             get
             {
-                Debug.Assert(id < array.Count && !AlreadyRemoved(id));
+                Debug.Assert(id < Capacity && !AlreadyRemoved(id));
                 return array[(int)id];
             }
             set
             {
-                Debug.Assert(id < array.Count && !AlreadyRemoved(id));
+                Debug.Assert(id < Capacity && !AlreadyRemoved(id));
                 array[(int)id] = value;
             }
         }
@@ -51,19 +62,9 @@ namespace Utilities
         /// <summary>
         /// Create a new FreeList.
         /// </summary>
-        public FreeList()
+        public FreeList() : this(InitialCapacity)
         {
-            indices = [];
-            array = [];
-        }
-        /// <summary>
-        /// Create a new FreeList with a specified capacity.
-        /// </summary>
-        /// <param name="count">Capacity</param>
-        public FreeList(int count)
-        {
-            indices = new(count);
-            array = new(count);
+
         }
 
         /// <summary>
@@ -75,17 +76,28 @@ namespace Utilities
             uint id;
             if (nextFreeIndex == uint.MaxValue)
             {
-                id = (uint)array.Count;
-                array.Add(value);
-                indices.Add(id);
+                if (size >= Capacity)
+                {
+                    //Grow the list
+                    int newCapacity = (int)Capacity * 2;
+                    Array.Resize(ref array, newCapacity);
+                    Array.Resize(ref indices, newCapacity);
+                }
+
+                id = size;
+                array[(int)id] = value;
+                indices[(int)id] = new(id);
             }
             else
             {
                 id = nextFreeIndex;
-                Debug.Assert(id < array.Count && AlreadyRemoved(id));
+                Debug.Assert(id < Capacity && AlreadyRemoved(id));
                 array[(int)id] = value;
-                nextFreeIndex = indices[(int)id];
-                indices[(int)id] = id;
+
+                var idx = indices[(int)id];
+                nextFreeIndex = idx.Index;
+                idx.Removed = false;
+                indices[(int)id] = idx;
             }
             size++;
             return id;
@@ -96,10 +108,15 @@ namespace Utilities
         /// <param name="id">Id</param>
         public void Remove(uint id)
         {
-            Debug.Assert(id < array.Count && !AlreadyRemoved(id));
-            (array[(int)id] as IDisposable)?.Dispose();
-            array[(int)id] = default;
-            indices[(int)id] = nextFreeIndex;
+            Debug.Assert(id < Capacity && !AlreadyRemoved(id));
+            (array[id] as IDisposable)?.Dispose();
+            array[id] = default;
+
+            var idx = indices[(int)id];
+            idx.Index = nextFreeIndex;
+            idx.Removed = true;
+            indices[id] = idx;
+
             nextFreeIndex = id;
             size--;
         }
@@ -108,8 +125,6 @@ namespace Utilities
         /// </summary>
         public void Clear()
         {
-            indices.Clear();
-            array.Clear();
             nextFreeIndex = uint.MaxValue;
             size = 0;
         }
@@ -119,11 +134,11 @@ namespace Utilities
         /// </summary>
         public bool First(out T first)
         {
-            for (uint i = 0; i < indices.Count; i++)
+            for (uint i = 0; i < Capacity; i++)
             {
                 if (!AlreadyRemoved(i))
                 {
-                    first = array[(int)indices[(int)i]];
+                    first = array[indices[i].Index];
                     return true;
                 }
             }
@@ -138,7 +153,7 @@ namespace Utilities
         /// <param name="id">Id</param>
         private bool AlreadyRemoved(uint id)
         {
-            return indices[(int)id] == uint.MaxValue;
+            return indices[id].Removed;
         }
     }
 }

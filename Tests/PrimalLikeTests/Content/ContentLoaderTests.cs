@@ -1,7 +1,6 @@
 ﻿using NUnit.Framework;
 using PrimalLike;
 using PrimalLike.Common;
-using PrimalLike.Components;
 using PrimalLike.Content;
 using PrimalLike.EngineAPI;
 using System.IO;

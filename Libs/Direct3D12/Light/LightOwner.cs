@@ -2,7 +2,7 @@
 
 namespace Direct3D12.Light
 {
-    record LightOwner()
+    struct LightOwner()
     {
         public uint EntityId = uint.MaxValue;
         public uint DataIndex = uint.MaxValue;

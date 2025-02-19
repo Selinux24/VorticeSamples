@@ -1,8 +1,8 @@
-﻿using PrimalLike.Common;
+﻿using NUnit.Framework;
+using NUnit.Framework.Internal;
+using PrimalLike.Common;
 using PrimalLike.Components;
 using PrimalLike.EngineAPI;
-using NUnit.Framework;
-using NUnit.Framework.Internal;
 using System;
 using System.Collections.Generic;
 

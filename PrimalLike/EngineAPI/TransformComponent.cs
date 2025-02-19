@@ -5,10 +5,10 @@ using System.Numerics;
 
 namespace PrimalLike.EngineAPI
 {
-    public class TransformComponent
+    public struct TransformComponent
     {
         public TransformId Id { get; private set; }
-        public Quaternion Rotation
+        public readonly Quaternion Rotation
         {
             get
             {
@@ -16,7 +16,7 @@ namespace PrimalLike.EngineAPI
                 return Transform.Rotations[(int)IdDetail.Index(Id)];
             }
         }
-        public Vector3 Orientation
+        public readonly Vector3 Orientation
         {
             get
             {
@@ -24,7 +24,7 @@ namespace PrimalLike.EngineAPI
                 return Transform.Orientations[(int)IdDetail.Index(Id)];
             }
         }
-        public Vector3 Position
+        public readonly Vector3 Position
         {
             get
             {
@@ -32,7 +32,7 @@ namespace PrimalLike.EngineAPI
                 return Transform.Positions[(int)IdDetail.Index(Id)];
             }
         }
-        public Vector3 Scale
+        public readonly Vector3 Scale
         {
             get
             {
@@ -50,7 +50,7 @@ namespace PrimalLike.EngineAPI
             Id = id;
         }
 
-        public bool IsValid()
+        public readonly bool IsValid()
         {
             return IdDetail.IsValid(Id);
         }

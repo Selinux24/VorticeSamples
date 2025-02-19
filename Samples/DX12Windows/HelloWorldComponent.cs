@@ -1,4 +1,5 @@
-﻿using PrimalLike;
+﻿using DX12Windows.Lights;
+using PrimalLike;
 using PrimalLike.EngineAPI;
 using PrimalLike.Graphics;
 using WindowsPlatform;
@@ -26,6 +27,8 @@ namespace DX12Windows
         {
             frameInfo.LastFrameTime = time.DeltaTime;
             frameInfo.AverageFrameTime = time.AverageDeltaTime;
+
+            //LightGenerator.TestLights(time.DeltaTime);
 
             dt += time.DeltaTime;
             if (dt > maxTime)

@@ -195,7 +195,9 @@ namespace Direct3D12.Light
 
         public void Enable(uint id, bool isEnabled)
         {
-            owners[id].IsEnabled = isEnabled;
+            var owner = owners[id];
+            owner.IsEnabled = isEnabled;
+            owners[id] = owner;
 
             if (owners[id].LightType == LightTypes.Directional)
             {
@@ -234,7 +236,6 @@ namespace Direct3D12.Light
                 }
             }
         }
-
         public void Intensity(uint id, float intensity)
         {
             if (intensity < 0f) intensity = 0f;
@@ -259,7 +260,6 @@ namespace Direct3D12.Light
                 MakeDirty(index);
             }
         }
-
         public void Color(uint id, Vector3 color)
         {
             Debug.Assert(color.X <= 1f && color.Y <= 1f && color.Z <= 1f);
@@ -285,7 +285,6 @@ namespace Direct3D12.Light
                 MakeDirty(index);
             }
         }
-
         public void Attenuation(uint id, Vector3 attenuation)
         {
             Debug.Assert(attenuation.X >= 0f && attenuation.Y >= 0f && attenuation.Z >= 0f);
@@ -299,7 +298,6 @@ namespace Direct3D12.Light
             cullableLights[(int)index] = light;
             MakeDirty(index);
         }
-
         public void Range(uint id, float range)
         {
             Debug.Assert(range > 0f);
@@ -333,7 +331,6 @@ namespace Direct3D12.Light
             cullingInfo[(int)index] = cInfo;
             boundingSpheres[(int)index] = sphere;
         }
-
         public void Umbra(uint id, float umbra)
         {
             var owner = owners[id];
@@ -354,7 +351,6 @@ namespace Direct3D12.Light
                 Penumbra(id, umbra);
             }
         }
-
         public void Penumbra(uint id, float penumbra)
         {
             var owner = owners[id];
@@ -382,7 +378,6 @@ namespace Direct3D12.Light
             boundingSpheres[(int)index] = sphere;
             MakeDirty(index);
         }
-
         public bool IsEnabled(uint id)
         {
             return owners[id].IsEnabled;
@@ -402,7 +397,6 @@ namespace Direct3D12.Light
             Debug.Assert(index < cullableLights.Count);
             return cullableLights[(int)index].Intensity;
         }
-
         public Vector3 Color(uint id)
         {
             LightOwner owner = owners[id];
@@ -417,7 +411,6 @@ namespace Direct3D12.Light
             Debug.Assert(index < cullableLights.Count);
             return cullableLights[(int)index].Color;
         }
-
         public Vector3 Attenuation(uint id)
         {
             var owner = owners[id];
@@ -427,7 +420,6 @@ namespace Direct3D12.Light
             Debug.Assert(index < cullableLights.Count);
             return cullableLights[(int)index].Attenuation;
         }
-
         public float Range(uint id)
         {
             var owner = owners[id];
@@ -437,7 +429,6 @@ namespace Direct3D12.Light
             Debug.Assert(index < cullableLights.Count);
             return cullableLights[(int)index].Range;
         }
-
         public float Umbra(uint id)
         {
             var owner = owners[id];
@@ -447,7 +438,6 @@ namespace Direct3D12.Light
             Debug.Assert(index < cullableLights.Count);
             return MathF.Acos(cullableLights[(int)index].CosUmbra) * 2f;
         }
-
         public float Penumbra(uint id)
         {
             var owner = owners[id];
@@ -457,12 +447,10 @@ namespace Direct3D12.Light
             Debug.Assert(index < cullableLights.Count);
             return MathF.Acos(cullableLights[(int)index].CosPenumbra) * 2f;
         }
-
         public LightTypes LightType(uint id)
         {
             return owners[id].LightType;
         }
-
         public uint EntityId(uint id)
         {
             return owners[id].EntityId;
@@ -592,12 +580,6 @@ namespace Direct3D12.Light
             return owners.Size > 0;
         }
 
-        private static float CalculateConeRadius(float range, float cosPenumbra)
-        {
-            float sinPenumbra = MathF.Sqrt(1f - cosPenumbra * cosPenumbra);
-
-            return sinPenumbra * range;
-        }
         private static void CalculateConeBoundingSphere(Shaders.LightParameters parameters, ref Shaders.Sphere sphere)
         {
             var tip = parameters.Position;
@@ -617,6 +599,14 @@ namespace Direct3D12.Light
                 sphere.Radius = coneSin * parameters.Range;
             }
         }
+#if !USE_BOUNDING_SPHERES
+        private static float CalculateConeRadius(float range, float cosPenumbra)
+        {
+            float sinPenumbra = MathF.Sqrt(1f - cosPenumbra * cosPenumbra);
+
+            return sinPenumbra * range;
+        }
+#endif
 
         private void UpdateTransform(uint index)
         {
@@ -724,6 +714,7 @@ namespace Direct3D12.Light
                 var owner2 = owners[cullableOwners[(int)index2]];
                 Debug.Assert(owner2.DataIndex == index2);
                 owner2.DataIndex = index1;
+                owners[cullableOwners[(int)index2]] = owner2;
 
                 cullableLights[(int)index1] = cullableLights[(int)index2];
                 cullingInfo[(int)index1] = cullingInfo[(int)index2];
@@ -742,6 +733,8 @@ namespace Direct3D12.Light
                 Debug.Assert(owner2.DataIndex == index2);
                 owner1.DataIndex = index2;
                 owner2.DataIndex = index1;
+                owners[cullableOwners[(int)index1]] = owner1;
+                owners[cullableOwners[(int)index2]] = owner2;
 
                 // swap light parameters
                 Debug.Assert(index1 < cullableLights.Count);
@@ -770,13 +763,11 @@ namespace Direct3D12.Light
                 Debug.Assert(owners[cullableOwners[(int)index2]].EntityId == cullableEntityIds[(int)index2]);
 
                 // set dirty bits
-                Debug.Assert(index1 < dirtyBits.Count);
-                Debug.Assert(index2 < dirtyBits.Count);
                 MakeDirty(index1);
                 MakeDirty(index2);
             }
         }
-        
+
         private void MakeDirty(uint index)
         {
             Debug.Assert(index < dirtyBits.Count);

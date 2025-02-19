@@ -95,7 +95,7 @@ namespace PrimalLikeDLL
             var surface = new RenderSurface()
             {
                 Window = platform.CreateWindow(info),
-                Surface = null,
+                Surface = default,
             };
 
             surfaces.Add(surface);

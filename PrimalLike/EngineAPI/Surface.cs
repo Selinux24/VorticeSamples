@@ -8,7 +8,7 @@ namespace PrimalLike.EngineAPI
     /// <summary>
     /// Surface
     /// </summary>
-    public class Surface
+    public readonly struct Surface
     {
         /// <summary>
         /// Surface id

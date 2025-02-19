@@ -2,12 +2,6 @@
 using PrimalLike.EngineAPI;
 using PrimalLike.Graphics;
 using PrimalLike.Platform;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using static Native32.User32;
 
 namespace D3D12LibTests
 {

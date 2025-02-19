@@ -1,10 +1,26 @@
 ﻿using NUnit.Framework;
+using System;
+using System.Collections.Generic;
 using Utilities;
 
 namespace UtilitiesTests
 {
     public class FreeListTests
     {
+        private const int randMax = 0x7fff;
+        private const float invRandMax = 1f / randMax;
+        private static readonly Random rand = new(37);
+        private static float Random(float min = 0f)
+        {
+            float v = rand.Next(0, randMax) * invRandMax;
+
+            return MathF.Max(min, v);
+        }
+
+        private readonly List<TestStruct> lights = [];
+        private readonly List<TestStruct> disabledLights = [];
+        private readonly FreeList<TestStruct> freeList = new();
+
         [Test()]
         public void AddRemoveClassTest()
         {
@@ -189,6 +205,81 @@ namespace UtilitiesTests
             list.Clear();
             Assert.That(list.Size, Is.EqualTo(0));
             Assert.That(list.Empty, Is.True);
+        }
+
+        [Test()]
+        public void RandomTest()
+        {
+            for (int i = 0; i < 1000; i++)
+            {
+                Assert.DoesNotThrow(RandomCreate);
+            }
+        }
+        private void RandomCreate()
+        {
+            uint count = (uint)(Random(0.1f) * 100);
+            for (int i = 0; i < count; i++)
+            {
+                if (lights.Count == 0)
+                {
+                    break;
+                }
+                int index = (int)(Random() * (lights.Count - 1));
+                var light = lights[index];
+                lights.RemoveAt(index);
+                disabledLights.Add(light);
+            }
+
+            count = (uint)(Random(0.1f) * 50);
+            for (int i = 0; i < count; i++)
+            {
+                if (lights.Count == 0)
+                {
+                    break;
+                }
+                int index = (int)(Random() * (lights.Count - 1));
+                var light = lights[index];
+                freeList.Remove((uint)light.InternalId);
+                lights.RemoveAt(index);
+            }
+
+            count = (uint)(Random(0.1f) * 50);
+            for (int i = 0; i < count; i++)
+            {
+                if (disabledLights.Count == 0)
+                {
+                    break;
+                }
+                int index = (int)(Random() * (disabledLights.Count - 1));
+                var light = disabledLights[index];
+                freeList.Remove((uint)light.InternalId);
+                disabledLights.RemoveAt(index);
+            }
+
+            count = (uint)(Random(0.1f) * 100);
+            for (int i = 0; i < count; i++)
+            {
+                if (disabledLights.Count == 0)
+                {
+                    break;
+                }
+                int index = (int)(Random() * (disabledLights.Count - 1));
+                var light = disabledLights[index];
+                disabledLights.RemoveAt(index);
+                lights.Add(light);
+            }
+
+            count = (uint)(Random(0.1f) * 50);
+            for (uint i = 0; i < count; i++)
+            {
+                TestStruct t1 = new() { Value = Random() };
+                t1.InternalId = (int)freeList.Add(t1);
+                lights.Add(t1);
+
+                TestStruct t2 = new() { Value = Random() };
+                t2.InternalId = (int)freeList.Add(t2);
+                lights.Add(t2);
+            }
         }
     }
 

@@ -45,7 +45,7 @@ namespace DX12Windows
 
             CreateWindow();
 
-            LightGenerator.GenerateLights(true);
+            LightGenerator.GenerateLights();
 
             InitializeInput();
 

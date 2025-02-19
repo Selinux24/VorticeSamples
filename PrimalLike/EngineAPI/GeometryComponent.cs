@@ -2,7 +2,7 @@
 
 namespace PrimalLike.EngineAPI
 {
-    public class GeometryComponent
+    public struct GeometryComponent
     {
         public GeometryId Id { get; private set; }
 
@@ -15,7 +15,7 @@ namespace PrimalLike.EngineAPI
             Id = id;
         }
 
-        public bool IsValid()
+        public readonly bool IsValid()
         {
             return IdDetail.IsValid(Id);
         }
