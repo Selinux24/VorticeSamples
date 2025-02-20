@@ -42,6 +42,15 @@ namespace PrimalLike.Graphics
             gfx.RemoveSurface(id);
         }
 
+        public static void CreateLightSet(ulong lightSetKey)
+        {
+            gfx.CreateLightSet(lightSetKey);
+        }
+        public static void RemoveLightSet(ulong lightSetKey)
+        {
+            gfx.RemoveLightSet(lightSetKey);
+        }
+
         public static Light CreateLight(LightInitInfo info)
         {
             return gfx.CreateLight(info);

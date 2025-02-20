@@ -117,6 +117,7 @@ namespace D3D12LibTests
 
         private uint itemId = IdDetail.InvalidId;
         private uint modelId = IdDetail.InvalidId;
+        private readonly ulong lightSetKey = 0;
 
         private const int numThreads = 8;
         private readonly Thread[] workers = new Thread[numThreads];
@@ -180,6 +181,10 @@ namespace D3D12LibTests
             Assert.That(modelId != uint.MaxValue, "Model creation error.");
         }
 
+        private void CreateRenderItem()
+        {
+            itemId = RenderItem.CreateRenderItem(Application.CreateEntity(new()).Id);
+        }
         private void CreateCameras()
         {
             Win32WindowInfo[] initInfos =
@@ -230,10 +235,6 @@ namespace D3D12LibTests
                 cameraSurfaces[i].CreateCamera(entity);
                 cameraSurfaces[i].UpdateFrameInfo([itemId], [10f]);
             }
-        }
-        private void CreateRenderItem()
-        {
-            itemId = RenderItem.CreateRenderItem(Application.CreateEntity(new()).Id);
         }
 
         [Test()]

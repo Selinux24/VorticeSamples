@@ -58,6 +58,16 @@ namespace Direct3D12
             D3D12Graphics.RenderSurface(id, info);
         }
 
+
+        public void CreateLightSet(ulong lightSetKey)
+        {
+            D3D12Light.CreateLightSet(lightSetKey);
+        }
+        public void RemoveLightSet(ulong lightSetKey)
+        {
+            D3D12Light.RemoveLightSet(lightSetKey);
+        }
+
         /// <inheritdoc/>
         public PrimalLike.EngineAPI.Light CreateLight(LightInitInfo info)
         {

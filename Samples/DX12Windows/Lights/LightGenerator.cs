@@ -41,6 +41,9 @@ namespace DX12Windows.Lights
 
         public static void GenerateLights()
         {
+            Application.CreateLightSet(leftSet);
+            Application.CreateLightSet(rightSet);
+
             // LEFT_SET
             LightInitInfo info = new()
             {
@@ -119,7 +122,7 @@ namespace DX12Windows.Lights
                 EntityId = entityId,
                 LightType = type,
                 LightSetKey = lightSetKey,
-                Intensity = 1f,
+                Intensity = 10f,
 
                 Color = new(Random(0.2f), Random(0.2f), Random(0.2f))
             };
@@ -165,8 +168,18 @@ namespace DX12Windows.Lights
                 Application.RemoveLight(light.Id, light.LightSetKey);
                 Application.RemoveEntity(id);
             }
-
             lights.Clear();
+
+            foreach (var light in disabledLights)
+            {
+                uint id = light.EntityId;
+                Application.RemoveLight(light.Id, light.LightSetKey);
+                Application.RemoveEntity(id);
+            }
+            disabledLights.Clear();
+
+            Application.RemoveLightSet(leftSet);
+            Application.RemoveLightSet(rightSet);
         }
 
         public static void TestLights(float dt)

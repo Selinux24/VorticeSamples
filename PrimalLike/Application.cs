@@ -178,6 +178,21 @@ namespace PrimalLike
         }
 
         /// <summary>
+        /// Creates a light set.
+        /// </summary>
+        public static void CreateLightSet(ulong lightSetKey)
+        {
+            Renderer.CreateLightSet(lightSetKey);
+        }
+        /// <summary>
+        /// Removes a light set.
+        /// </summary>
+        public static void RemoveLightSet(ulong lightSetKey)
+        {
+            Renderer.RemoveLightSet(lightSetKey);
+        }
+
+        /// <summary>
         /// Creates a light.
         /// </summary>
         /// <param name="info">Light info</param>

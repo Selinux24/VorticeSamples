@@ -51,28 +51,30 @@ namespace Direct3D12.Light
         public static void Shutdown()
         {
             // make sure to remove all lights before shutting down graphics.
-            Debug.Assert(ValidateLights());
+            Debug.Assert(lightSets.Count == 0);
 
             for (uint i = 0; i < D3D12Graphics.FrameBufferCount; i++)
             {
                 lightBuffers[i].Dispose();
             }
         }
-        private static bool ValidateLights()
+
+        public static void CreateLightSet(ulong lightSetKey)
         {
-            bool hasLights = false;
-
-            foreach (var it in lightSets)
-            {
-                hasLights |= it.Value.HasLights();
-            }
-
-            return !hasLights;
+            Debug.Assert(!lightSets.ContainsKey(lightSetKey));
+            lightSets.Add(lightSetKey, new());
+        }
+        public static void RemoveLightSet(ulong lightSetKey)
+        {
+            Debug.Assert(lightSets.ContainsKey(lightSetKey));
+            Debug.Assert(lightSets[lightSetKey].HasLights() == false);
+            lightSets.Remove(lightSetKey);
         }
 
         public static PrimalLike.EngineAPI.Light Create(LightInitInfo info)
         {
             Debug.Assert(IdDetail.IsValid(info.EntityId));
+            Debug.Assert(lightSets.ContainsKey(info.LightSetKey));
             if (lightSets.TryGetValue(info.LightSetKey, out var value))
             {
                 return value.Add(info);

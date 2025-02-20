@@ -55,6 +55,17 @@ namespace PrimalLike.Graphics
         void RenderSurface(SurfaceId id, FrameInfo info);
 
         /// <summary>
+        /// Creates a light set.
+        /// </summary>
+        /// <param name="lightSetKey">Light set key</param>
+        void CreateLightSet(ulong lightSetKey);
+        /// <summary>
+        /// Removes a light set.
+        /// </summary>
+        /// <param name="lightSetKey">Light set key</param>
+        void RemoveLightSet(ulong lightSetKey);
+
+        /// <summary>
         /// Creates a light.
         /// </summary>
         /// <param name="info">Light initialization info</param>
