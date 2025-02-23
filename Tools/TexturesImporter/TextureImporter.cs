@@ -1,0 +1,644 @@
+﻿using ContentTools;
+using DirectXTexNet;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Runtime.InteropServices;
+using System.Threading;
+using Utilities;
+using Vortice.Direct3D;
+using Vortice.Direct3D11;
+using Vortice.DXGI;
+
+namespace TexturesImporter
+{
+    static class TextureImporter
+    {
+        struct D3D11Device()
+        {
+            public ID3D11Device Device;
+            public object HwCompressionMutex = new();
+        }
+
+        private const uint AmdId = 0x1002;
+        private const uint NvidiaId = 0x10de;
+        private const uint WarpId = 0x1414;
+
+        private static readonly object deviceCreationMutex = new();
+        private static bool tryOnce = false;
+        private static readonly List<D3D11Device> d3d11Devices = [];
+
+        private static TexHelper Helper => TexHelper.Instance;
+
+        public static void ShutDownTextureTools()
+        {
+            d3d11Devices.Clear();
+        }
+
+        private static IDXGIFactory1 GetDXGIFactory()
+        {
+            return DXGI.CreateDXGIFactory1<IDXGIFactory1>();
+        }
+        private static void CreateDevice()
+        {
+            if (d3d11Devices.Count > 0)
+            {
+                return;
+            }
+
+            List<IDXGIAdapter> adapters = [];
+            IDXGIFactory1 factory = GetDXGIFactory();
+            if (factory != null)
+            {
+                for (uint i = 0; factory.EnumAdapters(i, out IDXGIAdapter adapter).Success; i++)
+                {
+                    if (adapter == null)
+                    {
+                        continue;
+                    }
+
+                    var desc = adapter.Description;
+
+                    if (desc.VendorId != WarpId)
+                    {
+                        adapters.Add(adapter);
+                    }
+
+                    // Assume AMD and nVidia adapters are discrete and bubble them up when found.
+                    if ((desc.VendorId == AmdId || desc.VendorId == NvidiaId) && adapters.Count > 1)
+                    {
+                        //Move the last element of adapters to the front.
+                        adapters.Insert(0, adapters.Last());
+                        adapters.RemoveAt(adapters.Count - 1);
+                    }
+                }
+            }
+
+            DeviceCreationFlags createDeviceFlags = 0;
+#if DEBUG
+            createDeviceFlags |= DeviceCreationFlags.Debug;
+#endif
+
+            List<ID3D11Device> devices = [];
+            FeatureLevel[] featureLevels = [FeatureLevel.Level_11_0];
+
+            for (int i = 0; i < adapters.Count; i++)
+            {
+                if (D3D11.D3D11CreateDevice(
+                    adapters[i],
+                    adapters[i] != null ? DriverType.Unknown : DriverType.Hardware,
+                    createDeviceFlags,
+                    featureLevels, out var device).Success)
+                {
+                    devices.Add(device);
+                }
+            }
+
+            for (int i = 0; i < devices.Count; i++)
+            {
+                if (devices[i] != null)
+                {
+                    d3d11Devices.Add(new() { Device = devices[i] });
+                }
+            }
+        }
+
+        private static TexMetadata MetadataFromTextureInfo(TextureInfo info)
+        {
+            DXGI_FORMAT format = (DXGI_FORMAT)info.Format;
+
+            bool is3d = info.Flags.HasFlag(TextureFlags.IsVolumeMap);
+
+            int width = info.Width;
+            int height = info.Height;
+            int depth = is3d ? info.ArraySize : 1;
+            int arraySize = is3d ? 1 : info.ArraySize;
+            int mipLevels = info.MipLevels;
+            TEX_MISC_FLAG miscFlags = info.Flags.HasFlag(TextureFlags.IsCubeMap) ? TEX_MISC_FLAG.TEXTURECUBE : 0;
+            TEX_MISC_FLAG2 miscFlags2 = (TEX_MISC_FLAG2)(info.Flags.HasFlag(TextureFlags.IsPremultipliedAlpha) ?
+                (uint)TEX_ALPHA_MODE.PREMULTIPLIED :
+                info.Flags.HasFlag(TextureFlags.HasAlpha) ? (uint)TEX_ALPHA_MODE.STRAIGHT : (uint)TEX_ALPHA_MODE.OPAQUE);
+            // TODO: what about 1D?
+            TEX_DIMENSION dimension = is3d ? TEX_DIMENSION.TEXTURE3D : TEX_DIMENSION.TEXTURE2D;
+
+            return new(width, height, depth, arraySize, mipLevels, miscFlags, miscFlags2, format, dimension);
+        }
+        private static void TextureInfoFromMetadata(TexMetadata metadata, ref TextureInfo info)
+        {
+            DXGI_FORMAT format = metadata.Format;
+            info.Format = (uint)format;
+            info.Width = metadata.Width;
+            info.Height = metadata.Height;
+            info.ArraySize = metadata.IsVolumemap() ? metadata.Depth : metadata.ArraySize;
+            info.MipLevels = metadata.MipLevels;
+            SetOrClearFlag(ref info.Flags, TextureFlags.HasAlpha, Helper.HasAlpha(format));
+            SetOrClearFlag(ref info.Flags, TextureFlags.IsHdr, format == DXGI_FORMAT.BC6H_UF16 || format == DXGI_FORMAT.BC6H_SF16);
+            SetOrClearFlag(ref info.Flags, TextureFlags.IsPremultipliedAlpha, metadata.IsPMAlpha());
+            SetOrClearFlag(ref info.Flags, TextureFlags.IsCubeMap, metadata.IsCubemap());
+            SetOrClearFlag(ref info.Flags, TextureFlags.IsVolumeMap, metadata.IsVolumemap());
+        }
+        private static void SetOrClearFlag(ref TextureFlags flags, TextureFlags flag, bool set)
+        {
+            if (set) flags |= flag; else flags &= ~flag;
+        }
+
+        private static long GetImageSize(Image image)
+        {
+            // 4 x u32 for width, height, rowPitch and slicePitch
+            return sizeof(uint) * 4 + image.SlicePitch;
+        }
+
+        public static void DecompressMipmaps(ref TextureData data)
+        {
+            Debug.Assert(Helper.IsCompressed((DXGI_FORMAT)data.Info.Format));
+
+            Debug.Assert(data.ImportSettings.Compress);
+            Image[] images = SubresourceDataToImages(ref data);
+
+            var metadata = MetadataFromTextureInfo(data.Info);
+            var tmp = Helper.InitializeTemporary([.. images], metadata);
+
+            var scratch = tmp.Decompress(0, DXGI_FORMAT.UNKNOWN);
+            if (scratch != null)
+            {
+                CopySubresources(scratch, ref data);
+                TextureInfoFromMetadata(scratch.GetMetadata(), ref data.Info);
+            }
+            else
+            {
+                data.Info.ImportError = ImportErrors.Decompress;
+            }
+        }
+        private static Image[] SubresourceDataToImages(ref TextureData data)
+        {
+            Debug.Assert(data.SubresourceData != IntPtr.Zero && data.SubresourceSize > 0);
+            Debug.Assert(data.Info.MipLevels > 0 && data.Info.MipLevels <= TextureData.MaxMips);
+            Debug.Assert(data.Info.ArraySize > 0);
+
+            var info = data.Info;
+            int imageCount = info.ArraySize;
+
+            if (info.Flags.HasFlag(TextureFlags.IsVolumeMap))
+            {
+                int depthPerMipLevel = info.ArraySize;
+                for (int i = 1; i < info.MipLevels; i++)
+                {
+                    depthPerMipLevel = Math.Max(depthPerMipLevel >> 1, 1);
+                    imageCount += depthPerMipLevel;
+                }
+            }
+            else
+            {
+                imageCount *= info.MipLevels;
+            }
+
+            BlobStreamReader blob = new(data.SubresourceData);
+            Image[] images = new Image[imageCount];
+
+            for (uint i = 0; i < imageCount; i++)
+            {
+                int width = blob.Read<int>();
+                int height = blob.Read<int>();
+                DXGI_FORMAT format = (DXGI_FORMAT)info.Format;
+                uint rowPitch = blob.Read<uint>();
+                uint slicePitch = blob.Read<uint>();
+                IntPtr pixels = blob.Position;
+
+                Image image = new(width, height, format, rowPitch, slicePitch, pixels, null);
+
+                blob.Skip((int)image.SlicePitch);
+
+                images[i] = image;
+            }
+
+            return images;
+        }
+
+        public static void Import(ref TextureData data)
+        {
+            var settings = data.ImportSettings;
+            Debug.Assert(settings.Sources != null && settings.SourceCount > 0);
+
+            List<ScratchImage> scratchImages = [];
+            List<Image> images = [];
+
+            uint width = 0;
+            uint height = 0;
+            Format format = Format.Unknown;
+            var files = settings.Sources.Split(';');
+            Debug.Assert(files.Length == settings.SourceCount);
+
+            for (uint i = 0; i < settings.SourceCount; i++)
+            {
+                scratchImages.Add(LoadFromFile(ref data, files[i]));
+                if (data.Info.ImportError != 0)
+                {
+                    return;
+                }
+
+                var scratch = scratchImages.Last();
+                var metadata = scratch.GetMetadata();
+
+                if (i == 0)
+                {
+                    width = (uint)metadata.Width;
+                    height = (uint)metadata.Height;
+                    format = (Format)metadata.Format;
+                }
+
+                // All image sources should have the same size.
+                if (width != metadata.Width || height != metadata.Height)
+                {
+                    data.Info.ImportError = ImportErrors.SizeMismatch;
+                    return;
+                }
+
+                // All image sources should have the same format.
+                if (format != (Format)metadata.Format)
+                {
+                    data.Info.ImportError = ImportErrors.FormatMismatch;
+                    return;
+                }
+
+                uint arraySize = (uint)metadata.ArraySize;
+                uint depth = (uint)metadata.Depth;
+
+                for (int arrayIndex = 0; arrayIndex < arraySize; arrayIndex++)
+                {
+                    for (int depthIndex = 0; depthIndex < depth; depthIndex++)
+                    {
+                        var image = scratch.GetImage(0, arrayIndex, depthIndex);
+
+                        if (image == null)
+                        {
+                            data.Info.ImportError = ImportErrors.Unknown;
+                            return;
+                        }
+
+                        if (width != image.Width || height != image.Height)
+                        {
+                            data.Info.ImportError = ImportErrors.SizeMismatch;
+                            return;
+                        }
+
+                        images.Add(image);
+                    }
+                }
+            }
+
+            var scratchFi = InitializeFromImages(ref data, [.. images]);
+            if (data.Info.ImportError != 0)
+            {
+                return;
+            }
+
+            if (settings.Compress)
+            {
+                // NOTE: make a copy of the first uncompressed image for the editor to generate an icon from.
+                //       We only do this for compressed imports. If not compressed, the editor can pick the
+                //       first image from the returned subresources.
+                CopyIcon(scratchFi, ref data);
+                var bcScratch = CompressImage(ref data, scratchFi);
+
+                if (data.Info.ImportError != 0)
+                {
+                    return;
+                }
+
+                scratchFi = bcScratch;
+            }
+
+            CopySubresources(scratchFi, ref data);
+            TextureInfoFromMetadata(scratchFi.GetMetadata(), ref data.Info);
+        }
+        private static ScratchImage LoadFromFile(ref TextureData data, string fileName)
+        {
+            Debug.Assert(File.Exists(fileName));
+            ScratchImage scratch = null;
+            if (!File.Exists(fileName))
+            {
+                data.Info.ImportError = ImportErrors.FileNotFound;
+                return scratch;
+            }
+
+            data.Info.ImportError = ImportErrors.Load;
+
+            WIC_FLAGS wicFlags = WIC_FLAGS.NONE;
+
+            if (data.ImportSettings.OutputFormat == (uint)DXGI_FORMAT.BC4_UNORM ||
+                data.ImportSettings.OutputFormat == (uint)DXGI_FORMAT.BC5_UNORM)
+            {
+                wicFlags |= WIC_FLAGS.IGNORE_SRGB;
+            }
+
+            string file = fileName;
+
+            // Try one of WIC formats first (e.g. BMP, JPEG, PNG, etc.).
+            wicFlags |= WIC_FLAGS.FORCE_RGB;
+
+            scratch = Helper.LoadFromWICFile(file, wicFlags);
+
+            // It wasn't a WIC format. Try TGA.
+            scratch ??= Helper.LoadFromTGAFile(file);
+
+            // It wasn't a TGA either. Try HDR.
+            if (scratch == null)
+            {
+                scratch = Helper.LoadFromHDRFile(file);
+                if (scratch != null)
+                {
+                    data.Info.Flags |= TextureFlags.IsHdr;
+                }
+            }
+
+            // It wasn't HDR. Try DDS.
+            if (scratch == null)
+            {
+                scratch = Helper.LoadFromDDSFile(file, DDS_FLAGS.FORCE_RGB);
+                if (scratch != null)
+                {
+                    data.Info.ImportError = ImportErrors.Decompress;
+                    var mipScratch = scratch.Decompress(0, DXGI_FORMAT.UNKNOWN);
+                    if (mipScratch != null)
+                    {
+                        scratch = mipScratch;
+                    }
+                }
+            }
+
+            if (scratch != null)
+            {
+                data.Info.ImportError = ImportErrors.Succeeded;
+            }
+
+            return scratch;
+        }
+        private static ScratchImage InitializeFromImages(ref TextureData data, Image[] images)
+        {
+            var settings = data.ImportSettings;
+
+            ScratchImage scratch;
+            {
+                // Scope for working scratch
+                var metadata = MetadataFromTextureInfo(data.Info);
+                ScratchImage workingScratch = Helper.InitializeTemporary(images, metadata);
+                int arraySize = images.Length;
+
+                if (settings.Dimension == TextureDimensions.Texture1D || settings.Dimension == TextureDimensions.Texture2D)
+                {
+                    bool allow1d = settings.Dimension == TextureDimensions.Texture1D;
+                    if (arraySize > 1)
+                    {
+                        scratch = workingScratch.CreateArrayCopy(0, arraySize, allow1d, CP_FLAGS.NONE);
+                    }
+                    else
+                    {
+                        Debug.Assert(arraySize == 1);
+                        scratch = workingScratch.CreateImageCopy(0, allow1d, CP_FLAGS.NONE);
+                    }
+                }
+                else if (settings.Dimension == TextureDimensions.TextureCube)
+                {
+                    Debug.Assert(arraySize % 6 == 0);
+                    scratch = workingScratch.CreateCubeCopy(0, arraySize, CP_FLAGS.NONE);
+                }
+                else
+                {
+                    Debug.Assert(settings.Dimension == TextureDimensions.Texture3D);
+                    scratch = workingScratch.CreateVolumeCopy(0, arraySize, CP_FLAGS.NONE);
+                }
+
+                if (scratch == null)
+                {
+                    data.Info.ImportError = ImportErrors.Unknown;
+                    return null;
+                }
+
+                //scratch = workingScratch;
+            }
+
+            if (settings.MipLevels != 1)
+            {
+                var metadata = scratch.GetMetadata();
+                int mipLevels = Math.Clamp(settings.MipLevels, 0, GetMaxMipCount(metadata.Width, metadata.Height, metadata.Depth));
+
+                ScratchImage mipScratch;
+                if (settings.Dimension != TextureDimensions.Texture3D)
+                {
+                    mipScratch = scratch.GenerateMipMaps(0, TEX_FILTER_FLAGS.DEFAULT, mipLevels, false);
+                }
+                else
+                {
+                    mipScratch = scratch.GenerateMipMaps3D(0, scratch.GetImageCount(), TEX_FILTER_FLAGS.DEFAULT, mipLevels);
+                }
+
+                if (mipScratch == null)
+                {
+                    data.Info.ImportError = ImportErrors.MipmapGeneration;
+                    return null;
+                }
+
+                scratch = mipScratch;
+            }
+
+            return scratch;
+        }
+        private static void CopyIcon(ScratchImage scratch, ref TextureData data)
+        {
+            Debug.Assert(scratch.GetImageCount() > 0);
+
+            var image = scratch.GetImage(0);
+
+            long size = GetImageSize(image);
+            Debug.Assert(size <= int.MaxValue);
+            data.IconSize = (uint)size;
+
+            data.Icon = Marshal.AllocHGlobal((int)size);
+            Debug.Assert(data.Icon != IntPtr.Zero);
+
+            BlobStreamWriter blob = new(data.Icon, (int)size);
+            blob.Write(image.Width);
+            blob.Write(image.Height);
+            blob.Write((uint)image.RowPitch);
+            blob.Write((uint)image.SlicePitch);
+            blob.Write(image.Pixels, (int)image.SlicePitch);
+        }
+        private static ScratchImage CompressImage(ref TextureData data, ScratchImage scratch)
+        {
+            Debug.Assert(data.ImportSettings.Compress && scratch.GetImageCount() > 0);
+
+            var image = scratch.GetImage(0, 0, 0);
+            if (image == null)
+            {
+                data.Info.ImportError = ImportErrors.Unknown;
+                return null;
+            }
+
+            var outputFormat = DetermineOutputFormat(ref data, scratch, image);
+
+            ScratchImage bcScratch = null;
+            if (CanUseGpu(outputFormat))
+            {
+                bool wait = true;
+                while (wait)
+                {
+                    for (int i = 0; i < d3d11Devices.Count; i++)
+                    {
+                        if (Monitor.TryEnter(d3d11Devices[i].HwCompressionMutex))
+                        {
+                            bcScratch = scratch.Compress(d3d11Devices[i].Device.NativePointer, outputFormat, TEX_COMPRESS_FLAGS.DEFAULT, 1.0f);
+                            Monitor.Exit(d3d11Devices[i].HwCompressionMutex);
+                            wait = false;
+                            break;
+                        }
+                    }
+                    if (wait)
+                    {
+                        Thread.Sleep(200);
+                    }
+                }
+            }
+            else
+            {
+                bcScratch = scratch.Compress(outputFormat, TEX_COMPRESS_FLAGS.PARALLEL, data.ImportSettings.AlphaThreshold);
+            }
+
+            if (bcScratch == null)
+            {
+                data.Info.ImportError = ImportErrors.Compress;
+                return null;
+            }
+
+            return bcScratch;
+        }
+        private static bool CanUseGpu(DXGI_FORMAT format)
+        {
+            switch (format)
+            {
+                case DXGI_FORMAT.BC6H_TYPELESS:
+                case DXGI_FORMAT.BC6H_UF16:
+                case DXGI_FORMAT.BC6H_SF16:
+                case DXGI_FORMAT.BC7_TYPELESS:
+                case DXGI_FORMAT.BC7_UNORM:
+                case DXGI_FORMAT.BC7_UNORM_SRGB:
+                {
+                    lock (deviceCreationMutex)
+                    {
+                        if (!tryOnce)
+                        {
+                            tryOnce = true;
+                            CreateDevice();
+                        }
+
+                        return d3d11Devices.Count > 0;
+                    }
+                }
+            }
+            return false;
+        }
+        private static DXGI_FORMAT DetermineOutputFormat(ref TextureData data, ScratchImage scratch, Image image)
+        {
+            Debug.Assert(data.ImportSettings.Compress);
+            var imageFormat = image.Format;
+
+            if (data.ImportSettings.OutputFormat == (uint)DXGI_FORMAT.UNKNOWN)
+            {
+                // Determine the best block compressed format if import settings
+                // don't explicitly specify a format.
+
+                if (data.Info.Flags.HasFlag(TextureFlags.IsHdr) || imageFormat == DXGI_FORMAT.BC6H_UF16 || imageFormat == DXGI_FORMAT.BC6H_SF16)
+                {
+                    data.ImportSettings.OutputFormat = (uint)DXGI_FORMAT.BC6H_UF16;
+                }
+                else if (imageFormat == DXGI_FORMAT.R8_UNORM || imageFormat == DXGI_FORMAT.BC4_UNORM || imageFormat == DXGI_FORMAT.BC4_SNORM)
+                {
+                    // If the source image is gray scale or a single channel block compressed format (BC4),
+                    // then output format will be BC4.
+                    data.ImportSettings.OutputFormat = (uint)DXGI_FORMAT.BC4_UNORM;
+                }
+                else if (NormalMapIdentification.IsNormalMap(image) || imageFormat == DXGI_FORMAT.BC5_UNORM || imageFormat == DXGI_FORMAT.BC5_SNORM)
+                {
+                    // Test if the source image is a normal map and if so, use BC5 format for the output.
+                    data.Info.Flags |= TextureFlags.IsImportedAsNormalMap;
+                    data.ImportSettings.OutputFormat = (uint)DXGI_FORMAT.BC5_UNORM;
+
+                    if (Helper.IsSRGB(imageFormat))
+                    {
+                        scratch.OverrideFormat(Helper.MakeTypelessUNORM(Helper.MakeTypeless(imageFormat)));
+                    }
+                }
+                else
+                {
+                    // We exhausted all options. use an RGBA block compressed format.
+                    data.ImportSettings.OutputFormat = data.ImportSettings.PreferBc7 ?
+                        (uint)DXGI_FORMAT.BC7_UNORM :
+                        (uint)DXGI_FORMAT.BC3_UNORM;
+                }
+            }
+
+            Debug.Assert(Helper.IsCompressed((DXGI_FORMAT)data.ImportSettings.OutputFormat));
+            if (Helper.HasAlpha((DXGI_FORMAT)data.ImportSettings.OutputFormat))
+            {
+                data.Info.Flags |= TextureFlags.HasAlpha;
+            }
+
+            return Helper.IsSRGB(image.Format) ?
+                Helper.MakeSRGB((DXGI_FORMAT)data.ImportSettings.OutputFormat) :
+                (DXGI_FORMAT)data.ImportSettings.OutputFormat;
+        }
+        private static void CopySubresources(ScratchImage scratch, ref TextureData data)
+        {
+            var metadata = scratch.GetMetadata();
+            Debug.Assert(metadata.MipLevels > 0 && metadata.MipLevels <= TextureData.MaxMips);
+
+            ulong subresourceSize = 0;
+
+            int imageCount = scratch.GetImageCount();
+            for (int i = 0; i < imageCount; i++)
+            {
+                subresourceSize += (ulong)GetImageSize(scratch.GetImage(i));
+            }
+
+            if (subresourceSize > uint.MaxValue)
+            {
+                // Support up to 4GB per resource.
+                data.Info.ImportError = ImportErrors.MaxSizeExceeded;
+                return;
+            }
+
+            data.SubresourceSize = (uint)subresourceSize;
+            data.SubresourceData = Marshal.AllocHGlobal((IntPtr)data.SubresourceSize);
+            Debug.Assert(data.SubresourceData != IntPtr.Zero);
+
+            BlobStreamWriter blob = new(data.SubresourceData, (int)data.SubresourceSize);
+
+            for (int i = 0; i < imageCount; i++)
+            {
+                var image = scratch.GetImage(i);
+
+                Debug.Assert(image.SlicePitch <= int.MaxValue);
+                blob.Write(image.Width);
+                blob.Write(image.Height);
+                blob.Write((uint)image.RowPitch);
+                blob.Write((uint)image.SlicePitch);
+                blob.Write(image.Pixels, (int)image.SlicePitch);
+            }
+        }
+        private static int GetMaxMipCount(int width, int height, int depth)
+        {
+            int mipLevels = 1;
+            while (width > 1 || height > 1 || depth > 1)
+            {
+                width >>= 1;
+                height >>= 1;
+                depth >>= 1;
+
+                mipLevels++;
+            }
+
+            return mipLevels;
+        }
+    }
+}
