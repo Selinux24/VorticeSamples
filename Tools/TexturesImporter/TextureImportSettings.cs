@@ -19,7 +19,6 @@ namespace TexturesImporter
         }
         public TextureDimensions Dimension = 0;
         public int MipLevels = 0;
-        public int ArraySize = 0;
         public float AlphaThreshold = 0;
         public bool PreferBc7 = false;
         public uint OutputFormat = 0;

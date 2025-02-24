@@ -13,7 +13,8 @@ namespace TexturesImporter
             textureData.ImportSettings.Compress = true;
 
             TextureImporter.Import(ref textureData);
-            TextureImporter.DecompressMipmaps(ref textureData);
+
+            TextureImporter.ShutDownTextureTools();
 
             Console.ReadKey();
         }
