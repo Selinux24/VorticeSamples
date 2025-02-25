@@ -13,5 +13,6 @@ namespace TexturesImporter
         SizeMismatch,
         FormatMismatch,
         FileNotFound,
+        NeedSixImages,
     }
 }

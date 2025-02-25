@@ -1,4 +1,5 @@
-﻿using System;
+﻿using DirectXTexNet;
+using System;
 
 namespace TexturesImporter
 {
@@ -10,6 +11,7 @@ namespace TexturesImporter
         {
             TextureData textureData = new();
             textureData.ImportSettings.Sources = textureM24Path;
+            textureData.ImportSettings.OutputFormat = (uint)DXGI_FORMAT.BC6H_UF16;
             textureData.ImportSettings.Compress = true;
 
             TextureImporter.Import(ref textureData);

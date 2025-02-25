@@ -9,5 +9,6 @@ namespace ContentTools
         IsImportedAsNormalMap = 0x08,
         IsCubeMap = 0x10,
         IsVolumeMap = 0x20,
+        IsSRGB = 0x40,
     }
 }

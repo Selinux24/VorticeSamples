@@ -5,101 +5,17 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
-using System.Threading;
 using Utilities;
-using Vortice.Direct3D;
-using Vortice.Direct3D11;
-using Vortice.DXGI;
 
 namespace TexturesImporter
 {
     static class TextureImporter
     {
-        struct D3D11Device()
-        {
-            public ID3D11Device Device;
-            public object HwCompressionMutex = new();
-        }
-
-        private static readonly object deviceCreationMutex = new();
-        private static bool tryOnce = false;
-        private static readonly List<D3D11Device> d3d11Devices = [];
-
         private static TexHelper Helper => TexHelper.Instance;
 
         public static void ShutDownTextureTools()
         {
-            for (int i = 0; i < d3d11Devices.Count; i++)
-            {
-                d3d11Devices[i].Device?.Dispose();
-            }
-
-            d3d11Devices.Clear();
-        }
-
-        private static IDXGIAdapter[] GetAdaptersByPerformance()
-        {
-            using var factory = DXGI.CreateDXGIFactory1<IDXGIFactory7>();
-
-            List<IDXGIAdapter> adapters = [];
-
-            const uint warpId = 0x1414;
-
-            for (uint i = 0; factory.EnumAdapterByGpuPreference(i, GpuPreference.HighPerformance, out IDXGIAdapter adapter).Success; i++)
-            {
-                if (adapter == null)
-                {
-                    continue;
-                }
-
-                var desc = adapter.Description;
-
-                if (desc.VendorId != warpId)
-                {
-                    adapters.Add(adapter);
-                }
-            }
-
-            return [.. adapters];
-        }
-        private static void CreateDevice()
-        {
-            if (d3d11Devices.Count > 0)
-            {
-                return;
-            }
-
-            var adapters = GetAdaptersByPerformance();
-
-            DeviceCreationFlags createDeviceFlags = 0;
-#if DEBUG
-            createDeviceFlags |= DeviceCreationFlags.Debug;
-#endif
-
-            List<ID3D11Device> devices = [];
-            FeatureLevel[] featureLevels = [FeatureLevel.Level_11_0];
-
-            for (int i = 0; i < adapters.Length; i++)
-            {
-                if (D3D11.D3D11CreateDevice(
-                    adapters[i],
-                    adapters[i] != null ? DriverType.Unknown : DriverType.Hardware,
-                    createDeviceFlags,
-                    featureLevels, out var device).Success)
-                {
-                    devices.Add(device);
-                }
-            }
-
-            for (int i = 0; i < devices.Count; i++)
-            {
-                // NOTE: we check for valid devices since device creation can fail for adapters that don't support
-                //       the requested feature level (D3D_FEATURE_LEVEL_11_0).
-                if (devices[i] != null)
-                {
-                    d3d11Devices.Add(new() { Device = devices[i] });
-                }
-            }
+            DeviceManager.ShutDown();
         }
 
         private static TexMetadata MetadataFromTextureInfo(TextureInfo info)
@@ -135,6 +51,7 @@ namespace TexturesImporter
             SetOrClearFlag(ref info.Flags, TextureFlags.IsPremultipliedAlpha, metadata.IsPMAlpha());
             SetOrClearFlag(ref info.Flags, TextureFlags.IsCubeMap, metadata.IsCubemap());
             SetOrClearFlag(ref info.Flags, TextureFlags.IsVolumeMap, metadata.IsVolumemap());
+            SetOrClearFlag(ref info.Flags, TextureFlags.IsSRGB, Helper.IsSRGB(format));
         }
         private static void SetOrClearFlag(ref TextureFlags flags, TextureFlags flag, bool set)
         {
@@ -362,7 +279,11 @@ namespace TexturesImporter
                 }
                 else if (settings.Dimension == TextureDimensions.TextureCube)
                 {
-                    Debug.Assert((arraySize % 6) == 0);
+                    if ((arraySize % 6) != 0)
+                    {
+                        data.Info.ImportError = ImportErrors.NeedSixImages;
+                        return null;
+                    }
                     scratch = workingScratch.CreateCubeCopy(0, arraySize, CP_FLAGS.NONE);
                 }
                 else
@@ -439,27 +360,10 @@ namespace TexturesImporter
 
             var outputFormat = DetermineOutputFormat(ref data, scratch, image);
 
-            ScratchImage bcScratch = null;
-            if (CanUseGpu(outputFormat))
+            ScratchImage bcScratch;
+            if (DeviceManager.CanUseGpu(outputFormat))
             {
-                bool wait = true;
-                while (wait)
-                {
-                    for (int i = 0; i < d3d11Devices.Count; i++)
-                    {
-                        if (Monitor.TryEnter(d3d11Devices[i].HwCompressionMutex))
-                        {
-                            bcScratch = scratch.Compress(d3d11Devices[i].Device.NativePointer, outputFormat, TEX_COMPRESS_FLAGS.DEFAULT, 1.0f);
-                            Monitor.Exit(d3d11Devices[i].HwCompressionMutex);
-                            wait = false;
-                            break;
-                        }
-                    }
-                    if (wait)
-                    {
-                        Thread.Sleep(200);
-                    }
-                }
+                bcScratch = DeviceManager.CompressGpu(scratch, outputFormat);
             }
             else
             {
@@ -473,31 +377,6 @@ namespace TexturesImporter
             }
 
             return bcScratch;
-        }
-        private static bool CanUseGpu(DXGI_FORMAT format)
-        {
-            switch (format)
-            {
-                case DXGI_FORMAT.BC6H_TYPELESS:
-                case DXGI_FORMAT.BC6H_UF16:
-                case DXGI_FORMAT.BC6H_SF16:
-                case DXGI_FORMAT.BC7_TYPELESS:
-                case DXGI_FORMAT.BC7_UNORM:
-                case DXGI_FORMAT.BC7_UNORM_SRGB:
-                {
-                    lock (deviceCreationMutex)
-                    {
-                        if (!tryOnce)
-                        {
-                            tryOnce = true;
-                            CreateDevice();
-                        }
-
-                        return d3d11Devices.Count > 0;
-                    }
-                }
-            }
-            return false;
         }
         private static DXGI_FORMAT DetermineOutputFormat(ref TextureData data, ScratchImage scratch, Image image)
         {
