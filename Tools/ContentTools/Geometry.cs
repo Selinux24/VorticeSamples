@@ -33,7 +33,7 @@ namespace ContentTools
             public Vector3[] Colors { get; set; } = [];
             public Vector2[][] UVSets { get; set; } = [];
             public int[] MaterialIndices { get; set; } = [];
-            public int[] MaterialUsed { get => MaterialIndices.Distinct().ToArray(); }
+            public int[] MaterialUsed { get => [.. MaterialIndices.Distinct()]; }
 
             public uint[] RawIndices { get; set; } = [];
 
@@ -75,9 +75,9 @@ namespace ContentTools
             return processors;
         }
 
-        public static void ProcessScene(Model scene, GeometryImportSettings settings)
+        public static void ProcessModel(Model model, GeometryImportSettings settings, Progression progression = null)
         {
-            foreach (var lod in scene.LODGroups)
+            foreach (var lod in model.LODGroups)
             {
                 foreach (var m in lod.Meshes)
                 {
@@ -85,25 +85,28 @@ namespace ContentTools
                 }
             }
         }
-        private static void DetermineElementsType(Mesh m)
+        private static ElementsType DetermineElementsType(Mesh m)
         {
+            ElementsType type = 0;
+
             if (m.Normals.Length > 0)
             {
                 if (m.UVSets.Length > 0 && m.UVSets[0].Length > 0)
                 {
-                    m.ElementsType = ElementsType.StaticNormalTexture;
+                    type = ElementsType.StaticNormalTexture;
                 }
                 else
                 {
-                    m.ElementsType = ElementsType.StaticNormal;
+                    type = ElementsType.StaticNormal;
                 }
             }
             else if (m.Colors.Length > 0)
             {
-                m.ElementsType = ElementsType.StaticColor;
+                type = ElementsType.StaticColor;
             }
 
             // TODO: we lack data for skeletal meshes. Expand for skeletal meshes later.
+            return type;
         }
         private static void ProcessVertices(Mesh m, GeometryImportSettings settings)
         {
@@ -120,7 +123,7 @@ namespace ContentTools
                 ProcessUVs(m);
             }
 
-            DetermineElementsType(m);
+            m.ElementsType = DetermineElementsType(m);
             PackVertices(m);
         }
 
@@ -477,6 +480,77 @@ namespace ContentTools
                 uint[] data = [.. m.Indices];
                 blob.Write(data);
             }
+        }
+
+        private static bool NearEqual(float n1, float n2)
+        {
+            return MathF.Abs(MathF.Abs(n1) - MathF.Abs(n2)) <= Epsilon;
+        }
+        private static void AppendToVectorPod<T>(T[] dst, T[] src)
+        {
+            if (src.Length == 0)
+            {
+                return;
+            }
+
+            int numElements = dst.Length;
+            Array.Resize(ref dst, dst.Length + src.Length);
+            Array.Copy(src, 0, dst, numElements, src.Length);
+        }
+
+        public static bool CoalesceMeshes(LODGroup lod, Progression progression, out Mesh combinedMesh)
+        {
+            Debug.Assert(lod.Meshes.Count > 0);
+            var firstMesh = lod.Meshes[0];
+
+            combinedMesh = new()
+            {
+                Name = firstMesh.Name,
+                ElementsType = DetermineElementsType(firstMesh),
+                LodThreshold = firstMesh.LodThreshold,
+                LodId = firstMesh.LodId,
+                UVSets = new Vector2[firstMesh.UVSets.Length][]
+            };
+
+            for (uint meshIdx = 0; meshIdx < lod.Meshes.Count; meshIdx++)
+            {
+                var m = lod.Meshes[(int)meshIdx];
+
+                if (combinedMesh.ElementsType != DetermineElementsType(m) ||
+                    combinedMesh.UVSets.Length != m.UVSets.Length ||
+                    combinedMesh.LodId != m.LodId ||
+                    !NearEqual(combinedMesh.LodThreshold, m.LodThreshold))
+                {
+                    combinedMesh = null;
+
+                    return false;
+                }
+
+                int positionCount = combinedMesh.Positions.Length;
+                int rawIndexBase = combinedMesh.RawIndices.Length;
+
+                AppendToVectorPod(combinedMesh.Positions, m.Positions);
+                AppendToVectorPod(combinedMesh.Normals, m.Normals);
+                AppendToVectorPod(combinedMesh.Tangents, m.Tangents);
+                AppendToVectorPod(combinedMesh.Colors, m.Colors);
+
+                for (int i = 0; i < combinedMesh.UVSets.Length; i++)
+                {
+                    AppendToVectorPod(combinedMesh.UVSets[i], m.UVSets[i]);
+                }
+
+                AppendToVectorPod(combinedMesh.MaterialIndices, m.MaterialIndices);
+                AppendToVectorPod(combinedMesh.RawIndices, m.RawIndices);
+
+                for (int i = rawIndexBase; i < combinedMesh.RawIndices.Length; i++)
+                {
+                    combinedMesh.RawIndices[i] += (uint)positionCount;
+                }
+
+                progression?.Callback(progression.Value, progression.MaxValue > 1 ? progression.MaxValue - 1 : 1);
+            }
+
+            return true;
         }
     }
 }

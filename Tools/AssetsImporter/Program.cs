@@ -7,6 +7,8 @@ namespace AssetsImporter
 {
     internal class Program
     {
+        private const string modelLODTestPath = "../../../../../Assets/LODTest.fbx";
+        private const string modelGroupTestPath = "../../../../../Assets/GroupTest.fbx";
         private const string modelM24Path = "../../../../../Assets/M24.dae";
         private const string modelHumveePath = "../../../../../Assets/Humvee.obj";
         private const string modelToyTankPath = "../../../../../Assets/ToyTank.fbx";
@@ -16,10 +18,15 @@ namespace AssetsImporter
 
         static void Main()
         {
-            GeometryImportSettings settings = new();
+            GeometryImportSettings settings = new()
+            {
+                CoalesceMeshes = true
+            };
 
             List<string> files = [];
 
+            files.AddRange(ImportModel(modelLODTestPath, settings, assetsFolder));
+            files.AddRange(ImportModel(modelGroupTestPath, settings, assetsFolder));
             files.AddRange(ImportModel(modelM24Path, settings, assetsFolder));
             files.AddRange(ImportModel(modelHumveePath, settings, assetsFolder));
             files.AddRange(ImportModel(modelToyTankPath, settings, assetsFolder));
@@ -34,6 +41,8 @@ namespace AssetsImporter
 
                 ExportAssetsFile(assetFilename);
             }
+
+            Console.WriteLine("Done");
             Console.ReadKey();
         }
 

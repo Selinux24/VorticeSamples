@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Numerics;
+using Utilities;
 
 namespace AssetsImporter
 {
@@ -17,7 +18,7 @@ namespace AssetsImporter
     {
         private static readonly object mutex = new();
 
-        public static string[] Read(string fileName, GeometryImportSettings settings, string assetsFolder)
+        public static string[] Read(string fileName, GeometryImportSettings settings, string assetsFolder, Progression progression = null)
         {
             lock (mutex)
             {
@@ -35,10 +36,28 @@ namespace AssetsImporter
                 List<string> files = [];
 
                 var models = ReadScene(aScene, settings);
+
                 foreach (var model in models)
                 {
                     // Process the scene data
-                    Geometry.ProcessScene(model, settings);
+                    Geometry.ProcessModel(model, settings, progression);
+
+                    if (settings.CoalesceMeshes)
+                    {
+                        foreach (var lod in model.LODGroups)
+                        {
+                            if (lod.Meshes.Count <= 1)
+                            {
+                                continue;
+                            }
+
+                            if (Geometry.CoalesceMeshes(lod, progression, out var combinedMesh))
+                            {
+                                lod.Meshes.Clear();
+                                lod.Meshes.Add(combinedMesh);
+                            }
+                        }
+                    }
 
                     // Pack the scene data (for editor)
                     files.Add(Geometry.PackData(model, assetsFolder));

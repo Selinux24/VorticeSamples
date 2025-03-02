@@ -193,7 +193,7 @@ namespace ContentTools
             Creators[(int)info.Type](scene, info);
 
             settings.CalculateNormals = true;
-            Geometry.ProcessScene(scene, settings);
+            Geometry.ProcessModel(scene, settings);
             Geometry.PackData(scene, Path.GetRandomFileName());
         }
     }
