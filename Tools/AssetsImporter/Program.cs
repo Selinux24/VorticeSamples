@@ -18,6 +18,12 @@ namespace AssetsImporter
 
         static void Main()
         {
+            GeometryImportSettings lodSettings = new()
+            {
+                CoalesceMeshes = true,
+                IsLOD = true,
+                Thresholds = [1, 2],
+            };
             GeometryImportSettings settings = new()
             {
                 CoalesceMeshes = true
@@ -25,7 +31,7 @@ namespace AssetsImporter
 
             List<string> files = [];
 
-            files.AddRange(ImportModel(modelLODTestPath, settings, assetsFolder));
+            files.AddRange(ImportModel(modelLODTestPath, lodSettings, assetsFolder));
             files.AddRange(ImportModel(modelGroupTestPath, settings, assetsFolder));
             files.AddRange(ImportModel(modelM24Path, settings, assetsFolder));
             files.AddRange(ImportModel(modelHumveePath, settings, assetsFolder));

@@ -27,15 +27,14 @@ namespace ContentTools
         public class Mesh()
         {
             // Initial data
-            public Vector3[] Positions { get; set; } = [];
-            public Vector3[] Normals { get; set; } = [];
-            public Vector4[] Tangents { get; set; } = [];
-            public Vector3[] Colors { get; set; } = [];
-            public Vector2[][] UVSets { get; set; } = [];
-            public int[] MaterialIndices { get; set; } = [];
+            public Vector3[] Positions = [];
+            public Vector3[] Normals = [];
+            public Vector4[] Tangents = [];
+            public Vector3[] Colors = [];
+            public Vector2[][] UVSets = [];
+            public int[] MaterialIndices = [];
+            public uint[] RawIndices = [];
             public int[] MaterialUsed { get => [.. MaterialIndices.Distinct()]; }
-
-            public uint[] RawIndices { get; set; } = [];
 
             // Intermediate data
             public List<Vertex> Vertices { get; set; } = [];
@@ -486,7 +485,7 @@ namespace ContentTools
         {
             return MathF.Abs(MathF.Abs(n1) - MathF.Abs(n2)) <= Epsilon;
         }
-        private static void AppendToVectorPod<T>(T[] dst, T[] src)
+        private static void AppendToVectorPod<T>(ref T[] dst, T[] src)
         {
             if (src.Length == 0)
             {
@@ -529,18 +528,19 @@ namespace ContentTools
                 int positionCount = combinedMesh.Positions.Length;
                 int rawIndexBase = combinedMesh.RawIndices.Length;
 
-                AppendToVectorPod(combinedMesh.Positions, m.Positions);
-                AppendToVectorPod(combinedMesh.Normals, m.Normals);
-                AppendToVectorPod(combinedMesh.Tangents, m.Tangents);
-                AppendToVectorPod(combinedMesh.Colors, m.Colors);
+                AppendToVectorPod(ref combinedMesh.Positions, m.Positions);
+                AppendToVectorPod(ref combinedMesh.Normals, m.Normals);
+                AppendToVectorPod(ref combinedMesh.Tangents, m.Tangents);
+                AppendToVectorPod(ref combinedMesh.Colors, m.Colors);
 
                 for (int i = 0; i < combinedMesh.UVSets.Length; i++)
                 {
-                    AppendToVectorPod(combinedMesh.UVSets[i], m.UVSets[i]);
+                    combinedMesh.UVSets[i] = [];
+                    AppendToVectorPod(ref combinedMesh.UVSets[i], m.UVSets[i]);
                 }
 
-                AppendToVectorPod(combinedMesh.MaterialIndices, m.MaterialIndices);
-                AppendToVectorPod(combinedMesh.RawIndices, m.RawIndices);
+                AppendToVectorPod(ref combinedMesh.MaterialIndices, m.MaterialIndices);
+                AppendToVectorPod(ref combinedMesh.RawIndices, m.RawIndices);
 
                 for (int i = rawIndexBase; i < combinedMesh.RawIndices.Length; i++)
                 {

@@ -13,5 +13,8 @@ namespace ContentTools
         public bool ImportEmbeddedTextures { get; set; } = false;
         public bool ImportAnimations { get; set; } = false;
         public bool CoalesceMeshes { get; set; } = false;
+
+        public bool IsLOD { get; set; } = false;
+        public float[] Thresholds { get; set; } = [];
     }
 }
