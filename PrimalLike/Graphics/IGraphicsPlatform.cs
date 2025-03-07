@@ -1,4 +1,5 @@
 ﻿using PrimalLike.EngineAPI;
+using System;
 
 namespace PrimalLike.Graphics
 {
@@ -138,6 +139,16 @@ namespace PrimalLike.Graphics
         /// </summary>
         /// <param name="id">Material id</param>
         void RemoveMaterial(IdType id);
+        /// <summary>
+        /// Adds a texture.
+        /// </summary>
+        /// <param name="info">Texture info</param>
+        IdType AddTexture(IntPtr info);
+        /// <summary>
+        /// Removes a texture.
+        /// </summary>
+        /// <param name="id">Texture id</param>
+        void RemoveTexture(IdType id);
         /// <summary>
         /// Adds a render item.
         /// </summary>

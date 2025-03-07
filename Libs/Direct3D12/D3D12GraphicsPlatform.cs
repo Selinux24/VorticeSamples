@@ -131,6 +131,16 @@ namespace Direct3D12
             Material.Remove(id);
         }
         /// <inheritdoc/>
+        public uint AddTexture(IntPtr data)
+        {
+            return Texture.Add(data);
+        }
+        /// <inheritdoc/>
+        public void RemoveTexture(uint id)
+        {
+            Texture.Remove(id);
+        }
+        /// <inheritdoc/>
         public uint AddRenderItem(uint entityId, uint geometryContentId, uint[] materialIds)
         {
             return RenderItem.Add(entityId, geometryContentId, materialIds);

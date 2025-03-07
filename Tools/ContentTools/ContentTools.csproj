@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Libs\Utilities\Utilities.csproj" />
+    <ProjectReference Include="..\..\PrimalLike\PrimalLike.csproj" />
   </ItemGroup>
 
 </Project>

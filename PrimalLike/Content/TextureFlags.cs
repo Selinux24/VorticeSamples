@@ -1,5 +1,5 @@
 ﻿
-namespace ContentTools
+namespace PrimalLike.Content
 {
     public enum TextureFlags : uint
     {

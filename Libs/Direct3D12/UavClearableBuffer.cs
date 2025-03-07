@@ -24,7 +24,7 @@ namespace Direct3D12
             buffer = new(info, false);
 
             Debug.Assert(info.Size > 0 && info.Alignment > 0);
-            D3D12Helpers.NameD3D12Object(buffer.Buffer, buffer.Size, "Structured Buffer - size");
+            D3D12Helpers.NameD3D12Object(buffer.Buffer, buffer.Size, "UAV Clearable Buffer - size");
 
             Debug.Assert((info.Flags & ResourceFlags.AllowUnorderedAccess) != 0);
             uav = D3D12Graphics.UavHeap.Allocate();

@@ -57,6 +57,7 @@ namespace PrimalLike.Content
             {
                 AssetTypes.Mesh => CreateGeometryResource(data),
                 AssetTypes.Material => CreateMaterialResource(data),
+                AssetTypes.Texture => CreateTextureResource(data),
                 _ => uint.MaxValue,
             };
 
@@ -72,6 +73,9 @@ namespace PrimalLike.Content
                     break;
                 case AssetTypes.Material:
                     DestroyMaterialResource(id);
+                    break;
+                case AssetTypes.Texture:
+                    DestroyTextureResource(id);
                     break;
                 default:
                     Debug.Assert(false);
@@ -305,6 +309,16 @@ namespace PrimalLike.Content
         private static void DestroyMaterialResource(IdType id)
         {
             Renderer.RemoveMaterial(id);
+        }
+
+        private static IdType CreateTextureResource(IntPtr data)
+        {
+            Debug.Assert(data != IntPtr.Zero);
+            return Renderer.AddTexture(data);
+        }
+        private static void DestroyTextureResource(IdType id)
+        {
+            Renderer.RemoveTexture(id);
         }
 
         public static IdType AddShaderGroup(CompiledShader[] shaders, uint[] keys)

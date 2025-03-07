@@ -1,5 +1,5 @@
-﻿using ContentTools;
-using DirectXTexNet;
+﻿using DirectXTexNet;
+using PrimalLike.Content;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;

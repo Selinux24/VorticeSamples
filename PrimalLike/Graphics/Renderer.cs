@@ -101,6 +101,14 @@ namespace PrimalLike.Graphics
         {
             gfx.RemoveMaterial(id);
         }
+        public static IdType AddTexture(IntPtr info)
+        {
+            return gfx.AddTexture(info);
+        }
+        public static void RemoveTexture(IdType id)
+        {
+            gfx.RemoveTexture(id);
+        }
         public static IdType AddRenderItem(IdType entityId, IdType geometryContentId, IdType[] materialIds)
         {
             return gfx.AddRenderItem(entityId, geometryContentId, materialIds);

@@ -87,11 +87,11 @@ namespace PrimalLike.Content
         }
         public uint LodFromThreshold(float threshold)
         {
-            Debug.Assert(threshold > 0);
+            Debug.Assert(threshold >= 0);
 
             if (lodCount == 1) return 0;
 
-            for (uint i = lodCount - 1; i > 0; i--)
+            for (uint i = lodCount - 1; i >= 0; i--)
             {
                 if (Thresholds[(int)i] <= threshold)
                 {

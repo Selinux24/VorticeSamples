@@ -1,4 +1,4 @@
-﻿using ContentTools;
+﻿using PrimalLike.Content;
 
 namespace TexturesImporter
 {
