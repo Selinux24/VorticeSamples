@@ -45,6 +45,7 @@ namespace AssetsImporter
                     continue;
                 }
 
+                Console.WriteLine($"Writing asset {assetFilename}");
                 ExportAssetsFile(assetFilename);
             }
 
@@ -57,9 +58,8 @@ namespace AssetsImporter
             string path = Path.GetFullPath(modelPath);
             if (!File.Exists(path))
             {
-                Console.WriteLine("Asset file not found");
-                Console.ReadKey();
-                return null;
+                Console.WriteLine($"Asset file not found: {path}");
+                return [];
             }
 
             return AssimpImporter.Read(path, settings, assetsFolder);

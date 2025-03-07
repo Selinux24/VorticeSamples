@@ -502,14 +502,20 @@ namespace ContentTools
             Debug.Assert(lod.Meshes.Count > 0);
             var firstMesh = lod.Meshes[0];
 
+            int uvSets = firstMesh.UVSets.Length;
             combinedMesh = new()
             {
                 Name = firstMesh.Name,
                 ElementsType = DetermineElementsType(firstMesh),
                 LodThreshold = firstMesh.LodThreshold,
                 LodId = firstMesh.LodId,
-                UVSets = new Vector2[firstMesh.UVSets.Length][]
+                UVSets = new Vector2[uvSets][]
             };
+
+            for (int i = 0; i < uvSets; i++)
+            {
+                combinedMesh.UVSets[i] = [];
+            }
 
             for (uint meshIdx = 0; meshIdx < lod.Meshes.Count; meshIdx++)
             {
@@ -535,7 +541,6 @@ namespace ContentTools
 
                 for (int i = 0; i < combinedMesh.UVSets.Length; i++)
                 {
-                    combinedMesh.UVSets[i] = [];
                     AppendToVectorPod(ref combinedMesh.UVSets[i], m.UVSets[i]);
                 }
 

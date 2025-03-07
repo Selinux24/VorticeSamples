@@ -41,42 +41,10 @@ namespace AssetsImporter
 
                 GetModel(progression, out var model);
 
+                Geometry.ProcessModel(model, settings, progression);
+
                 // Pack the scene data (for editor)
                 return [Geometry.PackData(model, assetsFolder)];
-
-                /*
-                List<string> files = [];
-
-                var models = ReadScene();
-
-                foreach (var model in models)
-                {
-                    // Process the scene data
-                    Geometry.ProcessModel(model, settings, progression);
-
-                    if (settings.CoalesceMeshes)
-                    {
-                        foreach (var lod in model.LODGroups)
-                        {
-                            if (lod.Meshes.Count <= 1)
-                            {
-                                continue;
-                            }
-
-                            if (Geometry.CoalesceMeshes(lod, progression, out var combinedMesh))
-                            {
-                                lod.Meshes.Clear();
-                                lod.Meshes.Add(combinedMesh);
-                            }
-                        }
-                    }
-
-                    // Pack the scene data (for editor)
-                    files.Add(Geometry.PackData(model, assetsFolder));
-                }
-
-                return [.. files];
-                */
             }
         }
         private static AScene ReadFile(string filePath, APostProcessSteps ppSteps = APostProcessSteps.None, APropertyConfig[] configs = null)
@@ -94,39 +62,14 @@ namespace AssetsImporter
 
             return importer.ImportFile(filePath, ppSteps);
         }
-        private static Geometry.Model[] ReadScene()
-        {
-            List<Geometry.Model> models = [];
 
-            foreach (var aMesh in aScene.Meshes)
-            {
-                if (!GetMeshData(aMesh, out var mesh))
-                {
-                    continue;
-                }
-
-                Geometry.LODGroup lod = new()
-                {
-                    Name = aMesh.Name,
-                    Meshes = [mesh],
-                };
-
-                models.Add(new Geometry.Model(aMesh.Name)
-                {
-                    LODGroups = [lod],
-                });
-            }
-
-            return [.. models];
-        }
-
-        private static void GetModel(Progression progression, out Geometry.Model model)
+        private static bool GetModel(Progression progression, out Geometry.Model model)
         {
             ANode root = aScene?.RootNode;
             if (root == null)
             {
                 model = default;
-                return;
+                return false;
             }
 
             model = new(root.Name);
@@ -144,7 +87,7 @@ namespace AssetsImporter
                         continue;
                     }
 
-                    GetMeshes(model, node, lod.Meshes, 0, -1f, progression);
+                    lod.Meshes.AddRange(GetMeshes(model, node, 0, -1f, progression));
                 }
 
                 if (lod.Meshes.Count > 0)
@@ -170,7 +113,7 @@ namespace AssetsImporter
                     }
 
                     Geometry.LODGroup lod = new();
-                    GetMeshes(model, node, lod.Meshes, 0, -1f, progression);
+                    lod.Meshes.AddRange(GetMeshes(model, node, 0, -1f, progression));
                     if (lod.Meshes.Count > 0)
                     {
                         lod.Name = lod.Meshes[0].Name;
@@ -178,18 +121,22 @@ namespace AssetsImporter
                     }
                 }
             }
+
+            return true;
         }
-        private static void GetMeshes(Geometry.Model model, ANode node, List<Geometry.Mesh> meshes, uint lodId, float lodThreshold, Progression progression)
+        private static Geometry.Mesh[] GetMeshes(Geometry.Model model, ANode node, uint lodId, float lodThreshold, Progression progression)
         {
             Debug.Assert(node != null && lodId != uint.MaxValue);
             bool isLodGroup = false;
+
+            List<Geometry.Mesh> meshes = [];
 
             if (node.HasMeshes)
             {
                 for (int m = 0; m < node.MeshCount; m++)
                 {
                     var mesh = aScene.Meshes[node.MeshIndices[m]];
-                    GetMesh(mesh, meshes, lodId, lodThreshold, progression);
+                    meshes.AddRange(GetMesh(mesh, lodId, lodThreshold, progression));
                 }
             }
             else if (importSettings.IsLOD)
@@ -202,12 +149,16 @@ namespace AssetsImporter
             {
                 for (int i = 0; i < node.ChildCount; i++)
                 {
-                    GetMeshes(model, node.Children[i], meshes, lodId, lodThreshold, progression);
+                    meshes.AddRange(GetMeshes(model, node.Children[i], lodId, lodThreshold, progression));
                 }
             }
+
+            return [.. meshes];
         }
-        private static void GetMesh(AMesh mesh, List<Geometry.Mesh> meshes, uint lodId, float lodThreshold, Progression progression)
+        private static Geometry.Mesh[] GetMesh(AMesh mesh, uint lodId, float lodThreshold, Progression progression)
         {
+            List<Geometry.Mesh> meshes = [];
+
             Debug.Assert(mesh != null);
 
             if (GetMeshData(mesh, out var m))
@@ -219,6 +170,8 @@ namespace AssetsImporter
                 meshes.Add(m);
                 progression?.Callback(progression.Value, progression.MaxValue + 1);
             }
+
+            return [.. meshes];
         }
         private static void GetLODGroup(Geometry.Model model, ANode node, Progression progression)
         {
@@ -241,7 +194,7 @@ namespace AssetsImporter
                     lodThreshold = importSettings.Thresholds[i - 1];
                 }
 
-                GetMeshes(model, node.Children[i], lod.Meshes, (uint)lod.Meshes.Count, lodThreshold, progression);
+                lod.Meshes.AddRange(GetMeshes(model, node.Children[i], (uint)lod.Meshes.Count, lodThreshold, progression));
             }
 
             if (lod.Meshes.Count > 0)
