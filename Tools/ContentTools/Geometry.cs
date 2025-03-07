@@ -14,6 +14,8 @@ namespace ContentTools
     /// </summary>
     public static class Geometry
     {
+        #region Classes
+
         public class Model(string name)
         {
             public string Name { get; set; } = name ?? $"model_{Guid.NewGuid()}";
@@ -49,6 +51,8 @@ namespace ContentTools
             public float LodThreshold { get; set; } = -1f;
             public uint LodId { get; set; } = uint.MaxValue;
         }
+
+        #endregion
 
         private const float Epsilon = 1e-5f;
 
@@ -502,17 +506,36 @@ namespace ContentTools
             Debug.Assert(lod.Meshes.Count > 0);
             var firstMesh = lod.Meshes[0];
 
-            int uvSets = firstMesh.UVSets.Length;
+            ElementsType elementsType = DetermineElementsType(firstMesh);
+            int uvSetCount = firstMesh.UVSets.Length;
+            uint lodId = firstMesh.LodId;
+            float lodThreshold = firstMesh.LodThreshold;
+
+            for (int meshIdx = 0; meshIdx < lod.Meshes.Count; meshIdx++)
+            {
+                var m = lod.Meshes[meshIdx];
+
+                if (elementsType != DetermineElementsType(m) ||
+                    uvSetCount != m.UVSets.Length ||
+                    lodId != m.LodId ||
+                    !NearEqual(lodThreshold, m.LodThreshold))
+                {
+                    combinedMesh = null;
+
+                    return false;
+                }
+            }
+
             combinedMesh = new()
             {
                 Name = firstMesh.Name,
-                ElementsType = DetermineElementsType(firstMesh),
-                LodThreshold = firstMesh.LodThreshold,
-                LodId = firstMesh.LodId,
-                UVSets = new Vector2[uvSets][]
+                ElementsType = elementsType,
+                LodId = lodId,
+                LodThreshold = lodThreshold,
+                UVSets = new Vector2[uvSetCount][],
             };
 
-            for (int i = 0; i < uvSets; i++)
+            for (int i = 0; i < uvSetCount; i++)
             {
                 combinedMesh.UVSets[i] = [];
             }
@@ -520,16 +543,6 @@ namespace ContentTools
             for (uint meshIdx = 0; meshIdx < lod.Meshes.Count; meshIdx++)
             {
                 var m = lod.Meshes[(int)meshIdx];
-
-                if (combinedMesh.ElementsType != DetermineElementsType(m) ||
-                    combinedMesh.UVSets.Length != m.UVSets.Length ||
-                    combinedMesh.LodId != m.LodId ||
-                    !NearEqual(combinedMesh.LodThreshold, m.LodThreshold))
-                {
-                    combinedMesh = null;
-
-                    return false;
-                }
 
                 int positionCount = combinedMesh.Positions.Length;
                 int rawIndexBase = combinedMesh.RawIndices.Length;
