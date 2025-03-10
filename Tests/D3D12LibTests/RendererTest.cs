@@ -22,6 +22,7 @@ namespace D3D12LibTests
         private const string shadersIncludeDir = "../../../../../Libs/Direct3D12/Hlsl/";
         private const string shadersOutputPath = "./Content/engineShaders.bin";
         private const string testModelFile = "./Content/Model.model";
+        private const string testTextureFile = "./Content/texture.texture";
 
         private static readonly EngineShaderInfo[] engineShaderFiles =
         [
@@ -117,7 +118,7 @@ namespace D3D12LibTests
 
         private uint itemId = IdDetail.InvalidId;
         private uint modelId = IdDetail.InvalidId;
-        private readonly ulong lightSetKey = 0;
+        private uint textureId = IdDetail.InvalidId;
 
         private const int numThreads = 8;
         private readonly Thread[] workers = new Thread[numThreads];
@@ -179,6 +180,12 @@ namespace D3D12LibTests
             using var file = new MemoryStream(File.ReadAllBytes(testModelFile));
             modelId = ContentToEngine.CreateResource(file, AssetTypes.Mesh);
             Assert.That(modelId != uint.MaxValue, "Model creation error.");
+        }
+        private void LoadTestTexture()
+        {
+            using var file = new MemoryStream(File.ReadAllBytes(testTextureFile));
+            textureId = ContentToEngine.CreateResource(file, AssetTypes.Texture);
+            Assert.That(textureId != uint.MaxValue, "Texture creation error.");
         }
 
         private void CreateRenderItem()
@@ -243,6 +250,7 @@ namespace D3D12LibTests
             InitializeApplication();
 
             LoadTestModel();
+            LoadTestTexture();
             CreateRenderItem();
             CreateCameras();
 
@@ -256,6 +264,7 @@ namespace D3D12LibTests
             InitializeApplication();
 
             LoadTestModel();
+            LoadTestTexture();
             CreateRenderItem();
             CreateCameras();
 
@@ -277,6 +286,11 @@ namespace D3D12LibTests
             if (IdDetail.IsValid(modelId))
             {
                 ContentToEngine.DestroyResource(modelId, AssetTypes.Mesh);
+            }
+
+            if (IdDetail.IsValid(textureId))
+            {
+                ContentToEngine.DestroyResource(textureId, AssetTypes.Texture);
             }
 
             for (int i = 0; i < cameraSurfaces.Count; i++)

@@ -139,9 +139,7 @@ namespace Utilities
         /// <param name="fileName">File name</param>
         public void SaveToFile(string fileName)
         {
-            byte[] buffer = new byte[bufferSize];
-            Marshal.Copy(this.buffer, buffer, 0, bufferSize);
-            System.IO.File.WriteAllBytes(fileName, buffer);
+            FileUtils.WriteFile(buffer, bufferSize, fileName);
         }
     }
 }
