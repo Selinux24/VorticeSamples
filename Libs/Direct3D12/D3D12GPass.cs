@@ -23,6 +23,7 @@ namespace Direct3D12
             private byte[] buffer = [];
 
             public uint[] D3D12RenderItemIds = [];
+            public uint DescriptorIndexCount = 0;
 
             // NOTE: when adding new arrays, make sure to update resize() and struct_size.
             public uint[] EntityIds = null;
@@ -32,12 +33,15 @@ namespace Direct3D12
             public ID3D12PipelineState[] DepthPipelineStates = null;
             public ID3D12RootSignature[] RootSignatures = null;
             public MaterialTypes[] MaterialTypes = null;
+            public uint[][] DescriptorIndices = null;
+            public uint[] TextureCounts = null;
             public ulong[] PositionBuffers = null;
             public ulong[] ElementBuffers = null;
             public IndexBufferView[] IndexBufferViews = null;
             public D3D12PrimitiveTopology[] PrimitiveTopologies = null;
             public uint[] ElementsTypes = null;
             public ulong[] PerObjectData = null;
+            public ulong[] SrvIndices = null;
 
             static readonly int StructSize =
                 sizeof(uint) +                      // entity_ids
@@ -47,12 +51,15 @@ namespace Direct3D12
                 Marshal.SizeOf<IntPtr>() +          // depth_pipeline_states
                 Marshal.SizeOf<IntPtr>() +          // root_signatures
                 sizeof(MaterialTypes) +             // material_types
+                sizeof(uint) +                      // TODO: descriptor_indices
+                sizeof(uint) +                      // texture_counts
                 sizeof(ulong) +                     // position_buffers
                 sizeof(ulong) +                     // element_buffers
                 Marshal.SizeOf<IndexBufferView>() + // index_buffer_views
                 sizeof(D3D12PrimitiveTopology) +    // primitive_topologies
                 sizeof(uint) +                      // elements_types
-                sizeof(ulong);                      // per_object_data
+                sizeof(ulong) +                     // per_object_data
+                sizeof(ulong);                      // srv_indices
 
             public readonly uint Size()
             {
@@ -61,6 +68,7 @@ namespace Direct3D12
             public void Clear()
             {
                 Array.Resize(ref D3D12RenderItemIds, 0);
+                DescriptorIndexCount = 0;
             }
             public void Resize()
             {
@@ -81,12 +89,15 @@ namespace Direct3D12
                     DepthPipelineStates = new ID3D12PipelineState[itemsCount];
                     RootSignatures = new ID3D12RootSignature[itemsCount];
                     MaterialTypes = new MaterialTypes[itemsCount];
+                    DescriptorIndices = new uint[itemsCount][];
+                    TextureCounts = new uint[itemsCount];
                     PositionBuffers = new ulong[itemsCount];
                     ElementBuffers = new ulong[itemsCount];
                     IndexBufferViews = new IndexBufferView[itemsCount];
                     PrimitiveTopologies = new D3D12PrimitiveTopology[itemsCount];
                     ElementsTypes = new uint[itemsCount];
                     PerObjectData = new ulong[itemsCount];
+                    SrvIndices = new ulong[itemsCount];
                 }
             }
 
@@ -117,7 +128,9 @@ namespace Direct3D12
                 return new()
                 {
                     RootSignatures = RootSignatures,
-                    MaterialTypes = MaterialTypes
+                    MaterialTypes = MaterialTypes,
+                    DescriptorIndices = DescriptorIndices,
+                    TextureCounts = TextureCounts,
                 };
             }
 
@@ -267,6 +280,10 @@ namespace Direct3D12
                     cmdList.SetGraphicsRootShaderResourceView((uint)OpaqueRootParameter.PositionBuffer, frameCache.PositionBuffers[cacheIndex]);
                     cmdList.SetGraphicsRootShaderResourceView((uint)OpaqueRootParameter.ElementBuffer, frameCache.ElementBuffers[cacheIndex]);
                     cmdList.SetGraphicsRootConstantBufferView((uint)OpaqueRootParameter.PerObjectData, frameCache.PerObjectData[cacheIndex]);
+                    if (frameCache.TextureCounts[cacheIndex] > 0)
+                    {
+                        cmdList.SetGraphicsRootShaderResourceView((uint)OpaqueRootParameter.SrvIndices, frameCache.SrvIndices[cacheIndex]);
+                    }
                 }
                 break;
             }
@@ -289,10 +306,31 @@ namespace Direct3D12
             frameCache.SetViews(viewsCache);
 
             var materialsCache = frameCache.MaterialsCache();
-            Material.GetMaterials(itemsCache.MaterialIds, ref materialsCache);
+            Material.GetMaterials(itemsCache.MaterialIds, ref materialsCache, ref frameCache.DescriptorIndexCount);
             frameCache.SetMaterials(materialsCache);
 
             FillPerObjectData(ref d3d12Info);
+
+            if (frameCache.DescriptorIndexCount == 0)
+            {
+                return;
+            }
+
+            var cbuffer = D3D12Graphics.CBuffer;
+
+            uint itemsCount = frameCache.Size();
+            for (uint i = 0; i < itemsCount; i++)
+            {
+                frameCache.SrvIndices[i] = 0;
+
+                if (frameCache.TextureCounts[i] == 0)
+                {
+                    continue;
+                }
+
+                var gpuAddress = cbuffer.Write(frameCache.DescriptorIndices[i]);
+                frameCache.SrvIndices[i] = gpuAddress;
+            }
         }
 
         public static void Shutdown()

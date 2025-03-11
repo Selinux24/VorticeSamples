@@ -1,4 +1,5 @@
 ﻿using PrimalLike.EngineAPI;
+using System;
 
 namespace PrimalLike.Platform
 {
@@ -22,7 +23,7 @@ namespace PrimalLike.Platform
             platform.RemoveWindow(id);
         }
 
-        public static nint GetWindowHandle(WindowId id)
+        public static IntPtr GetWindowHandle(WindowId id)
         {
             return platform.GetWindowHandle(id);
         }

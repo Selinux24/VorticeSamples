@@ -1,6 +1,7 @@
 ﻿global using WindowId = System.UInt32;
 using PrimalLike.Common;
 using PrimalLike.Platform;
+using System;
 using System.Diagnostics;
 
 namespace PrimalLike.EngineAPI
@@ -47,7 +48,7 @@ namespace PrimalLike.EngineAPI
         /// <summary>
         /// Gets the window handle.
         /// </summary>
-        public nint Handle { get => PlatformBase.GetWindowHandle(id); }
+        public IntPtr Handle { get => PlatformBase.GetWindowHandle(id); }
         /// <summary>
         /// Gets the window width.
         /// </summary>

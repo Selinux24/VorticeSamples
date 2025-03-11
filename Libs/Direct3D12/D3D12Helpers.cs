@@ -133,6 +133,49 @@ namespace Direct3D12
 
             public static BlendDescription Disabled { get => disabled; }
         }
+        public readonly struct SampleStatesCollection()
+        {
+            private static readonly StaticSamplerDescription staticPoint = new(
+                new SamplerDescription(
+                    Filter.MinMagMipPoint,
+                    TextureAddressMode.Wrap,
+                    TextureAddressMode.Wrap,
+                    TextureAddressMode.Wrap,
+                    0f,
+                    1,
+                    ComparisonFunction.Always,
+                    new Color4(0f, 0f, 0f, 1f),
+                    0f, float.MaxValue),
+                ShaderVisibility.Pixel, 0, 0);
+            private static readonly StaticSamplerDescription staticLinear = new(
+                new SamplerDescription(
+                    Filter.MinMagMipLinear,
+                    TextureAddressMode.Wrap,
+                    TextureAddressMode.Wrap,
+                    TextureAddressMode.Wrap,
+                    0f,
+                    1,
+                    ComparisonFunction.Always,
+                    new Color4(0f, 0f, 0f, 1f),
+                    0f, float.MaxValue),
+                ShaderVisibility.Pixel, 0, 0);
+            private static readonly StaticSamplerDescription staticAnisotropic = new(
+                new SamplerDescription(
+                    Filter.Anisotropic,
+                    TextureAddressMode.Wrap,
+                    TextureAddressMode.Wrap,
+                    TextureAddressMode.Wrap,
+                    0f,
+                    1,
+                    ComparisonFunction.Always,
+                    new Color4(0f, 0f, 0f, 1f),
+                    0f, float.MaxValue),
+                ShaderVisibility.Pixel, 0, 0);
+
+            public static StaticSamplerDescription StaticPoint { get => staticPoint; }
+            public static StaticSamplerDescription StaticLinear { get => staticLinear; }
+            public static StaticSamplerDescription StaticAnisotropic { get => staticAnisotropic; }
+        }
 
         #endregion
 
@@ -395,6 +438,16 @@ namespace Direct3D12
         public static ulong AlignSizeForTexture(ulong size)
         {
             return MathHelper.AlignUp(size, D3D12.TextureDataPlacementAlignment);
+        }
+
+        public static StaticSamplerDescription StaticSampler(StaticSamplerDescription staticSampler, uint shaderRegister, uint registerSpace, ShaderVisibility visibility)
+        {
+            var sampler = staticSampler;
+            sampler.ShaderRegister = shaderRegister;
+            sampler.RegisterSpace = registerSpace;
+            sampler.ShaderVisibility = visibility;
+
+            return sampler;
         }
     }
 }

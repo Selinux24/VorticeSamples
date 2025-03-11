@@ -33,7 +33,7 @@ namespace Direct3D12
                 byte[] hash = reader.ReadBytes(16);
                 byte[] data = reader.ReadBytes(size);
 
-                nint pt = Marshal.AllocHGlobal(size);
+                IntPtr pt = Marshal.AllocHGlobal(size);
                 Marshal.Copy(data, 0, pt, size);
 
                 engineShaders[i] = new(data);

@@ -9,7 +9,7 @@ namespace Direct3D12.Content
 {
     class D3D12MaterialStream
     {
-        private readonly nint buffer;
+        private readonly IntPtr buffer;
 
         private uint[] textureIds;
         private uint[] descriptorIndices;
@@ -27,15 +27,15 @@ namespace Direct3D12.Content
         public uint[] DescriptorIndices { get => descriptorIndices; }
         public uint[] ShaderIds { get => shaderIds; }
 
-        public D3D12MaterialStream(nint materialBuffer)
+        public D3D12MaterialStream(IntPtr materialBuffer)
         {
             buffer = materialBuffer;
 
             Initialize();
         }
-        public D3D12MaterialStream(ref nint materialBuffer, MaterialInitInfo info)
+        public D3D12MaterialStream(ref IntPtr materialBuffer, MaterialInitInfo info)
         {
-            Debug.Assert(materialBuffer == nint.Zero);
+            Debug.Assert(materialBuffer == IntPtr.Zero);
 
             info.GetShaderFlags(out ShaderFlags shaderFlags, out int shaderCount);
             Debug.Assert(shaderCount != 0 && shaderFlags != 0);
@@ -80,7 +80,7 @@ namespace Direct3D12.Content
 
         private void Initialize()
         {
-            Debug.Assert(buffer != nint.Zero);
+            Debug.Assert(buffer != IntPtr.Zero);
 
             BlobStreamReader blob = new(buffer);
 

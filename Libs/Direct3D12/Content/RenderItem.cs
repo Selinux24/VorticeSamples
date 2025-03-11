@@ -4,6 +4,7 @@ using PrimalLike.Graphics;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using Utilities;
 using Vortice.Direct3D12;
 
@@ -59,23 +60,28 @@ namespace Direct3D12.Content
 
             items[0] = geometryContentId;
 
+            var d3d12Items = new D3D12RenderItem[materialCount * Marshal.SizeOf<D3D12RenderItem>()];
+            for (uint i = 0; i < materialCount; i++)
+            {
+                PsoId idPair = Material.CreatePso(materialIds[i], viewsCache.PrimitiveTopologies[i], viewsCache.ElementsTypes[i]);
+
+                d3d12Items[i] = new()
+                {
+                    EntityId = entityId,
+                    SubmeshGpuId = gpuIds[i],
+                    MaterialId = materialIds[i],
+                    PsoId = idPair.GpassPsoId,
+                    DepthPsoId = idPair.DepthPsoId
+                };
+
+                Debug.Assert(IdDetail.IsValid(d3d12Items[i].SubmeshGpuId) && IdDetail.IsValid(d3d12Items[i].MaterialId));
+            }
+
             lock (renderItemMutex)
             {
                 for (uint i = 0; i < materialCount; i++)
                 {
-                    PsoId idPair = Material.CreatePso(materialIds[i], viewsCache.PrimitiveTopologies[i], viewsCache.ElementsTypes[i]);
-
-                    D3D12RenderItem item = new()
-                    {
-                        EntityId = entityId,
-                        SubmeshGpuId = gpuIds[i],
-                        MaterialId = materialIds[i],
-                        PsoId = idPair.GpassPsoId,
-                        DepthPsoId = idPair.DepthPsoId
-                    };
-
-                    Debug.Assert(IdDetail.IsValid(item.SubmeshGpuId) && IdDetail.IsValid(item.MaterialId));
-                    items[i + 1] = renderItems.Add(item);
+                    items[i + 1] = renderItems.Add(d3d12Items[i]);
                 }
 
                 // mark the end of ids list.
@@ -99,6 +105,7 @@ namespace Direct3D12.Content
                 renderItemIds.Remove(id);
             }
         }
+        
         public static void GetD3D12RenderItemIds(ref FrameInfo info, ref uint[] d3d12RenderItemIds)
         {
             Debug.Assert(info.RenderItemIds != null && info.Thresholds != null && info.RenderItemCount != 0);
@@ -139,7 +146,7 @@ namespace Direct3D12.Content
                     Debug.Assert(itemIndex <= d3d12RenderItemCount);
                 }
 
-                Debug.Assert(itemIndex <= d3d12RenderItemCount);
+                Debug.Assert(itemIndex == d3d12RenderItemCount);
             }
         }
         internal static void GetItems(uint[] d3d12RenderItemIds, ref ItemsCache cache)

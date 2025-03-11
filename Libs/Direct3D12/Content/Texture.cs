@@ -38,6 +38,16 @@ namespace Direct3D12.Content
                 return id;
             }
         }
+        ///<summary>
+        ///NOTE: expects data to contain
+        ///struct {
+        ///    u32 width, height, array_size (or depth), flags, mip_levels, format,
+        ///    struct {
+        ///        u32 row_pitch, slice_pitch,
+        ///        u8 image[mip_level][slice_pitch * depth_per_mip],
+        ///    } images[]
+        ///} texture
+        ///</summary>
         private static D3D12Texture CreateResourceFromTextureData(IntPtr data)
         {
             Debug.Assert(data != IntPtr.Zero);
@@ -84,13 +94,9 @@ namespace Direct3D12.Content
 
                     subresources.Add(new SubresourceData(blob.Position, rowPitch, slicePitch));
 
-                    blob.Skip(slicePitch);
 
-                    // skip the rest of the slices fo 3d textures with depth > 1
-                    for (uint k = 1; k < depthPerMipLevel[j]; k++)
-                    {
-                        blob.Skip(4 * sizeof(uint) + slicePitch);
-                    }
+                    // skip the rest of slices.
+                    blob.Skip(slicePitch * (int)depthPerMipLevel[j]);
                 }
             }
 

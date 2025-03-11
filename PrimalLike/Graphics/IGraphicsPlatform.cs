@@ -123,7 +123,7 @@ namespace PrimalLike.Graphics
         /// Adds a submesh.
         /// </summary>
         /// <param name="data">Submesh data</param>
-        IdType AddSubmesh(ref nint data);
+        IdType AddSubmesh(ref IntPtr data);
         /// <summary>
         /// Removes a submesh.
         /// </summary>

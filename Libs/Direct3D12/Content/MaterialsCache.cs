@@ -7,5 +7,7 @@ namespace Direct3D12.Content
     {
         public ID3D12RootSignature[] RootSignatures;
         public MaterialTypes[] MaterialTypes;
+        public uint[][] DescriptorIndices;
+        public uint[] TextureCounts;
     }
 }

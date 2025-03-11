@@ -34,7 +34,7 @@ namespace WindowsPlatform
             return Win32PlatformBase.IsWindowFullscreen(id);
         }
         /// <inheritdoc/>
-        public nint GetWindowHandle(uint id)
+        public IntPtr GetWindowHandle(uint id)
         {
             Debug.Assert(IdDetail.IsValid(id));
             return Win32PlatformBase.GetWindowHandle(id);

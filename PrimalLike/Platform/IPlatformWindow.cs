@@ -1,4 +1,5 @@
-﻿
+﻿using System;
+
 namespace PrimalLike.Platform
 {
     public interface IPlatformWindow
@@ -10,7 +11,7 @@ namespace PrimalLike.Platform
         /// <summary>
         /// Gets the handle of the window.
         /// </summary>
-        nint Handle { get; }
+        IntPtr Handle { get; }
         /// <summary>
         /// Gets whether the window is in full screen mode.
         /// </summary>

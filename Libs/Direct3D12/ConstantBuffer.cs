@@ -62,9 +62,24 @@ namespace Direct3D12
         public ulong Write<T>(T data) where T : unmanaged
         {
             // NOTE: be careful not to read from this buffer. Reads are really really slow.
-            T* p = Allocate<T>();
+            T* p = Allocate<T>(1);
             // TODO: handle the case when cbuffer is full.
             BuffersHelper.Write(p, data);
+
+            return GetGpuAddress(p);
+        }
+        /// <summary>
+        /// Write data to the constant buffer. This is a slow operation.
+        /// </summary>
+        /// <typeparam name="T">Data type</typeparam>
+        /// <param name="array">Array</param>
+        /// <returns>Returns the GPU address</returns>
+        public ulong Write<T>(T[] array) where T : unmanaged
+        {
+            // NOTE: be careful not to read from this buffer. Reads are really really slow.
+            T* p = Allocate<T>(array.Length);
+            // TODO: handle the case when cbuffer is full.
+            BuffersHelper.WriteArray(p, array);
 
             return GetGpuAddress(p);
         }
@@ -73,11 +88,11 @@ namespace Direct3D12
         /// </summary>
         /// <typeparam name="T">Data type</typeparam>
         /// <returns>Returns the CPU address</returns>
-        private T* Allocate<T>() where T : unmanaged
+        private T* Allocate<T>(int arraySize) where T : unmanaged
         {
             lock (mutex)
             {
-                uint size = (uint)Marshal.SizeOf<T>();
+                uint size = (uint)(Marshal.SizeOf<T>() * arraySize);
                 uint alignedSize = (uint)D3D12Helpers.AlignSizeForConstantBuffer(size);
                 Debug.Assert(cpuOffset + alignedSize <= buffer.Size);
                 if (cpuOffset + alignedSize <= buffer.Size)

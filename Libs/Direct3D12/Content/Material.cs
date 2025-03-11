@@ -50,22 +50,31 @@ namespace Direct3D12.Content
                 materials.Remove(id);
             }
         }
-        public static void GetMaterials(uint[] materialIds, ref MaterialsCache cache)
+        
+        public static void GetMaterials(uint[] materialIds, ref MaterialsCache cache, ref uint descriptorIndexCount)
         {
             Debug.Assert(materialIds != null && materialIds.Length > 0);
             Debug.Assert(cache.RootSignatures != null && cache.MaterialTypes != null);
 
             lock (materialMutex)
             {
+                uint totalIndexCount = 0;
+
                 for (uint i = 0; i < materialIds.Length; i++)
                 {
                     var stream = new D3D12MaterialStream(materials[materialIds[i]]);
 
                     cache.RootSignatures[i] = rootSignatures[(int)stream.RootSignatureId];
                     cache.MaterialTypes[i] = stream.MaterialType;
+                    cache.DescriptorIndices[i] = stream.DescriptorIndices;
+                    cache.TextureCounts[i] = stream.TextureCount;
+                    totalIndexCount += stream.TextureCount;
                 }
+
+                descriptorIndexCount = totalIndexCount;
             }
         }
+        
         public static uint CreateRootSignature(MaterialTypes type, ShaderFlags flags)
         {
             Debug.Assert(type < MaterialTypes.Count);
@@ -122,7 +131,14 @@ namespace Direct3D12.Content
                     parameters[(uint)OpaqueRootParameter.LightGrid] = D3D12Helpers.AsSrv(ShaderVisibility.Pixel, 5);
                     parameters[(uint)OpaqueRootParameter.LightIndexList] = D3D12Helpers.AsSrv(ShaderVisibility.Pixel, 6);
 
-                    var rootSignatureDesc = new D3D12RootSignatureDesc(parameters, GetRootSignatureFlags(flags));
+                    StaticSamplerDescription[] samplers =
+                    [
+                        D3D12Helpers.StaticSampler(D3D12Helpers.SampleStatesCollection.StaticPoint, 0,0, ShaderVisibility.Pixel),
+                        D3D12Helpers.StaticSampler(D3D12Helpers.SampleStatesCollection.StaticLinear, 1,0, ShaderVisibility.Pixel),
+                        D3D12Helpers.StaticSampler(D3D12Helpers.SampleStatesCollection.StaticPoint, 2,0, ShaderVisibility.Pixel),
+                    ];
+
+                    var rootSignatureDesc = new D3D12RootSignatureDesc(parameters, GetRootSignatureFlags(flags), samplers);
                     rootSignature = rootSignatureDesc.Create();
                     Debug.Assert(rootSignature != null);
                 }
