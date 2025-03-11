@@ -17,13 +17,21 @@ namespace DX12Windows.Content
 
         public static uint LoadModel(string modelPath)
         {
-            modelPath = Path.GetFullPath(modelPath);
-            using var file = new MemoryStream(File.ReadAllBytes(modelPath));
+            return LoadResource(modelPath, AssetTypes.Mesh);
+        }
+        public static uint LoadTexture(string texturePath)
+        {
+            return LoadResource(texturePath, AssetTypes.Texture);
+        }
+        private static uint LoadResource(string path, AssetTypes assetType)
+        {
+            path = Path.GetFullPath(path);
+            using var file = new MemoryStream(File.ReadAllBytes(path));
 
-            uint modelId = ContentToEngine.CreateResource(file, AssetTypes.Mesh);
-            Debug.Assert(IdDetail.IsValid(modelId));
+            uint id = ContentToEngine.CreateResource(file, assetType);
+            Debug.Assert(IdDetail.IsValid(id));
 
-            return modelId;
+            return id;
         }
     }
 }

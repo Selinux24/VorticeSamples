@@ -78,9 +78,9 @@ namespace DX12Windows.Lights
             lights.Add(Application.CreateLight(info));
 
 #if RANDOM_LIGHTS
-            float scale1 = 1f;
+            float scale1 = 2f;
             Vector3 scale = new(1f * scale1, 0.5f * scale1, 1f * scale1);
-            int dim = 20;
+            int dim = 10;
             for (int x = -dim; x < dim; x++)
             {
                 for (int y = 0; y < 2 * dim; y++)
