@@ -9,7 +9,7 @@ using Utilities;
 
 namespace TexturesImporter
 {
-    static class TextureImporter
+    public static class TextureImporter
     {
         private static TexHelper Helper => TexHelper.Instance;
 

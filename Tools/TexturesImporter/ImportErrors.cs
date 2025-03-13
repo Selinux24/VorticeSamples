@@ -1,7 +1,7 @@
 ﻿
 namespace TexturesImporter
 {
-    enum ImportErrors : uint
+    public enum ImportErrors : uint
     {
         Succeeded = 0,
         Unknown,

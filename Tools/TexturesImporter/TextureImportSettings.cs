@@ -1,7 +1,7 @@
 ﻿
 namespace TexturesImporter
 {
-    struct TextureImportSettings()
+    public struct TextureImportSettings()
     {
         /// <summary>
         /// String of one or more file paths separated by semi-colons ';'

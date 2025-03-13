@@ -1,7 +1,7 @@
 ﻿
 namespace TexturesImporter
 {
-    enum TextureDimensions : uint
+    public enum TextureDimensions : uint
     {
         Texture1D,
         Texture2D,

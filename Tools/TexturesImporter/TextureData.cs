@@ -3,7 +3,7 @@ using Utilities;
 
 namespace TexturesImporter
 {
-    struct TextureData()
+    public struct TextureData()
     {
         public const uint MaxMips = 14; // we support up to 8k textures.
         public IntPtr SubresourceData = 0;

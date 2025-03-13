@@ -2,7 +2,7 @@
 
 namespace TexturesImporter
 {
-    struct TextureInfo()
+    public struct TextureInfo()
     {
         public int Width = 0;
         public int Height = 0;

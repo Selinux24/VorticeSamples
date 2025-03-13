@@ -12,12 +12,20 @@ using System.IO;
 using System.Linq;
 using System.Numerics;
 using System.Threading;
+using TexturesImporter;
 
 namespace DX12Windows.Content
 {
     class LabSceneRenderItem : ITestRenderItem
     {
         private const string modelPrimalLab = "../../../../../Assets/LabScene.fbx";
+        private const string modelFembot = "../../../../../Assets/Fembot_v1.fbx";
+
+        private const string ambientOcclusionTexture = "../../../../../Assets/AmbientOcclusion.png";
+        private const string baseColorTexture = "../../../../../Assets/BaseColor.png";
+        private const string emissiveTexture = "../../../../../Assets/Emissive.png";
+        private const string metalRoughTexture = "../../../../../Assets/MetalRough.png";
+        private const string normalTexture = "../../../../../Assets/Normal.png";
 
         private const string fanModelName = "fanmodel.model";
         private const string intModelName = "labmodel.model";
@@ -67,12 +75,18 @@ namespace DX12Windows.Content
             [
                 Path.Combine(outputsFolder, fanModelName),
                 Path.Combine(outputsFolder, intModelName),
-                Path.Combine(outputsFolder, labModelName)
+                Path.Combine(outputsFolder, labModelName),
+                Path.Combine(outputsFolder, fembotModelName),
             ];
 
             if (modelNames.Any(f => !File.Exists(f)))
             {
-                var assets = AssimpImporter.Read(modelPrimalLab, new(), assetsFolder);
+                string[] assets =
+                [
+                    .. AssimpImporter.Read(modelPrimalLab, new(), assetsFolder),
+                    .. AssimpImporter.Read(modelFembot, new(), assetsFolder),
+                ];
+
                 Debug.Assert(assets.Length == modelNames.Length);
                 for (int i = 0; i < assets.Length; i++)
                 {
@@ -84,6 +98,27 @@ namespace DX12Windows.Content
                     AssimpImporter.PackForEngine(assets[i], modelNames[i]);
                 }
             }
+
+            TextureData data = new();
+            data.ImportSettings.Sources = ambientOcclusionTexture;
+            TextureImporter.Import(ref data);
+            data.SaveTexture(Path.Combine(outputsFolder, ambientOcclusionTextureName));
+
+            data.ImportSettings.Sources = baseColorTexture;
+            TextureImporter.Import(ref data);
+            data.SaveTexture(Path.Combine(outputsFolder, baseColorTextureName));
+
+            data.ImportSettings.Sources = emissiveTexture;
+            TextureImporter.Import(ref data);
+            data.SaveTexture(Path.Combine(outputsFolder, emissiveTextureName));
+
+            data.ImportSettings.Sources = metalRoughTexture;
+            TextureImporter.Import(ref data);
+            data.SaveTexture(Path.Combine(outputsFolder, metalRoughTextureName));
+
+            data.ImportSettings.Sources = normalTexture;
+            TextureImporter.Import(ref data);
+            data.SaveTexture(Path.Combine(outputsFolder, normalTextureName));
 
             CreateRenderItems(outputsFolder);
         }

@@ -40,6 +40,7 @@
     <ProjectReference Include="..\..\Platforms\WindowsPlatform\WindowsPlatform.csproj" />
     <ProjectReference Include="..\..\Tools\ShaderCompiler\ShaderCompiler.csproj" />
     <ProjectReference Include="..\..\Tools\AssetsImporter\AssetsImporter.csproj" />
+    <ProjectReference Include="..\..\Tools\TexturesImporter\TexturesImporter.csproj" />
   </ItemGroup>
 
 </Project>
