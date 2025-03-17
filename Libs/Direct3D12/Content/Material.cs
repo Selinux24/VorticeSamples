@@ -35,12 +35,11 @@ namespace Direct3D12.Content
 
         public static uint Add(MaterialInitInfo info)
         {
-            IntPtr buffer = IntPtr.Zero;
             lock (materialMutex)
             {
-                D3D12MaterialStream stream = new(ref buffer, info);
-                Debug.Assert(buffer != IntPtr.Zero);
-                return materials.Add(buffer);
+                D3D12MaterialStream stream = new(info);
+                Debug.Assert(stream.Buffer != IntPtr.Zero);
+                return materials.Add(stream.Buffer);
             }
         }
         public static void Remove(uint id)

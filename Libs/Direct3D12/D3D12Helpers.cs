@@ -179,6 +179,9 @@ namespace Direct3D12
 
         #endregion
 
+        private const string SEPARATOR_BEGIN = "** ERROR on {0} *********************************************";
+        private const string SEPARATOR_END = "** {0} ******************************************************";
+
         public static bool DxCall(HResult result)
         {
             if (result.Success)
@@ -329,7 +332,11 @@ namespace Direct3D12
             string errorMsg = D3D12.D3D12SerializeVersionedRootSignature(versionedDesc, out var signatureBlob);
             if (!string.IsNullOrEmpty(errorMsg))
             {
+                const string caller = nameof(D3D12.D3D12SerializeVersionedRootSignature);
+                Debug.WriteLine(SEPARATOR_BEGIN, [caller]);
                 Debug.WriteLine(errorMsg);
+                Debug.WriteLine(SEPARATOR_END, [caller]);
+
                 return null;
             }
 

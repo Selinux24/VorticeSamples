@@ -359,5 +359,14 @@ namespace PrimalLike.Content
                 return default;
             }
         }
+
+        public static IdType AddRenderItem(IdType entityId, IdType geometryContentId, IdType[] materialIds)
+        {
+            return Renderer.AddRenderItem(entityId, geometryContentId, materialIds);
+        }
+        public static void RemoveRenderItem(IdType id)
+        {
+            Renderer.RemoveRenderItem(id);
+        }
     }
 }

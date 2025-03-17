@@ -10,7 +10,7 @@ using Vortice.Direct3D12;
 
 namespace Direct3D12.Content
 {
-    public static class RenderItem
+    static class RenderItem
     {
         static readonly FreeList<D3D12RenderItem> renderItems = new();
         static readonly FreeList<uint[]> renderItemIds = new();
@@ -38,7 +38,7 @@ namespace Direct3D12.Content
         }
 
         /// <summary>
-        /// Creates a buffer that's basically an array of IdType
+        /// Creates a buffer that's basically an array of <see cref="uint"/>
         /// </summary>
         /// <remarks>
         /// buffer[0] = geometry_content_id
@@ -149,7 +149,7 @@ namespace Direct3D12.Content
                 Debug.Assert(itemIndex == d3d12RenderItemCount);
             }
         }
-        internal static void GetItems(uint[] d3d12RenderItemIds, ref ItemsCache cache)
+        public static void GetItems(uint[] d3d12RenderItemIds, ref ItemsCache cache)
         {
             Debug.Assert(d3d12RenderItemIds?.Length > 0);
             uint count = (uint)d3d12RenderItemIds.Length;

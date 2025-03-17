@@ -112,12 +112,12 @@ namespace DX12Windows.Content
             CreateMaterial();
             uint[] materials = [mtlId];
 
-            item1Id = Direct3D12.Content.RenderItem.Add(entity1Id, model1Id, materials);
-            item2Id = Direct3D12.Content.RenderItem.Add(entity2Id, model2Id, materials);
-            item3Id = Direct3D12.Content.RenderItem.Add(entity3Id, model3Id, materials);
-            item4Id = Direct3D12.Content.RenderItem.Add(entity4Id, model4Id, materials);
-            item5Id = Direct3D12.Content.RenderItem.Add(entity5Id, model5Id, materials);
-            item6Id = Direct3D12.Content.RenderItem.Add(entity6Id, model6Id, materials);
+            item1Id = ContentToEngine.AddRenderItem(entity1Id, model1Id, materials);
+            item2Id = ContentToEngine.AddRenderItem(entity2Id, model2Id, materials);
+            item3Id = ContentToEngine.AddRenderItem(entity3Id, model3Id, materials);
+            item4Id = ContentToEngine.AddRenderItem(entity4Id, model4Id, materials);
+            item5Id = ContentToEngine.AddRenderItem(entity5Id, model5Id, materials);
+            item6Id = ContentToEngine.AddRenderItem(entity6Id, model6Id, materials);
 
             renderItemEntityMap[item1Id] = entity1Id;
             renderItemEntityMap[item2Id] = entity2Id;
@@ -159,7 +159,7 @@ namespace DX12Windows.Content
         {
             if (IdDetail.IsValid(itemId))
             {
-                Direct3D12.Content.RenderItem.Remove(itemId);
+                ContentToEngine.RemoveRenderItem(itemId);
 
                 if (renderItemEntityMap.TryGetValue(itemId, out var value))
                 {

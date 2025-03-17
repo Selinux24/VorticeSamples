@@ -164,10 +164,10 @@ namespace DX12Windows.Content
             uint[] materials = [defaultMtlId, fembotMtlId];
             uint[] fembotMaterials = [fembotMtlId, fembotMtlId];
 
-            fanItemId = Direct3D12.Content.RenderItem.Add(fanEntityId, fanModelId, materials);
-            labItemId = Direct3D12.Content.RenderItem.Add(labEntityId, labModelId, materials);
-            intItemId = Direct3D12.Content.RenderItem.Add(intEntityId, intModelId, materials);
-            fembotItemId = Direct3D12.Content.RenderItem.Add(fembotEntityId, fembotModelId, fembotMaterials);
+            fanItemId = ContentToEngine.AddRenderItem(fanEntityId, fanModelId, materials);
+            labItemId = ContentToEngine.AddRenderItem(labEntityId, labModelId, materials);
+            intItemId = ContentToEngine.AddRenderItem(intEntityId, intModelId, materials);
+            fembotItemId = ContentToEngine.AddRenderItem(fembotEntityId, fembotModelId, fembotMaterials);
 
             renderItemEntityMap[fanItemId] = fanEntityId;
             renderItemEntityMap[labItemId] = labEntityId;
@@ -218,7 +218,7 @@ namespace DX12Windows.Content
                 return;
             }
 
-            Direct3D12.Content.RenderItem.Remove(itemId);
+            ContentToEngine.RemoveRenderItem(itemId);
 
             if (renderItemEntityMap.TryGetValue(itemId, out var value))
             {

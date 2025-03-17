@@ -50,7 +50,7 @@ namespace DX12Windows.Content
         {
             if (IdDetail.IsValid(itemId))
             {
-                Direct3D12.Content.RenderItem.Remove(itemId);
+                ContentToEngine.RemoveRenderItem(itemId);
 
                 if (renderItemEntityMap.TryGetValue(itemId, out var value))
                 {
@@ -86,7 +86,7 @@ namespace DX12Windows.Content
             uint[] materials = [mtlId, mtlId, mtlId, mtlId, mtlId];
 
             // TODO: add add_render_item in renderer.
-            itemId = Direct3D12.Content.RenderItem.Add(entityId, modelId, materials);
+            itemId = ContentToEngine.AddRenderItem(entityId, modelId, materials);
 
             renderItemEntityMap[itemId] = entityId;
             return itemId;

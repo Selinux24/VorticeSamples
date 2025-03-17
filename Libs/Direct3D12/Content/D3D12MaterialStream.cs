@@ -19,6 +19,7 @@ namespace Direct3D12.Content
         private MaterialTypes type;
         private ShaderFlags shaderFlags;
 
+        public IntPtr Buffer { get => buffer; }
         public uint TextureCount { get => textureCount; }
         public MaterialTypes MaterialType { get => type; }
         public ShaderFlags ShaderFlags { get => shaderFlags; }
@@ -33,10 +34,8 @@ namespace Direct3D12.Content
 
             Initialize();
         }
-        public D3D12MaterialStream(ref IntPtr materialBuffer, MaterialInitInfo info)
+        public D3D12MaterialStream(MaterialInitInfo info)
         {
-            Debug.Assert(materialBuffer == IntPtr.Zero);
-
             info.GetShaderFlags(out ShaderFlags shaderFlags, out int shaderCount);
             Debug.Assert(shaderCount != 0 && shaderFlags != 0);
 
@@ -48,7 +47,7 @@ namespace Direct3D12.Content
                 sizeof(uint) * shaderCount +                        // shader ids
                 (sizeof(uint) + sizeof(uint)) * info.TextureCount;  // texture ids and descriptor indices (maybe 0 if no textures used).
 
-            buffer = materialBuffer = Marshal.AllocHGlobal(bufferSize);
+            buffer = Marshal.AllocHGlobal(bufferSize);
             BlobStreamWriter blob = new(buffer, bufferSize);
 
             blob.Write((uint)info.Type);

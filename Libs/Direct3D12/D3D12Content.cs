@@ -6,7 +6,11 @@ namespace Direct3D12
     {
         public static bool Initialize()
         {
-            return true;
+            return
+                RenderItem.Initialize() &&
+                Texture.Initialize() &&
+                Material.Initialize() &&
+                Submesh.Initialize();
         }
         public static void Shutdown()
         {

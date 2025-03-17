@@ -10,7 +10,6 @@ using System.IO;
 using System.Linq;
 using System.Numerics;
 using System.Threading;
-using Vortice.Mathematics;
 
 namespace DX12Windows.Content
 {
@@ -69,7 +68,7 @@ namespace DX12Windows.Content
             CreateMaterial();
             uint[] materials = [mtlId];
 
-            itemId = Direct3D12.Content.RenderItem.Add(entityId, modelId, materials);
+            itemId = ContentToEngine.AddRenderItem(entityId, modelId, materials);
 
             renderItemEntityMap[itemId] = entityId;
         }
@@ -101,7 +100,7 @@ namespace DX12Windows.Content
         {
             if (IdDetail.IsValid(itemId))
             {
-                Direct3D12.Content.RenderItem.Remove(itemId);
+                ContentToEngine.RemoveRenderItem(itemId);
 
                 if (renderItemEntityMap.TryGetValue(itemId, out var value))
                 {
