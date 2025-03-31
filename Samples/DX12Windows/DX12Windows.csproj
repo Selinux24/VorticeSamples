@@ -20,14 +20,34 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Content\AmbientOcclusion.texture" />
+    <None Remove="Content\BaseColor.texture" />
+    <None Remove="Content\Emissive.texture" />
+    <None Remove="Content\MetalRough.texture" />
+    <None Remove="Content\Normal.texture" />
     <None Remove="game.bin" />
   </ItemGroup>
 
   <ItemGroup>
+    <Content Include="Content\AmbientOcclusion.texture">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Content\BaseColor.texture">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Content\Emissive.texture">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="Content\game.bin">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Content Include="Content\MetalRough.texture">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="Content\model.model">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Content\Normal.texture">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="Hlsl\TestShader.hlsl">

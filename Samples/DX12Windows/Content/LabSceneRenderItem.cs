@@ -32,11 +32,11 @@ namespace DX12Windows.Content
         private const string labModelName = "intmodel.model";
         private const string fembotModelName = "fembotmodel.model";
 
-        private const string ambientOcclusionTextureName = "ambient_occlusion.texture";
-        private const string baseColorTextureName = "base_color.texture";
-        private const string emissiveTextureName = "emissive.texture";
-        private const string metalRoughTextureName = "metal_rough.texture";
-        private const string normalTextureName = "normal.texture";
+        private const string ambientOcclusionTextureName = "AmbientOcclusion.texture";
+        private const string baseColorTextureName = "BaseColor.texture";
+        private const string emissiveTextureName = "Emissive.texture";
+        private const string metalRoughTextureName = "MetalRough.texture";
+        private const string normalTextureName = "Normal.texture";
 
         private uint fanModelId = uint.MaxValue;
         private uint intModelId = uint.MaxValue;
@@ -137,10 +137,10 @@ namespace DX12Windows.Content
                 new(() => { textureIds[(uint)TextureUsages.MetalRough] = ITestRenderItem.LoadTexture(metalRoughTextureName); }),
                 new(() => { textureIds[(uint)TextureUsages.Normal] = ITestRenderItem.LoadTexture(normalTextureName); }),
 
-                new(() => { fanModelId = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, fanModelName)); }),
-                new(() => { labModelId = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, intModelName)); }),
-                new(() => { intModelId = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, labModelName)); }),
-                new(() => { fembotModelId = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, fembotModelName)); }),
+                //new(() => { fanModelId = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, fanModelName)); }),
+                //new(() => { labModelId = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, intModelName)); }),
+                //new(() => { intModelId = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, labModelName)); }),
+                //new(() => { fembotModelId = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, fembotModelName)); }),
                 new(TestShaders.LoadShaders),
             ];
 
