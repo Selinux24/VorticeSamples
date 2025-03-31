@@ -374,3 +374,5 @@ FodyWeavers.xsd
 /Assets/MetalRough.png
 /Assets/Normal.png
 
+*.texture
+*.icon
