@@ -15,7 +15,7 @@ namespace DX12Windows.Content
 {
     class ToyTankRenderItem : ITestRenderItem
     {
-        private const string modelPrimalLab = "../../../../../Assets/ToyTank.fbx";
+        private const string modelToyTank = "../../../../../Assets/ToyTank.fbx";
 
         private const string modelName = "toytank_model.model";
         private uint modelId = uint.MaxValue;
@@ -36,7 +36,7 @@ namespace DX12Windows.Content
 
             if (modelNames.Any(f => !File.Exists(f)))
             {
-                var assets = AssimpImporter.Read(modelPrimalLab, new(), assetsFolder);
+                string[] assets = [.. AssimpImporter.Read(modelToyTank, new(), assetsFolder)];
                 Debug.Assert(assets.Length == modelNames.Length);
                 for (int i = 0; i < assets.Length; i++)
                 {

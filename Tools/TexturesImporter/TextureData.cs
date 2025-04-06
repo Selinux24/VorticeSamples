@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using Utilities;
 
 namespace TexturesImporter
@@ -14,19 +15,6 @@ namespace TexturesImporter
         public TextureImportSettings ImportSettings = new();
 
         /// <summary>
-        /// Saves the icon to a file
-        /// </summary>
-        /// <param name="outputPath">Output path</param>
-        public readonly void SaveIcon(string outputPath)
-        {
-            if (Icon == IntPtr.Zero || IconSize == 0)
-            {
-                return;
-            }
-
-            FileUtils.WriteFile(Icon, IconSize, outputPath);
-        }
-        /// <summary>
         /// Saves the texture to a file
         /// </summary>
         /// <param name="outputPath">Output path</param>
@@ -37,7 +25,18 @@ namespace TexturesImporter
                 return;
             }
 
-            FileUtils.WriteFile(SubresourceData, SubresourceSize, outputPath);
+            FileUtils.MakeRoom(outputPath);
+
+            using var file = File.OpenWrite(outputPath);
+            using var writer = new BinaryWriter(file);
+            writer.Write(Info.Width);
+            writer.Write(Info.Height);
+            writer.Write(Info.ArraySize);
+            writer.Write((uint)Info.Flags);
+            writer.Write(Info.MipLevels);
+            writer.Write(Info.Format);
+
+            FileUtils.WriteFile(writer, SubresourceData, SubresourceSize);
         }
     }
 }

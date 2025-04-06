@@ -16,7 +16,7 @@ namespace DX12Windows.Content
 {
     class M24RenderItem : ITestRenderItem
     {
-        private const string modelPrimalLab = "../../../../../Assets/m24.dae";
+        private const string modelM24 = "../../../../../Assets/m24.dae";
 
         private const string model1Name = "m24_1_model.model";
         private const string model2Name = "m24_2_model.model";
@@ -60,7 +60,7 @@ namespace DX12Windows.Content
 
             if (modelNames.Any(f => !File.Exists(f)))
             {
-                var assets = AssimpImporter.Read(modelPrimalLab, new(), assetsFolder);
+                string[] assets = [.. AssimpImporter.Read(modelM24, new(), assetsFolder)];
                 Debug.Assert(assets.Length == modelNames.Length);
                 for (int i = 0; i < assets.Length; i++)
                 {

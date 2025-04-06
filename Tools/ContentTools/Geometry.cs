@@ -377,6 +377,46 @@ namespace ContentTools
 
             return fileName;
         }
+        public static string PackDataByLODGroup(LODGroup lodGroup, string assetsFolder)
+        {
+            int sceneSize = GetLODGroupSize(lodGroup);
+            IntPtr buffer = Marshal.AllocHGlobal(sceneSize);
+
+            BlobStreamWriter blob = new(buffer, sceneSize);
+
+            // scene name
+            blob.Write(lodGroup.Name);
+
+            // number of LODs
+            blob.Write(1);
+
+            // LOD name
+            blob.Write(lodGroup.Name);
+
+            // number of meshes in this LOD
+            blob.Write(lodGroup.Meshes.Count);
+
+            foreach (var m in lodGroup.Meshes)
+            {
+                PackMesh(m, blob);
+            }
+
+            Debug.Assert(sceneSize == blob.Offset);
+
+            string fileName = Path.Combine(assetsFolder, Path.ChangeExtension(lodGroup.Name, ".asset"));
+            if (!Directory.Exists(assetsFolder))
+            {
+                Directory.CreateDirectory(assetsFolder);
+            }
+            if (File.Exists(fileName))
+            {
+                File.Delete(fileName);
+            }
+
+            blob.SaveToFile(fileName);
+
+            return fileName;
+        }
         private static int GetSceneSize(Model scene)
         {
             int size;
@@ -403,6 +443,32 @@ namespace ContentTools
 
                 size += lodSize;
             }
+
+            return size;
+        }
+        private static int GetLODGroupSize(LODGroup lodGroup)
+        {
+            int size;
+            int sceneNameLength = lodGroup.Name.Length;
+
+            size =
+                sizeof(int) +               // name length
+                sceneNameLength +           // room for scene name string
+                sizeof(int);                // number of LODs
+
+            int lodSize;
+            int lodNameLength = lodGroup.Name.Length;
+
+            lodSize =
+                sizeof(int) + lodNameLength +   // LOD name length and room for LOD name string
+                sizeof(int);                    // number of meshes in this LOD
+
+            foreach (var m in lodGroup.Meshes)
+            {
+                lodSize += GetMeshSize(m);
+            }
+
+            size += lodSize;
 
             return size;
         }

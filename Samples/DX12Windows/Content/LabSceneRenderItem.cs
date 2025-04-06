@@ -66,8 +66,8 @@ namespace DX12Windows.Content
 
         private readonly Dictionary<uint, uint> renderItemEntityMap = [];
 
-        public Vector3 InitialCameraPosition { get; } = new(13.76f, 3f, -1.1f);
-        public Quaternion InitialCameraRotation { get; } = Quaternion.CreateFromYawPitchRoll(-1.70f, -0.137f, 0f);
+        public Vector3 InitialCameraPosition { get; } = new(-5.49f, 1.73f, 9.26f);
+        public Quaternion InitialCameraRotation { get; } = Quaternion.CreateFromYawPitchRoll(5.61f, 0.19f, 0f);
 
         public void Load(string assetsFolder, string outputsFolder)
         {
@@ -100,6 +100,10 @@ namespace DX12Windows.Content
             }
 
             TextureData data = new();
+            data.ImportSettings.Compress = true;
+            data.ImportSettings.PreferBc7 = true;
+            data.ImportSettings.AlphaThreshold = 0.5f;
+
             data.ImportSettings.Sources = ambientOcclusionTexture;
             TextureImporter.Import(ref data);
             data.SaveTexture(Path.Combine(outputsFolder, ambientOcclusionTextureName));
@@ -120,6 +124,8 @@ namespace DX12Windows.Content
             TextureImporter.Import(ref data);
             data.SaveTexture(Path.Combine(outputsFolder, normalTextureName));
 
+            TextureImporter.ShutDownTextureTools();
+
             CreateRenderItems(outputsFolder);
         }
         private void CreateRenderItems(string outputsFolder)
@@ -131,16 +137,16 @@ namespace DX12Windows.Content
             //       You can replace them with any model that's available to you.
             Thread[] tasks =
             [
-                new(() => { textureIds[(uint)TextureUsages.AmbientOcclusion] = ITestRenderItem.LoadTexture(ambientOcclusionTextureName); }),
-                new(() => { textureIds[(uint)TextureUsages.BaseColor] = ITestRenderItem.LoadTexture(baseColorTextureName); }),
-                new(() => { textureIds[(uint)TextureUsages.Emissive] = ITestRenderItem.LoadTexture(emissiveTextureName); }),
-                new(() => { textureIds[(uint)TextureUsages.MetalRough] = ITestRenderItem.LoadTexture(metalRoughTextureName); }),
-                new(() => { textureIds[(uint)TextureUsages.Normal] = ITestRenderItem.LoadTexture(normalTextureName); }),
+                new(() => { textureIds[(uint)TextureUsages.AmbientOcclusion] = ITestRenderItem.LoadTexture(Path.Combine(outputsFolder, ambientOcclusionTextureName)); }),
+                new(() => { textureIds[(uint)TextureUsages.BaseColor] = ITestRenderItem.LoadTexture(Path.Combine(outputsFolder, baseColorTextureName)); }),
+                new(() => { textureIds[(uint)TextureUsages.Emissive] = ITestRenderItem.LoadTexture(Path.Combine(outputsFolder, emissiveTextureName)); }),
+                new(() => { textureIds[(uint)TextureUsages.MetalRough] = ITestRenderItem.LoadTexture(Path.Combine(outputsFolder, metalRoughTextureName)); }),
+                new(() => { textureIds[(uint)TextureUsages.Normal] = ITestRenderItem.LoadTexture(Path.Combine(outputsFolder, normalTextureName)); }),
 
-                //new(() => { fanModelId = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, fanModelName)); }),
-                //new(() => { labModelId = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, intModelName)); }),
-                //new(() => { intModelId = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, labModelName)); }),
-                //new(() => { fembotModelId = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, fembotModelName)); }),
+                new(() => { fanModelId = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, fanModelName)); }),
+                new(() => { labModelId = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, intModelName)); }),
+                new(() => { intModelId = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, labModelName)); }),
+                new(() => { fembotModelId = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, fembotModelName)); }),
                 new(TestShaders.LoadShaders),
             ];
 
@@ -161,7 +167,7 @@ namespace DX12Windows.Content
 
             // NOTE: we need shaders to be ready before creating materials
             CreateMaterial();
-            uint[] materials = [defaultMtlId, fembotMtlId];
+            uint[] materials = [defaultMtlId];
             uint[] fembotMaterials = [fembotMtlId, fembotMtlId];
 
             fanItemId = ContentToEngine.AddRenderItem(fanEntityId, fanModelId, materials);
@@ -206,6 +212,15 @@ namespace DX12Windows.Content
             if (IdDetail.IsValid(fembotMtlId))
             {
                 ContentToEngine.DestroyResource(fembotMtlId, AssetTypes.Material);
+            }
+
+            // remove textures
+            foreach (uint id in textureIds)
+            {
+                if (IdDetail.IsValid(id))
+                {
+                    ContentToEngine.DestroyResource(id, AssetTypes.Texture);
+                }
             }
 
             // remove shaders and textures

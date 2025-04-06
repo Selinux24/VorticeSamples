@@ -56,9 +56,9 @@ namespace Direct3D12.Content
             uint height = blob.Read<uint>();
             uint depth = 1;
             uint arraySize = blob.Read<uint>();
-            TextureFlags flags = blob.Read<TextureFlags>();
+            TextureFlags flags = (TextureFlags)blob.Read<uint>();
             uint mipLevels = blob.Read<uint>();
-            Format format = blob.Read<Format>();
+            Format format = (Format)blob.Read<uint>();
             bool is3d = flags.HasFlag(TextureFlags.IsVolumeMap);
 
             Debug.Assert(mipLevels <= D3D12Texture.MaxMips);
@@ -118,9 +118,9 @@ namespace Direct3D12.Content
             uint subresourceCount = arraySize * mipLevels;
             Debug.Assert(subresourceCount > 0);
 
-            PlacedSubresourceFootPrint[] layouts = new PlacedSubresourceFootPrint[Marshal.SizeOf<PlacedSubresourceFootPrint>() * subresourceCount];
-            uint[] numRows = new uint[sizeof(uint) * subresourceCount];
-            ulong[] rowSizes = new ulong[sizeof(ulong) * subresourceCount];
+            PlacedSubresourceFootPrint[] layouts = new PlacedSubresourceFootPrint[subresourceCount];
+            uint[] numRows = new uint[subresourceCount];
+            ulong[] rowSizes = new ulong[subresourceCount];
 
             var device = D3D12Graphics.Device;
             device.GetCopyableFootprints(desc, 0, subresourceCount, 0, layouts, numRows, rowSizes, out ulong requiredSize);
@@ -129,29 +129,29 @@ namespace Direct3D12.Content
             UploadContext context = new((uint)requiredSize);
             unsafe
             {
-                void* cpuAddress = context.CpuAddress;
+                IntPtr cpuAddress = (IntPtr)context.CpuAddress;
 
                 for (int subresourceIdx = 0; subresourceIdx < subresourceCount; subresourceIdx++)
                 {
-                    var layout = layouts[subresourceIdx];
+                    PlacedSubresourceFootPrint layout = layouts[subresourceIdx];
                     uint subresourceHeight = numRows[subresourceIdx];
                     uint subresourceDepth = layout.Footprint.Depth;
-                    var subResource = subresources[subresourceIdx];
+                    SubresourceData subResource = subresources[subresourceIdx];
 
-                    void* destData = Unsafe.Add<byte>(cpuAddress, (int)layout.Offset);
-                    var destRowPitch = layout.Footprint.RowPitch;
-                    var destSlicePitch = layout.Footprint.RowPitch * subresourceHeight;
+                    IntPtr destData = cpuAddress + (nint)layout.Offset;
+                    uint destRowPitch = layout.Footprint.RowPitch;
+                    uint destSlicePitch = layout.Footprint.RowPitch * subresourceHeight;
 
                     for (uint depthIdx = 0; depthIdx < subresourceDepth; depthIdx++)
                     {
-                        void* srcSlice = Unsafe.Add<byte>(subResource.pData, (int)(subResource.SlicePitch * depthIdx));
-                        void* dstSlice = Unsafe.Add<byte>(destData, (int)(destSlicePitch * depthIdx));
+                        IntPtr srcSlice = (IntPtr)subResource.pData + (nint)(subResource.SlicePitch * depthIdx);
+                        IntPtr dstSlice = destData + (nint)(destSlicePitch * depthIdx);
 
                         for (uint rowIdx = 0; rowIdx < subresourceHeight; rowIdx++)
                         {
-                            void* source = Unsafe.Add<byte>(dstSlice, (int)(destRowPitch * rowIdx));
-                            void* destination = Unsafe.Add<byte>(srcSlice, (int)(subResource.RowPitch * rowIdx));
-                            NativeMemory.Copy(source, destination, (nuint)rowSizes[subresourceIdx]);
+                            IntPtr source = dstSlice + (nint)(destRowPitch * rowIdx);
+                            IntPtr destination = srcSlice + (nint)(subResource.RowPitch * rowIdx);
+                            NativeMemory.Copy((void*)source, (void*)destination, (nuint)rowSizes[subresourceIdx]);
                         }
                     }
                 }
@@ -172,7 +172,7 @@ namespace Direct3D12.Content
 
                 TextureCopyLocation dst = new(resource, i);
 
-                context.CmdList.CopyTextureRegion(dst, 0, 0, 0, src, null);
+                context.CmdList.CopyTextureRegion(dst, 0, 0, 0, src);
             }
 
             context.EndUpload();
@@ -221,7 +221,7 @@ namespace Direct3D12.Content
             }
         }
 
-        public static void GetDescriptorIndices(uint[] textureIds, uint[] indices)
+        public static void GetDescriptorIndices(uint[] textureIds, ref uint[] indices)
         {
             Debug.Assert(textureIds != null && indices != null);
             lock (textureMutex)

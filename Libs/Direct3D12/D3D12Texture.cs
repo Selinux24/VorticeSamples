@@ -22,25 +22,34 @@ namespace Direct3D12
             var device = D3D12Graphics.Device;
             Debug.Assert(device != null);
 
-            Debug.Assert(info.Desc != null);
-            var desc = info.Desc.Value;
-            ClearValue clearValue = (desc.Flags.HasFlag(ResourceFlags.AllowRenderTarget) || desc.Flags.HasFlag(ResourceFlags.AllowDepthStencil)) ?
-                info.ClearValue :
-                default;
+            ClearValue clearValue;
+            if (info.Desc.HasValue)
+            {
+                var desc = info.Desc.Value;
+
+                clearValue = (desc.Flags.HasFlag(ResourceFlags.AllowRenderTarget) || desc.Flags.HasFlag(ResourceFlags.AllowDepthStencil)) ?
+                    info.ClearValue :
+                    default;
+            }
+            else
+            {
+                clearValue = default;
+            }
 
             if (info.Resource != null)
             {
                 Debug.Assert(info.Heap == null);
+
                 resource = info.Resource;
             }
             else if (info.Heap != null)
             {
-                Debug.Assert(info.Resource == null);
+                Debug.Assert(info.Desc != null);
 
                 if (!D3D12Helpers.DxCall(device.CreatePlacedResource(
                     info.Heap,
                     info.AllocationInfo.Offset,
-                    desc,
+                    info.Desc.Value,
                     info.InitialState,
                     clearValue,
                     out resource)))
@@ -50,12 +59,12 @@ namespace Direct3D12
             }
             else
             {
-                Debug.Assert(info.Heap == null && info.Resource == null);
+                Debug.Assert(info.Desc != null);
 
                 if (!D3D12Helpers.DxCall(device.CreateCommittedResource(
                     D3D12Helpers.HeapPropertiesCollection.DefaultHeap,
                     HeapFlags.None,
-                    desc,
+                    info.Desc.Value,
                     info.InitialState,
                     clearValue,
                     out resource)))

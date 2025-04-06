@@ -8,7 +8,6 @@ namespace TexturesImporter
     {
         private const string outputFolder = "./Content/";
         private const string outputTextureExt = ".texture";
-        private const string outputIconExt = ".icon";
 
         private const string textureM24Path = "../../../../../Assets/M24.dds";
         private const string textureAmbientOcclusionPath = "../../../../../Assets/AmbientOcclusion.png";
@@ -19,19 +18,21 @@ namespace TexturesImporter
 
         static void Main()
         {
-            Import(textureM24Path, DXGI_FORMAT.BC6H_UF16, true);
             Import(textureAmbientOcclusionPath);
             Import(textureBaseColorPath);
             Import(textureEmissivePath);
             Import(textureMetalRoughPath);
             Import(textureNormalPath);
+            Import(textureM24Path, DXGI_FORMAT.BC6H_UF16);
+
+            TextureImporter.ShutDownTextureTools();
 
             Console.WriteLine("Press any key to exit.");
             Console.ReadKey();
         }
-        private static void Import(string texturePath, DXGI_FORMAT? format = null, bool compress = false)
+        private static void Import(string texturePath, DXGI_FORMAT? format = null, bool compress = true, bool preferBc7 = true)
         {
-            if(!File.Exists(texturePath))
+            if (!File.Exists(texturePath))
             {
                 Console.WriteLine($"Texture not found => {Path.GetFileName(texturePath)}");
                 return;
@@ -39,15 +40,14 @@ namespace TexturesImporter
 
             TextureData textureData = new();
             textureData.ImportSettings.Sources = texturePath;
-            textureData.ImportSettings.Compress = compress;
             if (format.HasValue) textureData.ImportSettings.OutputFormat = (uint)format;
+            textureData.ImportSettings.Compress = compress;
+            textureData.ImportSettings.PreferBc7 = preferBc7;
+            textureData.ImportSettings.AlphaThreshold = 0.5f;
 
             TextureImporter.Import(ref textureData);
 
             textureData.SaveTexture(GetTexturePath(texturePath));
-            textureData.SaveIcon(GetIconPath(texturePath));
-
-            TextureImporter.ShutDownTextureTools();
 
             Console.WriteLine($"Texture imported successfully => {Path.GetFileName(texturePath)}");
         }
@@ -55,11 +55,6 @@ namespace TexturesImporter
         {
             string fileName = Path.GetFileName(textureName);
             return Path.Combine(outputFolder, Path.ChangeExtension(fileName, outputTextureExt));
-        }
-        private static string GetIconPath(string textureName)
-        {
-            string fileName = Path.GetFileName(textureName);
-            return Path.Combine(outputFolder, Path.ChangeExtension(fileName, outputIconExt));
         }
     }
 }

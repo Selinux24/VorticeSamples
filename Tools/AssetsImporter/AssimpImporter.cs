@@ -22,7 +22,7 @@ namespace AssetsImporter
         private static AScene aScene;
         private static GeometryImportSettings importSettings;
 
-        public static string[] Read(string fileName, GeometryImportSettings settings, string assetsFolder, Progression progression = null)
+        public static IEnumerable<string> Read(string fileName, GeometryImportSettings settings, string assetsFolder, Progression progression = null)
         {
             importSettings = settings;
 
@@ -44,7 +44,10 @@ namespace AssetsImporter
                 Geometry.ProcessModel(model, settings, progression);
 
                 // Pack the scene data (for editor)
-                return [Geometry.PackData(model, assetsFolder)];
+                foreach (var lodGroup in model.LODGroups)
+                {
+                    yield return Geometry.PackDataByLODGroup(lodGroup, assetsFolder);
+                }
             }
         }
         private static AScene ReadFile(string filePath, APostProcessSteps ppSteps = APostProcessSteps.None, APropertyConfig[] configs = null)

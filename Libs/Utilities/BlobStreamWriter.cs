@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -139,7 +140,10 @@ namespace Utilities
         /// <param name="fileName">File name</param>
         public void SaveToFile(string fileName)
         {
-            FileUtils.WriteFile(buffer, bufferSize, fileName);
+            using var file = File.OpenWrite(fileName);
+            using var writer = new BinaryWriter(file);
+
+            FileUtils.WriteFile(writer, buffer, bufferSize);
         }
     }
 }

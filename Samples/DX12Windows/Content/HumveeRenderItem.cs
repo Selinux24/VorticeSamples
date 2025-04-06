@@ -16,7 +16,7 @@ namespace DX12Windows.Content
 {
     class HumveeRenderItem : ITestRenderItem
     {
-        private const string modelPrimalLab = "../../../../../Assets/humvee.obj";
+        private const string modelHumvee = "../../../../../Assets/humvee.obj";
 
         private const string model1Name = "humvee_modelA.model";
         private const string model2Name = "humvee_modelB.model";
@@ -44,7 +44,7 @@ namespace DX12Windows.Content
 
             if (modelNames.Any(f => !File.Exists(f)))
             {
-                var assets = AssimpImporter.Read(modelPrimalLab, new(), assetsFolder);
+                string[] assets = [..AssimpImporter.Read(modelHumvee, new(), assetsFolder)];
                 Debug.Assert(assets.Length == modelNames.Length);
                 for (int i = 0; i < assets.Length; i++)
                 {

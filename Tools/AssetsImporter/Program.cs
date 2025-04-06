@@ -62,7 +62,7 @@ namespace AssetsImporter
                 return [];
             }
 
-            return AssimpImporter.Read(path, settings, assetsFolder);
+            return [.. AssimpImporter.Read(path, settings, assetsFolder)];
         }
         private static void ExportAssetsFile(string assetFilename)
         {

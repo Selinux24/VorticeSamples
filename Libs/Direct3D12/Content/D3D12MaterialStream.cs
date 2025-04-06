@@ -57,8 +57,10 @@ namespace Direct3D12.Content
 
             if (info.TextureCount > 0)
             {
+                textureIds = info.TextureIds;
+                descriptorIndices = new uint[info.TextureCount];
                 blob.Write(info.TextureIds);
-                Texture.GetDescriptorIndices(textureIds, descriptorIndices);
+                Texture.GetDescriptorIndices(textureIds, ref descriptorIndices);
                 blob.Write(descriptorIndices);
             }
 
