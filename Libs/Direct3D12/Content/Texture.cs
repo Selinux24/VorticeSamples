@@ -2,7 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Runtime.CompilerServices;
+using System.Linq;
 using System.Runtime.InteropServices;
 using Utilities;
 using Vortice.Direct3D12;
@@ -62,12 +62,7 @@ namespace Direct3D12.Content
             bool is3d = flags.HasFlag(TextureFlags.IsVolumeMap);
 
             Debug.Assert(mipLevels <= D3D12Texture.MaxMips);
-
-            uint[] depthPerMipLevel = new uint[D3D12Texture.MaxMips];
-            for (uint i = 0; i < D3D12Texture.MaxMips; i++)
-            {
-                depthPerMipLevel[i] = 1;
-            }
+            uint[] depthPerMipLevel = [.. Enumerable.Repeat(1u, D3D12Texture.MaxMips)];
 
             if (is3d)
             {
@@ -88,15 +83,13 @@ namespace Direct3D12.Content
             {
                 for (uint j = 0; j < mipLevels; j++)
                 {
-                    blob.Skip(2 * sizeof(uint)); // skip width and height
-                    int rowPitch = blob.Read<int>();
-                    int slicePitch = blob.Read<int>();
+                    uint rowPitch = blob.Read<uint>();
+                    uint slicePitch = blob.Read<uint>();
 
-                    subresources.Add(new SubresourceData(blob.Position, rowPitch, slicePitch));
-
+                    subresources.Add(new SubresourceData(blob.Position, (nint)rowPitch, (nint)slicePitch));
 
                     // skip the rest of slices.
-                    blob.Skip(slicePitch * (int)depthPerMipLevel[j]);
+                    blob.Skip(slicePitch * depthPerMipLevel[j]);
                 }
             }
 
@@ -138,20 +131,21 @@ namespace Direct3D12.Content
                     uint subresourceDepth = layout.Footprint.Depth;
                     SubresourceData subResource = subresources[subresourceIdx];
 
-                    IntPtr destData = cpuAddress + (nint)layout.Offset;
+                    IntPtr destDataPtr = cpuAddress + (nint)layout.Offset;
                     uint destRowPitch = layout.Footprint.RowPitch;
                     uint destSlicePitch = layout.Footprint.RowPitch * subresourceHeight;
 
                     for (uint depthIdx = 0; depthIdx < subresourceDepth; depthIdx++)
                     {
                         IntPtr srcSlice = (IntPtr)subResource.pData + (nint)(subResource.SlicePitch * depthIdx);
-                        IntPtr dstSlice = destData + (nint)(destSlicePitch * depthIdx);
+                        IntPtr dstSlice = destDataPtr + (nint)(destSlicePitch * depthIdx);
 
                         for (uint rowIdx = 0; rowIdx < subresourceHeight; rowIdx++)
                         {
-                            IntPtr source = dstSlice + (nint)(destRowPitch * rowIdx);
-                            IntPtr destination = srcSlice + (nint)(subResource.RowPitch * rowIdx);
-                            NativeMemory.Copy((void*)source, (void*)destination, (nuint)rowSizes[subresourceIdx]);
+                            IntPtr source = srcSlice + (nint)((uint)subResource.RowPitch * rowIdx);
+                            IntPtr destination = dstSlice + (nint)(destRowPitch * rowIdx);
+                            nuint byteCount = (nuint)rowSizes[subresourceIdx];
+                            NativeMemory.Copy(source.ToPointer(), destination.ToPointer(), byteCount);
                         }
                     }
                 }

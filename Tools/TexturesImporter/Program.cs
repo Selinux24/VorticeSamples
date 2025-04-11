@@ -1,5 +1,4 @@
-﻿using DirectXTexNet;
-using System;
+﻿using System;
 using System.IO;
 
 namespace TexturesImporter
@@ -23,14 +22,14 @@ namespace TexturesImporter
             Import(textureEmissivePath);
             Import(textureMetalRoughPath);
             Import(textureNormalPath);
-            Import(textureM24Path, DXGI_FORMAT.BC6H_UF16);
+            Import(textureM24Path, BCFormats.BC6HDR);
 
             TextureImporter.ShutDownTextureTools();
 
             Console.WriteLine("Press any key to exit.");
             Console.ReadKey();
         }
-        private static void Import(string texturePath, DXGI_FORMAT? format = null, bool compress = true, bool preferBc7 = true)
+        private static void Import(string texturePath, BCFormats? format = null, bool compress = true, bool preferBc7 = true)
         {
             if (!File.Exists(texturePath))
             {
@@ -40,7 +39,7 @@ namespace TexturesImporter
 
             TextureData textureData = new();
             textureData.ImportSettings.Sources = texturePath;
-            if (format.HasValue) textureData.ImportSettings.OutputFormat = (uint)format;
+            if (format.HasValue) textureData.ImportSettings.OutputFormat = format.Value;
             textureData.ImportSettings.Compress = compress;
             textureData.ImportSettings.PreferBc7 = preferBc7;
             textureData.ImportSettings.AlphaThreshold = 0.5f;

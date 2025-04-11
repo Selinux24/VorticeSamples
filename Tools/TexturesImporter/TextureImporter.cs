@@ -65,7 +65,7 @@ namespace TexturesImporter
             }
         }
 
-        private static long GetImageSize(Image image)
+        private static long GetImageAssetSize(Image image)
         {
             return
                 sizeof(int) +       // Width
@@ -74,7 +74,7 @@ namespace TexturesImporter
                 sizeof(uint) +      // SlicePitch
                 image.SlicePitch;   // Pixels size
         }
-        private static void WriteImage(BlobStreamWriter blob, Image image)
+        private static void WriteImageAsset(this BlobStreamWriter blob, Image image)
         {
             Debug.Assert(image.SlicePitch <= int.MaxValue);
 
@@ -84,7 +84,7 @@ namespace TexturesImporter
             blob.Write((uint)image.SlicePitch);
             blob.Write(image.Pixels, (int)image.SlicePitch);
         }
-        private static Image ReadImage(BlobStreamReader blob, DXGI_FORMAT format)
+        private static Image ReadImageAsset(this BlobStreamReader blob, DXGI_FORMAT format)
         {
             int width = blob.Read<int>();
             int height = blob.Read<int>();
@@ -212,8 +212,8 @@ namespace TexturesImporter
 
             WIC_FLAGS wicFlags = WIC_FLAGS.NONE;
 
-            if (data.ImportSettings.OutputFormat == (uint)DXGI_FORMAT.BC4_UNORM ||
-                data.ImportSettings.OutputFormat == (uint)DXGI_FORMAT.BC5_UNORM)
+            if (data.ImportSettings.OutputFormat == BCFormats.BC4SingleChannelGray ||
+                data.ImportSettings.OutputFormat == BCFormats.BC5DualChannelGray)
             {
                 wicFlags |= WIC_FLAGS.IGNORE_SRGB;
             }
@@ -337,7 +337,7 @@ namespace TexturesImporter
             Debug.Assert(scratch.GetImageCount() > 0);
             var image = scratch.GetImage(0);
 
-            long size = GetImageSize(image);
+            long size = GetImageAssetSize(image);
             Debug.Assert(size <= int.MaxValue);
             data.IconSize = (uint)size;
 
@@ -345,7 +345,7 @@ namespace TexturesImporter
             Debug.Assert(data.Icon != IntPtr.Zero);
 
             BlobStreamWriter blob = new(data.Icon, (int)size);
-            WriteImage(blob, image);
+            blob.WriteImageAsset(image);
         }
         private static ScratchImage CompressImage(ref TextureData data, ScratchImage scratch)
         {
@@ -383,26 +383,26 @@ namespace TexturesImporter
             Debug.Assert(data.ImportSettings.Compress);
             var imageFormat = image.Format;
 
-            if (data.ImportSettings.OutputFormat == (uint)DXGI_FORMAT.UNKNOWN)
+            if (data.ImportSettings.OutputFormat == BCFormats.PickBestFit)
             {
                 // Determine the best block compressed format if import settings
                 // don't explicitly specify a format.
 
                 if (data.Info.Flags.HasFlag(TextureFlags.IsHdr) || imageFormat == DXGI_FORMAT.BC6H_UF16 || imageFormat == DXGI_FORMAT.BC6H_SF16)
                 {
-                    data.ImportSettings.OutputFormat = (uint)DXGI_FORMAT.BC6H_UF16;
+                    data.ImportSettings.OutputFormat = BCFormats.BC6HDR;
                 }
                 else if (imageFormat == DXGI_FORMAT.R8_UNORM || imageFormat == DXGI_FORMAT.BC4_UNORM || imageFormat == DXGI_FORMAT.BC4_SNORM)
                 {
                     // If the source image is gray scale or a single channel block compressed format (BC4),
                     // then output format will be BC4.
-                    data.ImportSettings.OutputFormat = (uint)DXGI_FORMAT.BC4_UNORM;
+                    data.ImportSettings.OutputFormat = BCFormats.BC4SingleChannelGray;
                 }
                 else if (NormalMapIdentification.IsNormalMap(image) || imageFormat == DXGI_FORMAT.BC5_UNORM || imageFormat == DXGI_FORMAT.BC5_SNORM)
                 {
                     // Test if the source image is a normal map and if so, use BC5 format for the output.
                     data.Info.Flags |= TextureFlags.IsImportedAsNormalMap;
-                    data.ImportSettings.OutputFormat = (uint)DXGI_FORMAT.BC5_UNORM;
+                    data.ImportSettings.OutputFormat = BCFormats.BC5DualChannelGray;
 
                     if (Helper.IsSRGB(imageFormat))
                     {
@@ -414,17 +414,17 @@ namespace TexturesImporter
                     // We exhausted all options. use an RGBA block compressed format.
                     if (data.ImportSettings.PreferBc7)
                     {
-                        data.ImportSettings.OutputFormat = (uint)DXGI_FORMAT.BC7_UNORM;
+                        data.ImportSettings.OutputFormat = BCFormats.BC7HighQuality;
                     }
                     else
                     {
                         if (scratch.IsAlphaAllOpaque())
                         {
-                            data.ImportSettings.OutputFormat = (uint)DXGI_FORMAT.BC1_UNORM;
+                            data.ImportSettings.OutputFormat = BCFormats.BC1LowQualityAlpha;
                         }
                         else
                         {
-                            data.ImportSettings.OutputFormat = (uint)DXGI_FORMAT.BC3_UNORM;
+                            data.ImportSettings.OutputFormat = BCFormats.BC3MediumQuality;
                         }
                     }
                 }
@@ -456,7 +456,7 @@ namespace TexturesImporter
             int imageCount = scratch.GetImageCount();
             for (int i = 0; i < imageCount; i++)
             {
-                subresourceSize += (ulong)GetImageSize(scratch.GetImage(i));
+                subresourceSize += (ulong)GetImageAssetSize(scratch.GetImage(i));
             }
 
             if (subresourceSize > uint.MaxValue)
@@ -476,7 +476,7 @@ namespace TexturesImporter
             {
                 var image = scratch.GetImage(i);
 
-                WriteImage(blob, image);
+                blob.WriteImageAsset(image);
             }
         }
         private static int GetMaxMipCount(int width, int height, int depth)
@@ -499,7 +499,7 @@ namespace TexturesImporter
             Debug.Assert(Helper.IsCompressed((DXGI_FORMAT)data.Info.Format));
 
             Debug.Assert(data.ImportSettings.Compress);
-            Image[] images = SubresourceDataToImages(ref data);
+            Image[] images = SubresourceDataToImageAssets(ref data);
 
             var metadata = MetadataFromTextureInfo(data.Info);
             var tmp = Helper.InitializeTemporary([.. images], metadata);
@@ -515,7 +515,7 @@ namespace TexturesImporter
                 data.Info.ImportError = ImportErrors.Decompress;
             }
         }
-        private static Image[] SubresourceDataToImages(ref TextureData data)
+        private static Image[] SubresourceDataToImageAssets(ref TextureData data)
         {
             Debug.Assert(data.SubresourceData != IntPtr.Zero && data.SubresourceSize > 0);
             Debug.Assert(data.Info.MipLevels > 0 && data.Info.MipLevels <= TextureData.MaxMips);
@@ -543,7 +543,7 @@ namespace TexturesImporter
 
             for (uint i = 0; i < imageCount; i++)
             {
-                images[i] = ReadImage(blob, (DXGI_FORMAT)info.Format);
+                images[i] = blob.ReadImageAsset((DXGI_FORMAT)info.Format);
             }
 
             return images;

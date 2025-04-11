@@ -13,6 +13,7 @@ using System.Linq;
 using System.Numerics;
 using System.Threading;
 using TexturesImporter;
+using Vortice.DXGI;
 
 namespace DX12Windows.Content
 {
@@ -99,30 +100,47 @@ namespace DX12Windows.Content
                 }
             }
 
-            TextureData data = new();
-            data.ImportSettings.Compress = true;
-            data.ImportSettings.PreferBc7 = true;
-            data.ImportSettings.AlphaThreshold = 0.5f;
+            TextureData ambientOcclusionData = new();
+            ambientOcclusionData.ImportSettings.Compress = true;
+            ambientOcclusionData.ImportSettings.PreferBc7 = true;
+            ambientOcclusionData.ImportSettings.AlphaThreshold = 0.5f;
+            ambientOcclusionData.ImportSettings.Sources = ambientOcclusionTexture;
 
-            data.ImportSettings.Sources = ambientOcclusionTexture;
-            TextureImporter.Import(ref data);
-            data.SaveTexture(Path.Combine(outputsFolder, ambientOcclusionTextureName));
+            TextureImporter.Import(ref ambientOcclusionData);
+            ambientOcclusionData.SaveTexture(Path.Combine(outputsFolder, ambientOcclusionTextureName));
 
-            data.ImportSettings.Sources = baseColorTexture;
-            TextureImporter.Import(ref data);
-            data.SaveTexture(Path.Combine(outputsFolder, baseColorTextureName));
+            TextureData baseColorData = new();
+            baseColorData.ImportSettings.Compress = true;
+            baseColorData.ImportSettings.PreferBc7 = true;
+            baseColorData.ImportSettings.AlphaThreshold = 0.5f;
+            baseColorData.ImportSettings.Sources = baseColorTexture;
+            TextureImporter.Import(ref baseColorData);
+            baseColorData.SaveTexture(Path.Combine(outputsFolder, baseColorTextureName));
 
-            data.ImportSettings.Sources = emissiveTexture;
-            TextureImporter.Import(ref data);
-            data.SaveTexture(Path.Combine(outputsFolder, emissiveTextureName));
+            TextureData emissiveData = new();
+            emissiveData.ImportSettings.Compress = true;
+            emissiveData.ImportSettings.PreferBc7 = true;
+            emissiveData.ImportSettings.AlphaThreshold = 0.5f;
+            emissiveData.ImportSettings.Sources = emissiveTexture;
+            TextureImporter.Import(ref emissiveData);
+            emissiveData.SaveTexture(Path.Combine(outputsFolder, emissiveTextureName));
 
-            data.ImportSettings.Sources = metalRoughTexture;
-            TextureImporter.Import(ref data);
-            data.SaveTexture(Path.Combine(outputsFolder, metalRoughTextureName));
+            TextureData metalRoughData = new();
+            metalRoughData.ImportSettings.Compress = true;
+            metalRoughData.ImportSettings.PreferBc7 = true;
+            metalRoughData.ImportSettings.AlphaThreshold = 0.5f;
+            metalRoughData.ImportSettings.OutputFormat = BCFormats.BC5DualChannelGray;
+            metalRoughData.ImportSettings.Sources = metalRoughTexture;
+            TextureImporter.Import(ref metalRoughData);
+            metalRoughData.SaveTexture(Path.Combine(outputsFolder, metalRoughTextureName));
 
-            data.ImportSettings.Sources = normalTexture;
-            TextureImporter.Import(ref data);
-            data.SaveTexture(Path.Combine(outputsFolder, normalTextureName));
+            TextureData normalData = new();
+            normalData.ImportSettings.Compress = true;
+            normalData.ImportSettings.PreferBc7 = true;
+            normalData.ImportSettings.AlphaThreshold = 0.5f;
+            normalData.ImportSettings.Sources = normalTexture;
+            TextureImporter.Import(ref normalData);
+            normalData.SaveTexture(Path.Combine(outputsFolder, normalTextureName));
 
             TextureImporter.ShutDownTextureTools();
 
