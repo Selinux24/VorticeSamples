@@ -7,7 +7,7 @@ struct VertexOut
     float4 HomogeneousPosition : SV_POSITION;
     float3 WorldPosition : POSITION;
     float3 WorldNormal : NORMAL;
-    float3 WorldTangent : TANGENT;
+    float4 WorldTangent : TANGENT;
     float2 UV : TEXTURE;
 };
 
@@ -86,8 +86,8 @@ VertexOut TestShaderVS(in uint VertexIdx : SV_VertexID)
     VertexElement element = Elements[VertexIdx];
     float2 nXY = element.Normal * InvIntervals - 1.f;
     uint signs = (element.ColorTSign >> 24) & 0xff;
-    float nSign = float(signs & 0x02) - 1;
-    float3 normal = float3(nXY.x, nXY.y, sqrt(saturate(1.f - dot(nXY, nXY))) * nSign);
+    float nSign = float((signs & 0x04) >> 1) - 1.f;
+    float3 normal = float3(nXY, sqrt(saturate(1.f - dot(nXY, nXY))) * nSign);
 
     vsOut.HomogeneousPosition = mul(PerObjectBuffer.WorldViewProjection, position);
     vsOut.WorldPosition = worldPosition.xyz;
@@ -98,15 +98,22 @@ VertexOut TestShaderVS(in uint VertexIdx : SV_VertexID)
 #elif ELEMENTS_TYPE == ElementsTypeStaticNormalTexture
 
     VertexElement element = Elements[VertexIdx];
-    float2 nXY = element.Normal * InvIntervals - 1.f;
     uint signs = (element.ColorTSign >> 24) & 0xff;
-    float nSign = float(signs & 0x02) - 1;
-    float3 normal = float3(nXY.x, nXY.y, sqrt(saturate(1.f - dot(nXY, nXY))) * nSign);
+    float nSign = float((signs & 0x04) >> 1) - 1.f;
+    float tSign = float(signs & 0x02) - 1.f;
+    float hSign = float((signs & 0x01) << 1) - 1.f;
+    
+    float2 nXY = element.Normal * InvIntervals - 1.f;
+    float3 normal = float3(nXY, sqrt(saturate(1.f - dot(nXY, nXY))) * nSign);
+    
+    float2 tXY = element.Tangent * InvIntervals - 1.f;
+    float3 tangent = float3(tXY, sqrt(saturate(1.f - dot(tXY, tXY))) * tSign);
+    tangent = tangent - normal * dot(normal, tangent); 
 
     vsOut.HomogeneousPosition = mul(PerObjectBuffer.WorldViewProjection, position);
     vsOut.WorldPosition = worldPosition.xyz;
-    vsOut.WorldNormal = mul(float4(normal, 0.f), PerObjectBuffer.InvWorld).xyz;
-    vsOut.WorldTangent = 0.f;
+    vsOut.WorldNormal = normalize(mul(normal, (float3x3)PerObjectBuffer.InvWorld));
+    vsOut.WorldTangent = float4(normalize(mul(tangent, (float3x3)PerObjectBuffer.InvWorld)), hSign);
     vsOut.UV = float2(element.UV.x, 1.f - element.UV.y);
 #else
 #undef ELEMENTS_TYPE

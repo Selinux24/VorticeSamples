@@ -126,8 +126,75 @@ namespace ContentTools
                 ProcessUVs(m);
             }
 
+            if ((settings.CalculateTangents || m.Tangents.Length == 0) && m.UVSets.Length > 0)
+            {
+                CalculateTangents(m);
+            }
+
             m.ElementsType = DetermineElementsType(m);
             PackVertices(m);
+        }
+        private static void CalculateTangents(Mesh m)
+        {
+            m.Tangents = new Vector4[m.Vertices.Count];
+
+            int numIndices = m.RawIndices.Length;
+            var tangents = new Vector3[numIndices];
+            var bitangents = new Vector3[numIndices];
+
+            var positions = new Vector3[numIndices];
+            for (uint i = 0; i < numIndices; i++)
+            {
+                positions[i] = m.Vertices[(int)m.Indices[(int)i]].Position;
+            }
+
+            for (uint i = 0; i < numIndices; i += 3)
+            {
+                uint i0 = i;
+                uint i1 = i + 1;
+                uint i2 = i + 2;
+
+                var p0 = m.Positions[i0];
+                var p1 = m.Positions[i1];
+                var p2 = m.Positions[i2];
+
+                var uv0 = m.Vertices[(int)m.Indices[(int)i0]].UV;
+                var uv1 = m.Vertices[(int)m.Indices[(int)i1]].UV;
+                var uv2 = m.Vertices[(int)m.Indices[(int)i2]].UV;
+
+                var duv1 = new Vector2(uv1.X - uv0.X, uv1.Y - uv0.Y);
+                var duv2 = new Vector2(uv2.X - uv0.X, uv2.Y - uv0.Y);
+
+                var dp1 = p1 - p0;
+                var dp2 = p2 - p0;
+
+                float det = duv1.X * duv2.Y - duv1.Y * duv2.X;
+                if (MathF.Abs(det) < float.Epsilon) det = float.Epsilon;
+                float invDet = 1.0f / det;
+
+                var t = (dp1 * duv2.Y - dp2 * duv1.Y) * invDet;
+                var b = (dp2 * duv1.X - dp1 * duv2.X) * invDet;
+                tangents[i0] += t;
+                tangents[i1] += t;
+                tangents[i2] += t;
+                bitangents[i0] += b;
+                bitangents[i1] += b;
+                bitangents[i2] += b;
+            }
+
+            // Orthonormalize and calculate handedness
+            for (uint i = 0; i < numIndices; i++)
+            {
+                var t = tangents[i];
+                var b = bitangents[i];
+                var n = m.Vertices[(int)m.Indices[(int)i]].Normal;
+
+                var tangent = Vector3.Normalize(t - n * Vector3.Dot(n, t));
+                float handedness = Vector3.Dot(Vector3.Cross(n, t), b);
+                handedness = handedness > 0f ? 1f : -1f;
+
+                m.Vertices[(int)m.Indices[(int)i]].Tangent = new Vector4(tangent, handedness);
+            }
         }
 
         private static void RecalculateNormals(Mesh m)

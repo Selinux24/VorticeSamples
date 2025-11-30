@@ -30,16 +30,11 @@ namespace ContentTools
 
         public static byte PackTSign(Vector3 normal)
         {
-            uint bit = normal.Z > 0f ? 1u : 0u;
-            return (byte)(bit << 1);
+            return (byte)((normal.Z > 0f ? 1u : 0u) << 2);
         }
-        public static byte PackTSign(Vector3 normal, Vector4 tangent)
+        public static byte PackTSign(Vector4 tangent)
         {
-            byte tSign = PackTSign(normal);
-            uint bit = (tangent.W > 0f) && (tangent.Z > 0f) ? 1u : 0u;
-            tSign |= (byte)bit;
-
-            return tSign;
+            return (byte)(((tangent.W > 0f) ? 1u : 0u) | (((tangent.Z > 0f) ? 1u : 0u) << 1));
         }
 
         public static int GetVertexElementSize(ElementsType type)
@@ -95,7 +90,7 @@ namespace ContentTools
         [FieldOffset(2)]
         public byte Blue;
         [FieldOffset(3)]
-        public byte TSign;     // bit 0: tangent handedness * (tangent.z sign), bit 1: normal.z sign (0 means -1, 1 means +1).
+        public byte TSign;     // bit 0: tangent handedness, bit 1: tangent.z sign, bit 2: normal.z sign (0 means -1, 1 means +1).
         [FieldOffset(4)]
         public ushort NormalX;
         [FieldOffset(6)]
@@ -126,7 +121,7 @@ namespace ContentTools
         [FieldOffset(2)]
         public byte Blue;
         [FieldOffset(3)]
-        public byte TSign;     // bit 0: tangent handedness * (tangent.z sign), bit 1: normal.z sign (0 means -1, 1 means +1).
+        public byte TSign;     // bit 0: tangent handedness, bit 1: tangent.z sign, bit 2: normal.z sign (0 means -1, 1 means +1).
         [FieldOffset(4)]
         public ushort NormalX;
         [FieldOffset(6)]
@@ -147,7 +142,7 @@ namespace ContentTools
             ms.WriteByte(vertex.Red);
             ms.WriteByte(vertex.Green);
             ms.WriteByte(vertex.Blue);
-            ms.WriteByte(PackingHelper.PackTSign(vertex.Normal, vertex.Tangent));
+            ms.WriteByte(PackingHelper.PackTSign(vertex.Tangent));
             ms.Write(BitConverter.GetBytes(PackingHelper.PackFloat16(vertex.Normal.X, -1f, 1f)));
             ms.Write(BitConverter.GetBytes(PackingHelper.PackFloat16(vertex.Normal.Y, -1f, 1f)));
             ms.Write(BitConverter.GetBytes(PackingHelper.PackFloat16(vertex.Tangent.X, -1f, 1f)));
@@ -253,7 +248,7 @@ namespace ContentTools
         [FieldOffset(2)]
         public byte JointWeights2; // normalized joint weights for up to 4 joints.
         [FieldOffset(3)]
-        public byte TSign;     // bit 0: tangent handedness * (tangent.z sign), bit 1: normal.z sign (0 means -1, 1 means +1).
+        public byte TSign;     // bit 0: tangent handedness, bit 1: tangent.z sign, bit 2: normal.z sign (0 means -1, 1 means +1).
         [FieldOffset(4)]
         public uint JointIndices0;
         [FieldOffset(8)]
@@ -296,7 +291,7 @@ namespace ContentTools
         [FieldOffset(2)]
         public byte JointWeights2; // normalized joint weights for up to 4 joints.
         [FieldOffset(3)]
-        public byte TSign;     // bit 0: tangent handedness * (tangent.z sign), bit 1: normal.z sign (0 means -1, 1 means +1).
+        public byte TSign;     // bit 0: tangent handedness, bit 1: tangent.z sign, bit 2: normal.z sign (0 means -1, 1 means +1).
         [FieldOffset(4)]
         public uint JointIndices0;
         [FieldOffset(8)]
@@ -351,7 +346,7 @@ namespace ContentTools
         [FieldOffset(2)]
         public byte JointWeights2; // normalized joint weights for up to 4 joints.
         [FieldOffset(3)]
-        public byte TSign;     // bit 0: tangent handedness * (tangent.z sign), bit 1: normal.z sign (0 means -1, 1 means +1).
+        public byte TSign;     // bit 0: tangent handedness, bit 1: tangent.z sign, bit 2: normal.z sign (0 means -1, 1 means +1).
         [FieldOffset(4)]
         public uint JointIndices0;
         [FieldOffset(8)]
@@ -380,7 +375,7 @@ namespace ContentTools
             ms.WriteByte(PackingHelper.PackUnitFloat8(vertex.JointWeights.X));
             ms.WriteByte(PackingHelper.PackUnitFloat8(vertex.JointWeights.Y));
             ms.WriteByte(PackingHelper.PackUnitFloat8(vertex.JointWeights.Z));
-            ms.WriteByte(PackingHelper.PackTSign(vertex.Normal, vertex.Tangent));
+            ms.WriteByte(PackingHelper.PackTSign(vertex.Tangent));
             ms.Write(BitConverter.GetBytes(vertex.JointIndices[0]));
             ms.Write(BitConverter.GetBytes(vertex.JointIndices[1]));
             ms.Write(BitConverter.GetBytes(vertex.JointIndices[2]));
@@ -404,7 +399,7 @@ namespace ContentTools
         [FieldOffset(2)]
         public byte JointWeights2; // normalized joint weights for up to 4 joints.
         [FieldOffset(3)]
-        public byte TSign;     // bit 0: tangent handedness * (tangent.z sign), bit 1: normal.z sign (0 means -1, 1 means +1).
+        public byte TSign;     // bit 0: tangent handedness, bit 1: tangent.z sign, bit 2: normal.z sign (0 means -1, 1 means +1).
         [FieldOffset(4)]
         public uint JointIndices0;
         [FieldOffset(8)]
@@ -441,7 +436,7 @@ namespace ContentTools
             ms.WriteByte(PackingHelper.PackUnitFloat8(vertex.JointWeights.X));
             ms.WriteByte(PackingHelper.PackUnitFloat8(vertex.JointWeights.Y));
             ms.WriteByte(PackingHelper.PackUnitFloat8(vertex.JointWeights.Z));
-            ms.WriteByte(PackingHelper.PackTSign(vertex.Normal, vertex.Tangent));
+            ms.WriteByte(PackingHelper.PackTSign(vertex.Tangent));
             ms.Write(BitConverter.GetBytes(vertex.JointIndices[0]));
             ms.Write(BitConverter.GetBytes(vertex.JointIndices[1]));
             ms.Write(BitConverter.GetBytes(vertex.JointIndices[2]));
