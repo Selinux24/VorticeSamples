@@ -98,7 +98,7 @@ VertexOut TestShaderVS(in uint VertexIdx : SV_VertexID)
 #elif ELEMENTS_TYPE == ElementsTypeStaticNormalTexture
 
     VertexElement element = Elements[VertexIdx];
-    uint signs = (element.ColorTSign >> 24) & 0xff;
+    uint signs = element.ColorTSign >> 24;
     float nSign = float((signs & 0x04) >> 1) - 1.f;
     float tSign = float(signs & 0x02) - 1.f;
     float hSign = float((signs & 0x01) << 1) - 1.f;
@@ -143,7 +143,7 @@ float3 CalculateLighting(Surface S, float3 L, float3 V, float3 lightColor)
 {
     const float3 N = S.Normal;
     const float NoL = saturate(dot(N, L));
-    return PhongBRDF(N, L, V, S.BaseColor, 1.f, (1 - S.PerceptualRoughness) * 100.f) * (NoL / PI) * lightColor;
+    return PhongBRDF(N, L, V, S.BaseColor, 1.f, (1 - S.PerceptualRoughness) * 50.f) * (NoL / PI) * lightColor;
 }
 
 float3 PointLight(Surface S, float3 worldPosition, float3 V, LightParameters light)
@@ -214,7 +214,7 @@ Surface GetSurface(VertexOut psIn)
 
     S.BaseColor = 1.f;
     S.Metallic = 0.f;
-    S.Normal = psIn.WorldNormal;
+    S.Normal = normalize(psIn.WorldNormal);
     S.PerceptualRoughness = 1.f;
     S.EmissiveColor = 0.f;
     S.EmissiveIntensity = 1.f;
@@ -229,8 +229,16 @@ Surface GetSurface(VertexOut psIn)
     S.PerceptualRoughness = metalRough.g;
     S.EmissiveIntensity = 1.f;
     float3 n = Sample(4, LinearSampler, uv).rgb;
+    n = n * 2.f - 1.f;
+    n.z = sqrt(1.f - saturate(dot(n.xy, n.xy)));
 
-    S.Normal = psIn.WorldNormal;
+    const float3 N = normalize(psIn.WorldNormal);
+    const float3 T = normalize(psIn.WorldTangent.xyz);
+    const float3 B = cross(N, T) * psIn.WorldTangent.w;
+    const float3x3 TBN = float3x3(T, B, N);
+    // Transform from tangent-space to world-space
+    S.Normal = normalize(mul(n, TBN));
+    
 #endif
     return S;
 }
