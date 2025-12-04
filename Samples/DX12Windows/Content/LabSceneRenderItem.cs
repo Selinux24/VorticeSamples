@@ -84,7 +84,7 @@ namespace DX12Windows.Content
                 string[] assets =
                 [
                     .. AssimpImporter.Read(modelPrimalLab, new(), assetsFolder),
-                    .. AssimpImporter.Read(modelFembot, new(), assetsFolder),
+                    .. AssimpImporter.Read(modelFembot, new() { CalculateTangents = true }, assetsFolder),
                 ];
 
                 Debug.Assert(assets.Length == modelNames.Length);

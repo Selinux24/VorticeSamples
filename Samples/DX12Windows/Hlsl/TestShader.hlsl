@@ -113,7 +113,7 @@ VertexOut TestShaderVS(in uint VertexIdx : SV_VertexID)
     vsOut.HomogeneousPosition = mul(PerObjectBuffer.WorldViewProjection, position);
     vsOut.WorldPosition = worldPosition.xyz;
     vsOut.WorldNormal = normalize(mul(normal, (float3x3)PerObjectBuffer.InvWorld));
-    vsOut.WorldTangent = float4(normalize(mul(tangent, (float3x3)PerObjectBuffer.InvWorld)), hSign);
+    vsOut.WorldTangent = float4(normalize(mul(tangent, (float3x3)PerObjectBuffer.InvWorld)), -hSign);
     vsOut.UV = float2(element.UV.x, 1.f - element.UV.y);
 #else
 #undef ELEMENTS_TYPE
@@ -232,8 +232,8 @@ Surface GetSurface(VertexOut psIn)
     n = n * 2.f - 1.f;
     n.z = sqrt(1.f - saturate(dot(n.xy, n.xy)));
 
-    const float3 N = normalize(psIn.WorldNormal);
-    const float3 T = normalize(psIn.WorldTangent.xyz);
+    const float3 N = psIn.WorldNormal;
+    const float3 T = psIn.WorldTangent.xyz;
     const float3 B = cross(N, T) * psIn.WorldTangent.w;
     const float3x3 TBN = float3x3(T, B, N);
     // Transform from tangent-space to world-space

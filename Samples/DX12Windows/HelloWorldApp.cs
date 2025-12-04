@@ -30,7 +30,7 @@ namespace DX12Windows
                 Transform = new()
                 {
                     Position = position,
-                    Rotation = Quaternion.CreateFromYawPitchRoll(rotation.X, rotation.Y, rotation.Z),
+                    Rotation = Quaternion.CreateFromYawPitchRoll(rotation.Y, rotation.X, rotation.Z),
                     Scale = new(scale),
                 },
             };

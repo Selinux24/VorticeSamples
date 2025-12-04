@@ -1,4 +1,5 @@
-﻿using System;
+﻿using ContentTools.MikkTSpace;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -51,6 +52,51 @@ namespace ContentTools
             public float LodThreshold { get; set; } = -1f;
             public uint LodId { get; set; } = uint.MaxValue;
         }
+        class MeshMikkTSpace(Mesh m) : MikkTSpaceGenerator(m)
+        {
+            public static void CalculateMikkTSpace(Mesh m)
+            {
+                // Don't use any imported tangents
+                m.Tangents = [];
+
+                MeshMikkTSpace mikkTSpace = new(m);
+                mikkTSpace.GenTangSpace();
+            }
+
+            public override int GetNumFaces()
+            {
+                var m = GetMesh<Mesh>();
+                return m.Indices.Count / 3;
+            }
+            public override int GetNumVerticesOfFace(int faceIndex)
+            {
+                return 3;
+            }
+            public override Vector3 GetPosition(int faceIndex, int vertIndex)
+            {
+                var m = GetMesh<Mesh>();
+                uint index = m.Indices[faceIndex * 3 + vertIndex];
+                return m.Vertices[(int)index].Position;
+            }
+            public override Vector3 GetNormal(int faceIndex, int vertIndex)
+            {
+                var m = GetMesh<Mesh>();
+                uint index = m.Indices[faceIndex * 3 + vertIndex];
+                return m.Vertices[(int)index].Normal;
+            }
+            public override Vector2 GetTexCoord(int faceIndex, int vertIndex)
+            {
+                var m = GetMesh<Mesh>();
+                uint index = m.Indices[faceIndex * 3 + vertIndex];
+                return m.Vertices[(int)index].UV;
+            }
+            public override void SetTSpaceBasic(Vector3 tangent, float sign, int faceIndex, int vertIndex)
+            {
+                var m = GetMesh<Mesh>();
+                uint index = m.Indices[faceIndex * 3 + vertIndex];
+                m.Vertices[(int)index].Tangent = new Vector4(tangent, sign);
+            }
+        }
 
         #endregion
 
@@ -80,11 +126,16 @@ namespace ContentTools
 
         public static void ProcessModel(Model model, GeometryImportSettings settings, Progression progression = null)
         {
+            uint totalMeshes = (uint)model.LODGroups.Sum(lod => lod.Meshes.Count);
+            uint currentProgress = 0;
+
             foreach (var lod in model.LODGroups)
             {
                 foreach (var m in lod.Meshes)
                 {
                     ProcessVertices(m, settings);
+
+                    progression?.Callback(++currentProgress, totalMeshes);
                 }
             }
         }
@@ -128,7 +179,16 @@ namespace ContentTools
 
             if ((settings.CalculateTangents || m.Tangents.Length == 0) && m.UVSets.Length > 0)
             {
-                CalculateTangents(m);
+                MeshMikkTSpace.CalculateMikkTSpace(m);
+                //CalculateTangents(m);
+            }
+
+            // NOTE: m.tangents contains values of the imported tangent vectors. It will be empty
+            //       if tangents where calculated. Therefore, process_tangents is only called
+            //       when tangents are imported from the source file.
+            if (m.Tangents.Length == 0)
+            {
+                ProcessTangents(m);
             }
 
             m.ElementsType = DetermineElementsType(m);
@@ -136,7 +196,8 @@ namespace ContentTools
         }
         private static void CalculateTangents(Mesh m)
         {
-            m.Tangents = new Vector4[m.Vertices.Count];
+            // Don't use any imported tangents
+            m.Tangents = [];
 
             int numIndices = m.RawIndices.Length;
             var tangents = new Vector3[numIndices];
@@ -195,6 +256,68 @@ namespace ContentTools
 
                 m.Vertices[(int)m.Indices[(int)i]].Tangent = new Vector4(tangent, handedness);
             }
+        }
+        private static void ProcessTangents(Mesh m)
+        {
+            if (m.Tangents.Length != m.Positions.Length)
+            {
+                return;
+            }
+
+            uint numVertices = (uint)m.Vertices.Count;
+            uint numIndices = (uint)m.Indices.Count;
+            Debug.Assert(numVertices > 0 && numIndices > 0);
+
+            Vertex[] oldVertices = [.. m.Vertices];
+            m.Vertices.Clear();
+            uint[] oldIndices = [.. m.Indices];
+            m.Indices.Clear();
+            m.Indices.AddRange(new uint[numIndices]);
+
+            List<List<int>> idxRef = [];
+            for (uint i = 0; i < numIndices; i++)
+            {
+                idxRef[(int)oldIndices[i]].Add((int)i);
+            }
+
+            for (uint i = 0; i < numVertices; i++)
+            {
+                var refs = idxRef[(int)i];
+                int numRefs = refs.Count;
+
+                for (uint j = 0; j < numRefs; j++)
+                {
+                    int jRef = refs[(int)j];
+
+                    var tj = m.Tangents[jRef];
+                    var v = oldVertices[(int)oldIndices[jRef]];
+                    v.Tangent = tj;
+                    m.Indices[jRef] = (uint)m.Vertices.Count;
+                    m.Vertices.Add(v);
+
+                    for (uint k = j + 1; k < numRefs; k++)
+                    {
+                        int kRef = refs[(int)k];
+
+                        var t = m.Tangents[kRef];
+                        if (Vector4NearEqual(tj, t, float.Epsilon))
+                        {
+                            m.Indices[kRef] = m.Indices[jRef];
+                            refs.RemoveAt((int)k);
+                            numRefs--;
+                            k--;
+                        }
+                    }
+                }
+            }
+        }
+        private static bool Vector4NearEqual(Vector4 a, Vector4 b, float eps)
+        {
+            return
+                MathF.Abs(a.X - b.X) <= eps &&
+                MathF.Abs(a.Y - b.Y) <= eps &&
+                MathF.Abs(a.Z - b.Z) <= eps &&
+                MathF.Abs(a.W - b.W) <= eps;
         }
 
         private static void RecalculateNormals(Mesh m)
@@ -341,9 +464,8 @@ namespace ContentTools
                     {
                         int kRef = refs[(int)k];
 
-                        var uv1 = m.UVSets[0][oldIndices[kRef] - firstIndex];
-                        if (Math.Abs(v.UV.X - uv1.X) < float.Epsilon &&
-                            Math.Abs(v.UV.Y - uv1.Y) < float.Epsilon)
+                        var uv = m.UVSets[0][oldIndices[kRef] - firstIndex];
+                        if (Vector2NearEqual(v.UV, uv, float.Epsilon))
                         {
                             m.Indices[kRef] = m.Indices[jRef];
                             refs.RemoveAt((int)k);
@@ -373,6 +495,12 @@ namespace ContentTools
             }
 
             return [.. idxRef];
+        }
+        private static bool Vector2NearEqual(Vector2 a, Vector2 b, float eps)
+        {
+            return
+                MathF.Abs(a.X - b.X) <= eps &&
+                MathF.Abs(a.Y - b.Y) <= eps;
         }
 
         private static void PackVertices(Mesh m)
