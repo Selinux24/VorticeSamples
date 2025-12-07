@@ -9,5 +9,6 @@ namespace Direct3D12.Content
         public MaterialTypes[] MaterialTypes;
         public uint[][] DescriptorIndices;
         public uint[] TextureCounts;
+        public MaterialSurface[] MaterialSurfaces;
     }
 }

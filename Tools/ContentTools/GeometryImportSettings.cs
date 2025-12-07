@@ -6,12 +6,12 @@ namespace ContentTools
     /// </summary>
     public class GeometryImportSettings()
     {
-        public float SmoothingAngle { get; set; } = 0f;
         public bool CalculateNormals { get; set; } = false;
-        public bool CalculateTangents { get; set; } = false;
+        public bool CalculateTangents { get; set; } = true;
+        public float SmoothingAngle { get; set; } = 178f;
         public bool ReverseHandedness { get; set; } = false;
-        public bool ImportEmbeddedTextures { get; set; } = false;
-        public bool ImportAnimations { get; set; } = false;
+        public bool ImportEmbeddedTextures { get; set; } = true;
+        public bool ImportAnimations { get; set; } = true;
         public bool CoalesceMeshes { get; set; } = false;
 
         public bool IsLOD { get; set; } = false;

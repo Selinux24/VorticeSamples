@@ -1,6 +1,7 @@
 ﻿global using GeometryId = uint;
 using PrimalLike.Common;
 using PrimalLike.EngineAPI;
+using PrimalLike.Graphics;
 using System.Collections.Generic;
 using System.Diagnostics;
 
@@ -61,11 +62,14 @@ namespace PrimalLike.Components
             GeometryId id = c.Id;
             IdType index = idMapping[(int)IdDetail.Index(id)];
             GeometryId last_id = ownerIds[^1];
-            //TODO Remove content
+            Renderer.RemoveRenderItem(renderItemIds[(int)index]);
+            activeLod[(int)index] = activeLod[^1];
+            renderItemIds[(int)index] = renderItemIds[^1];
+            ownerIds[(int)index] = last_id;
             idMapping[(int)IdDetail.Index(last_id)] = index;
             idMapping[(int)IdDetail.Index(id)] = IdDetail.InvalidId;
 
-            if (generations[(int)index] < GenerationType.MaxValue)
+            if (generations[(int)index] < IdDetail.MaxGeneration)
             {
                 freeIds.Enqueue(id);
             }

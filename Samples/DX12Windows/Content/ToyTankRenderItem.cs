@@ -10,6 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Numerics;
 using System.Threading;
+using Vortice.Mathematics;
 
 namespace DX12Windows.Content
 {
@@ -56,7 +57,7 @@ namespace DX12Windows.Content
             var _1 = new Thread(() => { modelId = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, modelName)); });
             var _2 = new Thread(TestShaders.LoadShaders);
 
-            uint entityId = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, Vector3.Zero, 25f).Id;
+            uint entityId = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, new(-MathHelper.PiOver2, MathHelper.PiOver4, 0), 25f).Id;
 
             _1.Start();
             _2.Start();

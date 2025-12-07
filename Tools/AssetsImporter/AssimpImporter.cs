@@ -292,7 +292,19 @@ namespace AssetsImporter
             {
                 if (aMesh.HasTangentBasis)
                 {
-                    tangents.AddRange(aMesh.Tangents.Select(t => new Vector4(t, 0f)));
+                    tangents.AddRange(aMesh.Tangents.Select((t, i) =>
+                    {
+                        var n = aMesh.Normals[i];
+                        var b = aMesh.BiTangents[i];
+
+                        var tn = Vector3.Normalize(new Vector3(t.X, t.Y, t.Z));
+                        var nn = Vector3.Normalize(new Vector3(n.X, n.Y, n.Z));
+                        var bn = Vector3.Normalize(new Vector3(b.X, b.Y, b.Z));
+
+                        // Calculate handedness per vertex: w = sign( dot( cross(normal, tangent), bitangent ) )
+                        float handedness = Vector3.Dot(Vector3.Cross(nn, tn), bn) < 0f ? -1f : 1f;
+                        return new Vector4(tn, handedness);
+                    }));
                 }
                 else
                 {
@@ -302,7 +314,10 @@ namespace AssetsImporter
 
             for (uint i = 0; i < aMesh.TextureCoordinateChannelCount; i++)
             {
-                Vector2[] uvs = [.. aMesh.TextureCoordinateChannels[i].Select(uv => new Vector2(uv.X, uv.Y))];
+                // Assuming FBX UVs always have their origin at the bottom-left, the V-axis 
+                // should be flipped, since DirectX uses the upper-left corner as the origin.
+                // TODO: May be assimp does this yet?
+                Vector2[] uvs = [.. aMesh.TextureCoordinateChannels[i].Select(uv => new Vector2(uv.X, 1f - uv.Y))];
                 uvSets.Add(uvs);
             }
 

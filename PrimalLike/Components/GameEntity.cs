@@ -62,16 +62,16 @@ namespace PrimalLike.Components
             IdType index = IdDetail.Index(id);
             Debug.Assert(IsAlive(id));
 
-            if (Scripts[(int)index].IsValid())
-            {
-                Script.Remove(Scripts[(int)index]);
-                Scripts[(int)index] = new();
-            }
-
             if (Geometries[(int)index].IsValid())
             {
                 Geometry.Remove(Geometries[(int)index]);
                 Geometries[(int)index] = new();
+            }
+
+            if (Scripts[(int)index].IsValid())
+            {
+                Script.Remove(Scripts[(int)index]);
+                Scripts[(int)index] = new();
             }
 
             if (Transforms[(int)index].IsValid())
@@ -80,7 +80,7 @@ namespace PrimalLike.Components
                 Transforms[(int)index] = new();
             }
 
-            if (generations[(int)index] < GenerationType.MaxValue)
+            if (generations[(int)index] < IdDetail.MaxGeneration)
             {
                 freeIds.Enqueue(id);
             }

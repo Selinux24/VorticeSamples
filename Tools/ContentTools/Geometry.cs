@@ -259,7 +259,7 @@ namespace ContentTools
         }
         private static void ProcessTangents(Mesh m)
         {
-            if (m.Tangents.Length != m.Positions.Length)
+            if (m.Tangents.Length != m.RawIndices.Length)
             {
                 return;
             }
@@ -358,7 +358,12 @@ namespace ContentTools
             m.Indices.Clear();
             m.Indices.AddRange(new uint[numIndices]);
 
-            var idxRef = GetMeshRawIdRefList(m);
+            Dictionary<uint, List<uint>> idxRef = [];
+            for (uint i = 0; i < numIndices; i++)
+            {
+                idxRef.TryAdd(m.RawIndices[i], []);
+                idxRef[m.RawIndices[i]].Add(i);
+            }
 
             for (uint i = 0; i < numVertices; i++)
             {
@@ -367,24 +372,20 @@ namespace ContentTools
 
                 for (uint j = 0; j < numRefs; j++)
                 {
-                    int jRef = refs[(int)j];
+                    uint jRef = refs[(int)j];
+                    Vertex v = new();
+                    m.Indices[(int)jRef] = (uint)m.Vertices.Count;
+                    v.Position = m.Positions[m.RawIndices[jRef]];
+                    var n1 = m.Normals[m.RawIndices[jRef]];
 
-                    m.Indices[jRef] = (uint)m.Vertices.Count;
-                    Vertex v = new()
-                    {
-                        Position = m.Positions[m.RawIndices[jRef]]
-                    };
-
-                    Vector3 n1 = m.Normals[m.RawIndices[jRef]];
                     if (!isHardEdge)
                     {
-                        uint k = j + 1;
-                        while (k < numRefs)
+                        for (uint k = j + 1; k < numRefs; k++)
                         {
-                            int kRef = refs[(int)k];
+                            uint kRef = refs[(int)k];
+                            float cosTheta = 0f; // this value represents the cosine of the angle between normals.
+                            var n2 = m.Normals[m.RawIndices[kRef]];
 
-                            float cosTheta = 0f;
-                            Vector3 n2 = m.Normals[m.RawIndices[jRef]];
                             if (!isSoftEdge)
                             {
                                 cosTheta = Vector3.Dot(n1, n2) / n1.Length();
@@ -394,13 +395,11 @@ namespace ContentTools
                             {
                                 n1 += n2;
 
-                                m.Indices[kRef] = m.Indices[jRef];
+                                m.Indices[(int)kRef] = m.Indices[(int)jRef];
                                 refs.RemoveAt((int)k);
                                 numRefs--;
                                 k--;
                             }
-
-                            k++;
                         }
                     }
                     v.Normal = Vector3.Normalize(n1);
@@ -408,6 +407,7 @@ namespace ContentTools
                     m.Vertices.Add(v);
                 }
             }
+            Debug.Assert(m.Indices.Max() < m.Vertices.Count);
         }
         private static List<int>[] GetMeshRawIdRefList(Mesh m)
         {
@@ -433,17 +433,19 @@ namespace ContentTools
             uint numVertices = (uint)m.Vertices.Count;
             uint numIndices = (uint)m.Indices.Count;
             Debug.Assert(numVertices > 0 && numIndices > 0);
-            Debug.Assert(m.Indices.Max() == m.Vertices.Count - 1);
-
-            var idxRef = GetMeshIdRefList(m);
 
             Vertex[] oldVertices = [.. m.Vertices];
             m.Vertices.Clear();
             uint[] oldIndices = [.. m.Indices];
             m.Indices.Clear();
             m.Indices.AddRange(new uint[numIndices]);
-            Debug.Assert(oldIndices.Max() == oldVertices.Length - 1);
-            uint firstIndex = oldIndices.Min();
+
+            Dictionary<uint, List<uint>> idxRef = [];
+            for (uint i = 0; i < numIndices; i++)
+            {
+                idxRef.TryAdd(oldIndices[i], []);
+                idxRef[oldIndices[i]].Add(i);
+            }
 
             for (uint i = 0; i < numVertices; i++)
             {
@@ -452,28 +454,24 @@ namespace ContentTools
 
                 for (uint j = 0; j < numRefs; j++)
                 {
-                    int jRef = refs[(int)j];
-
-                    m.Indices[jRef] = (uint)m.Vertices.Count;
+                    uint jRef = refs[(int)j];
+                    m.Indices[(int)jRef] = (uint)m.Vertices.Count;
                     var v = oldVertices[oldIndices[jRef]];
-                    v.UV = m.UVSets[0][oldIndices[jRef] - firstIndex];
+                    v.UV = m.UVSets[0][m.RawIndices[jRef]];
                     m.Vertices.Add(v);
 
-                    uint k = j + 1;
-                    while (k < numRefs)
+                    for (uint k = j + 1; k < numRefs; k++)
                     {
-                        int kRef = refs[(int)k];
+                        uint kRef = refs[(int)k];
+                        var uv = m.UVSets[0][m.RawIndices[kRef]];
 
-                        var uv = m.UVSets[0][oldIndices[kRef] - firstIndex];
                         if (Vector2NearEqual(v.UV, uv, float.Epsilon))
                         {
-                            m.Indices[kRef] = m.Indices[jRef];
+                            m.Indices[(int)kRef] = m.Indices[(int)jRef];
                             refs.RemoveAt((int)k);
                             numRefs--;
                             k--;
                         }
-
-                        k++;
                     }
                 }
             }
@@ -518,7 +516,7 @@ namespace ContentTools
             }
             m.PositionBuffer = msPositionBuffer.ToArray();
 
-            int elementsCapacity = PackingHelper.GetVertexElementSize(m.ElementsType) * numVertices;
+            int elementsCapacity = PackingHelper.GetVertexElementsSize(m.ElementsType) * numVertices;
             using MemoryStream msElementsType = new(elementsCapacity);
 
             for (int i = 0; i < numVertices; i++)
@@ -675,7 +673,7 @@ namespace ContentTools
             int positionBufferSize = m.PositionBuffer.Length;
             Debug.Assert(positionBufferSize == Marshal.SizeOf(typeof(Vector3)) * numVertices);
             int elementBufferSize = m.ElementBuffer.Length;
-            Debug.Assert(elementBufferSize == PackingHelper.GetVertexElementSize(m.ElementsType) * numVertices);
+            Debug.Assert(elementBufferSize == PackingHelper.GetVertexElementsSize(m.ElementsType) * numVertices);
             int indexSize = (numVertices < (1 << 16)) ? sizeof(ushort) : sizeof(uint);
             int indexBufferSize = indexSize * numIndices;
 
@@ -703,7 +701,7 @@ namespace ContentTools
             blob.Write(m.LodId);
 
             // elements size
-            int elementsSize = PackingHelper.GetVertexElementSize(m.ElementsType);
+            int elementsSize = PackingHelper.GetVertexElementsSize(m.ElementsType);
             blob.Write(elementsSize);
 
             // elements type enumeration

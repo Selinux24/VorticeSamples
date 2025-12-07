@@ -1,4 +1,5 @@
-﻿using PrimalLike.Content;
+﻿using PrimalLike.Common;
+using PrimalLike.Content;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -222,6 +223,7 @@ namespace Direct3D12.Content
             {
                 for (uint i = 0; i < textureIds.Length; i++)
                 {
+                    Debug.Assert(IdDetail.IsValid(textureIds[i]));
                     indices[i] = descriptorIndices[textureIds[i]];
                 }
             }

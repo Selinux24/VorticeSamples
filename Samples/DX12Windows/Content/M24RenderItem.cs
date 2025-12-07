@@ -85,12 +85,12 @@ namespace DX12Windows.Content
             var _6 = new Thread(() => { model6Id = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, model6Name)); });
             var _7 = new Thread(TestShaders.LoadShaders);
 
-            uint entity1Id = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, new(MathHelper.PiOver4, -MathHelper.PiOver2, 0f), 1f).Id;
-            uint entity2Id = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, new(MathHelper.PiOver4, -MathHelper.PiOver2, 0f), 1f).Id;
-            uint entity3Id = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, new(MathHelper.PiOver4, -MathHelper.PiOver2, 0f), 1f).Id;
-            uint entity4Id = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, new(MathHelper.PiOver4, -MathHelper.PiOver2, 0f), 1f).Id;
-            uint entity5Id = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, new(MathHelper.PiOver4, -MathHelper.PiOver2, 0f), 1f).Id;
-            uint entity6Id = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, new(MathHelper.PiOver4, -MathHelper.PiOver2, 0f), 1f).Id;
+            uint entity1Id = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, new(-MathHelper.PiOver2, MathHelper.PiOver4, 0f), 1f).Id;
+            uint entity2Id = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, new(-MathHelper.PiOver2, MathHelper.PiOver4, 0f), 1f).Id;
+            uint entity3Id = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, new(-MathHelper.PiOver2, MathHelper.PiOver4, 0f), 1f).Id;
+            uint entity4Id = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, new(-MathHelper.PiOver2, MathHelper.PiOver4, 0f), 1f).Id;
+            uint entity5Id = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, new(-MathHelper.PiOver2, MathHelper.PiOver4, 0f), 1f).Id;
+            uint entity6Id = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, new(-MathHelper.PiOver2, MathHelper.PiOver4, 0f), 1f).Id;
 
             _1.Start();
             _2.Start();

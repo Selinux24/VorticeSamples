@@ -1,4 +1,5 @@
 ﻿using AssetsImporter;
+using ContentTools;
 using DX12Windows.Scripts;
 using DX12Windows.Shaders;
 using PrimalLike;
@@ -31,6 +32,7 @@ namespace DX12Windows.Content
         private const string intModelName = "labmodel.model";
         private const string labModelName = "intmodel.model";
         private const string fembotModelName = "fembotmodel.model";
+        private const string sphereModelName = "sphere.model";
 
         private const string ambientOcclusionTextureName = "AmbientOcclusion.texture";
         private const string baseColorTextureName = "BaseColor.texture";
@@ -77,6 +79,7 @@ namespace DX12Windows.Content
                 Path.Combine(outputsFolder, intModelName),
                 Path.Combine(outputsFolder, labModelName),
                 Path.Combine(outputsFolder, fembotModelName),
+                Path.Combine(outputsFolder, sphereModelName),
             ];
 
             if (modelNames.Any(f => !File.Exists(f)))
@@ -85,6 +88,7 @@ namespace DX12Windows.Content
                 [
                     .. AssimpImporter.Read(modelPrimalLab, new(), assetsFolder),
                     .. AssimpImporter.Read(modelFembot, new() { CalculateTangents = true }, assetsFolder),
+                    .. PrimitiveMesh.CreatePrimitiveMesh(new(), new() { Type = PrimitiveMeshType.UvSphere, Segments = [48, 48], Size = new Vector3(0.5f) }, assetsFolder),
                 ];
 
                 Debug.Assert(assets.Length == modelNames.Length);
@@ -99,7 +103,13 @@ namespace DX12Windows.Content
                 }
             }
 
-            if (!File.Exists(ambientOcclusionTextureName))
+            string outputAmbientOcclusionTexture = Path.Combine(outputsFolder, ambientOcclusionTextureName);
+            string outputBaseColorTexture = Path.Combine(outputsFolder, baseColorTextureName);
+            string outputEmissiveTexture = Path.Combine(outputsFolder, emissiveTextureName);
+            string outputMetalRoughTexture = Path.Combine(outputsFolder, metalRoughTextureName);
+            string outputNormalTexture = Path.Combine(outputsFolder, normalTextureName);
+
+            if (!File.Exists(outputAmbientOcclusionTexture))
             {
                 TextureData ambientOcclusionData = new();
                 ambientOcclusionData.ImportSettings.Compress = true;
@@ -108,10 +118,10 @@ namespace DX12Windows.Content
                 ambientOcclusionData.ImportSettings.Sources = ambientOcclusionTexture;
 
                 TextureImporter.Import(ref ambientOcclusionData);
-                ambientOcclusionData.SaveTexture(Path.Combine(outputsFolder, ambientOcclusionTextureName));
+                ambientOcclusionData.SaveTexture(outputAmbientOcclusionTexture);
             }
 
-            if (!File.Exists(baseColorTextureName))
+            if (!File.Exists(outputBaseColorTexture))
             {
                 TextureData baseColorData = new();
                 baseColorData.ImportSettings.Compress = true;
@@ -120,10 +130,10 @@ namespace DX12Windows.Content
                 baseColorData.ImportSettings.Sources = baseColorTexture;
 
                 TextureImporter.Import(ref baseColorData);
-                baseColorData.SaveTexture(Path.Combine(outputsFolder, baseColorTextureName));
+                baseColorData.SaveTexture(outputBaseColorTexture);
             }
 
-            if (!File.Exists(emissiveTextureName))
+            if (!File.Exists(outputEmissiveTexture))
             {
                 TextureData emissiveData = new();
                 emissiveData.ImportSettings.Compress = true;
@@ -132,10 +142,10 @@ namespace DX12Windows.Content
                 emissiveData.ImportSettings.Sources = emissiveTexture;
 
                 TextureImporter.Import(ref emissiveData);
-                emissiveData.SaveTexture(Path.Combine(outputsFolder, emissiveTextureName));
+                emissiveData.SaveTexture(outputEmissiveTexture);
             }
 
-            if (!File.Exists(metalRoughTextureName))
+            if (!File.Exists(outputMetalRoughTexture))
             {
                 TextureData metalRoughData = new();
                 metalRoughData.ImportSettings.Compress = true;
@@ -145,10 +155,10 @@ namespace DX12Windows.Content
                 metalRoughData.ImportSettings.Sources = metalRoughTexture;
 
                 TextureImporter.Import(ref metalRoughData);
-                metalRoughData.SaveTexture(Path.Combine(outputsFolder, metalRoughTextureName));
+                metalRoughData.SaveTexture(outputMetalRoughTexture);
             }
 
-            if (!File.Exists(normalTextureName))
+            if (!File.Exists(outputNormalTexture))
             {
                 TextureData normalData = new();
                 normalData.ImportSettings.Compress = true;
@@ -157,7 +167,7 @@ namespace DX12Windows.Content
                 normalData.ImportSettings.Sources = normalTexture;
 
                 TextureImporter.Import(ref normalData);
-                normalData.SaveTexture(Path.Combine(outputsFolder, normalTextureName));
+                normalData.SaveTexture(outputNormalTexture);
             }
 
             TextureImporter.ShutDownTextureTools();

@@ -37,7 +37,7 @@ namespace ContentTools
             return (byte)(((tangent.W > 0f) ? 1u : 0u) | (((tangent.Z > 0f) ? 1u : 0u) << 1));
         }
 
-        public static int GetVertexElementSize(ElementsType type)
+        public static int GetVertexElementsSize(ElementsType type)
         {
             return type switch
             {

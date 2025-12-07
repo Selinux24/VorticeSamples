@@ -448,8 +448,7 @@ namespace TexturesImporter
         }
         private static void CopySubresources(ScratchImage scratch, ref TextureData data)
         {
-            var metadata = scratch.GetMetadata();
-            Debug.Assert(metadata.MipLevels > 0 && metadata.MipLevels <= TextureData.MaxMips);
+            Debug.Assert(scratch.GetMetadata().MipLevels > 0 && scratch.GetMetadata().MipLevels <= TextureData.MaxMips);
 
             ulong subresourceSize = 0;
 

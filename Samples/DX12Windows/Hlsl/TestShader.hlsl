@@ -102,19 +102,20 @@ VertexOut TestShaderVS(in uint VertexIdx : SV_VertexID)
     float nSign = float((signs & 0x04) >> 1) - 1.f;
     float tSign = float(signs & 0x02) - 1.f;
     float hSign = float((signs & 0x01) << 1) - 1.f;
-    
+
+
     float2 nXY = element.Normal * InvIntervals - 1.f;
     float3 normal = float3(nXY, sqrt(saturate(1.f - dot(nXY, nXY))) * nSign);
-    
+
     float2 tXY = element.Tangent * InvIntervals - 1.f;
     float3 tangent = float3(tXY, sqrt(saturate(1.f - dot(tXY, tXY))) * tSign);
-    tangent = tangent - normal * dot(normal, tangent); 
+    tangent = tangent - normal * dot(normal, tangent);
 
     vsOut.HomogeneousPosition = mul(PerObjectBuffer.WorldViewProjection, position);
     vsOut.WorldPosition = worldPosition.xyz;
     vsOut.WorldNormal = normalize(mul(normal, (float3x3)PerObjectBuffer.InvWorld));
-    vsOut.WorldTangent = float4(normalize(mul(tangent, (float3x3)PerObjectBuffer.InvWorld)), -hSign);
-    vsOut.UV = float2(element.UV.x, 1.f - element.UV.y);
+    vsOut.WorldTangent = float4(normalize(mul(tangent, (float3x3)PerObjectBuffer.InvWorld)), hSign);
+    vsOut.UV = element.UV;
 #else
 #undef ELEMENTS_TYPE
     vsOut.HomogeneousPosition = mul(PerObjectBuffer.WorldViewProjection, position);
@@ -143,7 +144,7 @@ float3 CalculateLighting(Surface S, float3 L, float3 V, float3 lightColor)
 {
     const float3 N = S.Normal;
     const float NoL = saturate(dot(N, L));
-    return PhongBRDF(N, L, V, S.BaseColor, 1.f, (1 - S.PerceptualRoughness) * 50.f) * (NoL / PI) * lightColor;
+    return PhongBRDF(N, L, V, S.BaseColor, 1.f, (1 - S.PerceptualRoughness) * 100.f) * (NoL / PI) * lightColor;
 }
 
 float3 PointLight(Surface S, float3 worldPosition, float3 V, LightParameters light)
@@ -164,7 +165,7 @@ float3 PointLight(Surface S, float3 worldPosition, float3 V, LightParameters lig
     {
         const float dRcp = rsqrt(dSq);
         L *= dRcp;
-        const float attenuation = 1.f - smoothstep(-light.Range, light.Range, rcp(dRcp));
+        const float attenuation = 1.f - smoothstep(0.1f * light.Range, light.Range, rcp(dRcp));
         color = CalculateLighting(S, L, V, light.Color * light.Intensity * attenuation);
     }
 #endif
@@ -191,7 +192,7 @@ float3 Spotlight(Surface S, float3 worldPosition, float3 V, LightParameters ligh
     {
         const float dRcp = rsqrt(dSq);
         L *= dRcp;
-        const float attenuation = 1.f - smoothstep(-light.Range, light.Range, rcp(dRcp));
+        const float attenuation = 1.f - smoothstep(0.1f * light.Range, light.Range, rcp(dRcp));
         const float CosAngleToLight = saturate(dot(-L, light.Direction));
         const float angularAttenuation = smoothstep(light.CosPenumbra, light.CosUmbra, CosAngleToLight);
         color = CalculateLighting(S, L, V, light.Color * light.Intensity * attenuation * angularAttenuation);
@@ -238,7 +239,7 @@ Surface GetSurface(VertexOut psIn)
     const float3x3 TBN = float3x3(T, B, N);
     // Transform from tangent-space to world-space
     S.Normal = normalize(mul(n, TBN));
-    
+
 #endif
     return S;
 }
@@ -295,7 +296,7 @@ PixelOut TestShaderPS(in VertexOut psIn)
         LightParameters light = CullableLights[lightIndex];
         color += Spotlight(S, psIn.WorldPosition, viewDir, light);
     }
-
+    
 #else
     for (i = 0; i < lightCount; ++i)
     {

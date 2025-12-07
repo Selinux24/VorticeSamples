@@ -67,6 +67,7 @@ namespace Direct3D12.Content
                     cache.MaterialTypes[i] = stream.MaterialType;
                     cache.DescriptorIndices[i] = stream.DescriptorIndices;
                     cache.TextureCounts[i] = stream.TextureCount;
+                    cache.MaterialSurfaces[i] = stream.Surface;
                     totalIndexCount += stream.TextureCount;
                 }
 

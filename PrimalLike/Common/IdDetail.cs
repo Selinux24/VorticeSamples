@@ -11,12 +11,14 @@ namespace PrimalLike.Common
 {
     public static class IdDetail
     {
-        public const int GenerationBits = 10;
+        public const int GenerationBits = 8;
         public const int IndexBits = sizeof(IdType) * 8 - GenerationBits;
         public const IdType IndexMask = ((IdType)1ul << IndexBits) - 1u;
         public const IdType GenerationMask = ((IdType)1ul << GenerationBits) - 1u;
         public const IdType InvalidId = IdType.MaxValue;
         public const uint MinDeletedElements = 1024;
+
+        public static IdType MaxGeneration => GenerationMask - 1;
 
         public static bool IsValid(IdType id)
         {

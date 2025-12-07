@@ -11,6 +11,7 @@ namespace Direct3D12.Content
     {
         private readonly IntPtr buffer;
 
+        MaterialSurface materialSurface;
         private uint[] textureIds;
         private uint[] descriptorIndices;
         private uint[] shaderIds;
@@ -20,6 +21,7 @@ namespace Direct3D12.Content
         private ShaderFlags shaderFlags;
 
         public IntPtr Buffer { get => buffer; }
+        public MaterialSurface Surface { get => materialSurface; }
         public uint TextureCount { get => textureCount; }
         public MaterialTypes MaterialType { get => type; }
         public ShaderFlags ShaderFlags { get => shaderFlags; }
@@ -44,6 +46,7 @@ namespace Direct3D12.Content
                 sizeof(ShaderFlags) +                               // shader flags
                 sizeof(uint) +                                      // root signature id
                 sizeof(uint) +                                      // texture count
+                Marshal.SizeOf<MaterialSurface>() +                 // PBR material properties
                 sizeof(uint) * shaderCount +                        // shader ids
                 (sizeof(uint) + sizeof(uint)) * info.TextureCount;  // texture ids and descriptor indices (maybe 0 if no textures used).
 
@@ -54,6 +57,7 @@ namespace Direct3D12.Content
             blob.Write((uint)shaderFlags);
             blob.Write(Material.CreateRootSignature(info.Type, shaderFlags));
             blob.Write(info.TextureCount);
+            blob.Write(info.Surface);
 
             if (info.TextureCount > 0)
             {
@@ -89,6 +93,7 @@ namespace Direct3D12.Content
             shaderFlags = (ShaderFlags)blob.Read<uint>();
             rootSignatureId = blob.Read<uint>();
             textureCount = blob.Read<uint>();
+            materialSurface = blob.Read<MaterialSurface>();
 
             //Get the number of flags set in shaderFlags
             MaterialInitInfo.GetShaderFlagsCount(shaderFlags, out int shaderCount);

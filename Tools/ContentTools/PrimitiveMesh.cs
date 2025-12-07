@@ -129,44 +129,131 @@ namespace ContentTools
             uint numIndices = 2 * 3 * phiCount + 2 * 3 * phiCount * (thetaCount - 2);
             uint numVertices = 2 + phiCount * (thetaCount - 1);
 
-            List<Vector3> positions = [];
-            uint c = 0;
-            positions[(int)c++] = new Vector3(0f, info.Size.Y, 0f);
+            Vector3[] positions = new Vector3[numVertices];
 
-            for (uint j = 1; j <= (thetaCount - 1); ++j)
+            // Add the top vertex
+            uint c = 0;
+            positions[c++] = new Vector3(0f, info.Size.Y, 0f);
+
+            for (uint j = 1; j <= (thetaCount - 1); j++)
             {
                 float theta = j * thetaStep;
                 for (uint i = 0; i < phiCount; ++i)
                 {
                     float phi = i * phiStep;
-                    positions[(int)c++] = new Vector3(
+                    positions[c++] = new Vector3(
                         info.Size.X * MathF.Sin(theta) * MathF.Cos(phi),
                         info.Size.Y * MathF.Cos(theta),
                         -info.Size.Z * MathF.Sin(theta) * MathF.Sin(phi));
                 }
             }
 
-            positions[(int)c++] = new Vector3(0f, -info.Size.Y, 0f);
+            // Add the bottom vertex
+            positions[c++] = new Vector3(0f, -info.Size.Y, 0f);
             Debug.Assert(c == numVertices);
 
             c = 0;
-            List<uint> rawIndices = new(new uint[numIndices]);
-            List<Vector2> uvs = new(new Vector2[numIndices]);
+            uint[] rawIndices = new uint[numIndices];
+            Vector2[] uvs = new Vector2[numIndices];
             float invThetaCount = 1f / thetaCount;
             float invPhiCount = 1f / phiCount;
 
+            // Indices for the top cap, connecting the north pole to the first ring
             for (uint i = 0; i < phiCount - 1; ++i)
             {
-                uvs[(int)c] = new Vector2((2 * i + 1) * 0.5f * invPhiCount, 1f);
-                rawIndices[(int)c++] = 0;
-                uvs[(int)c] = new Vector2(i * invPhiCount, 1f - invThetaCount);
+                uvs[c] = new Vector2((2 * i + 1) * 0.5f * invPhiCount, 1f);
+                rawIndices[c++] = 0;
+                uvs[c] = new Vector2(i * invPhiCount, 1f - invThetaCount);
+                rawIndices[c++] = i + 1;
+                uvs[c] = new Vector2((i + 1) * invPhiCount, 1f - invThetaCount);
+                rawIndices[c++] = i + 2;
             }
+
+            uvs[c] = new Vector2(1f - 0.5f * invPhiCount, 1f);
+            rawIndices[c++] = 0;
+            uvs[c] = new Vector2(1f - invPhiCount, 1f - invThetaCount);
+            rawIndices[c++] = phiCount;
+            uvs[c] = new Vector2(1f, 1f - invThetaCount);
+            rawIndices[c++] = 1;
+
+            // Indices for the section between the top and bottom rings
+            for (uint j = 0; j < (thetaCount - 2); j++)
+            {
+                uint[] index;
+
+                for (uint i = 0; i < (phiCount - 1); i++)
+                {
+                    index =
+                    [
+                        1 + i + j * phiCount,
+                        1 + i + (j + 1) * phiCount,
+                        1 + (i + 1) + (j + 1) * phiCount,
+                        1 + (i + 1) + j * phiCount
+                    ];
+
+                    uvs[c] = new Vector2(i * invPhiCount, 1f - (j + 1) * invThetaCount);
+                    rawIndices[c++] = index[0];
+                    uvs[c] = new Vector2(i * invPhiCount, 1f - (j + 2) * invThetaCount);
+                    rawIndices[c++] = index[1];
+                    uvs[c] = new Vector2((i + 1) * invPhiCount, 1f - (j + 2) * invThetaCount);
+                    rawIndices[c++] = index[2];
+
+                    uvs[c] = new Vector2(i * invPhiCount, 1f - (j + 1) * invThetaCount);
+                    rawIndices[c++] = index[0];
+                    uvs[c] = new Vector2((i + 1) * invPhiCount, 1f - (j + 2) * invThetaCount);
+                    rawIndices[c++] = index[2];
+                    uvs[c] = new Vector2((i + 1) * invPhiCount, 1f - (j + 1) * invThetaCount);
+                    rawIndices[c++] = index[3];
+                }
+
+                index =
+                [
+                    phiCount + j * phiCount,
+                    phiCount + (j + 1) * phiCount,
+                    1 + (j + 1) * phiCount,
+                    1 + j * phiCount,
+                ];
+
+                uvs[c] = new Vector2(1f - invPhiCount, 1f - (j + 1) * invThetaCount);
+                rawIndices[c++] = index[0];
+                uvs[c] = new Vector2(1f - invPhiCount, 1f - (j + 2) * invThetaCount);
+                rawIndices[c++] = index[1];
+                uvs[c] = new Vector2(1f, 1f - (j + 2) * invThetaCount);
+                rawIndices[c++] = index[2];
+
+                uvs[c] = new Vector2(1f - invPhiCount, 1f - (j + 1) * invThetaCount);
+                rawIndices[c++] = index[0];
+                uvs[c] = new Vector2(1f, 1f - (j + 2) * invThetaCount);
+                rawIndices[c++] = index[2];
+                uvs[c] = new Vector2(1f, 1f - (j + 1) * invThetaCount);
+                rawIndices[c++] = index[3];
+            }
+
+            // Indices for the bottom cap, connecting the south posle to the last ring
+            uint southPoleIndex = (uint)positions.Length - 1;
+            for (uint i = 0; i < (phiCount - 1); i++)
+            {
+                uvs[c] = new Vector2((2 * i + 1) * 0.5f * invPhiCount, 0f);
+                rawIndices[c++] = southPoleIndex;
+                uvs[c] = new Vector2((i + 1) * invPhiCount, invThetaCount);
+                rawIndices[c++] = southPoleIndex - phiCount + i + 1;
+                uvs[c] = new Vector2(i * invPhiCount, invThetaCount);
+                rawIndices[c++] = southPoleIndex - phiCount + i;
+            }
+
+            uvs[c] = new Vector2(1f - 0.5f * invPhiCount, 0f);
+            rawIndices[c++] = southPoleIndex;
+            uvs[c] = new Vector2(1f, invThetaCount);
+            rawIndices[c++] = southPoleIndex - phiCount;
+            uvs[c] = new Vector2(1f - invPhiCount, invThetaCount);
+            rawIndices[c++] = southPoleIndex - 1;
 
             Mesh m = new()
             {
                 Name = "uv_sphere",
-                Positions = [.. positions],
-                RawIndices = [.. rawIndices],
+                Positions = positions,
+                RawIndices = rawIndices,
+                UVSets = [uvs],
             };
 
             return m;
@@ -184,7 +271,7 @@ namespace ContentTools
         {
         }
 
-        public static void CreatePrimitiveMesh(GeometryImportSettings settings, PrimitiveInitInfo info)
+        public static IEnumerable<string> CreatePrimitiveMesh(GeometryImportSettings settings, PrimitiveInitInfo info, string baseFolder = null)
         {
             Debug.Assert(settings != null && info != null);
             Debug.Assert(info.Type < PrimitiveMeshType.Count);
@@ -194,7 +281,8 @@ namespace ContentTools
 
             settings.CalculateNormals = true;
             Geometry.ProcessModel(scene, settings);
-            Geometry.PackData(scene, Path.GetRandomFileName());
+
+            yield return Geometry.PackData(scene, baseFolder ?? Path.GetRandomFileName());
         }
     }
 }

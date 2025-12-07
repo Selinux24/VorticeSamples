@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Linq;
 using System.Numerics;
 
 namespace ContentTools.MikkTSpace
@@ -113,18 +112,18 @@ namespace ContentTools.MikkTSpace
             InitTriInfo(pTriInfos, piTriListIn, iNrTrianglesIn);
             //printf("gen neighbors list end\n");
 
+            int[] piGroupTrianglesBuffer = new int[iNrTrianglesIn * 3];
 
             // based on the 4 rules, identify groups based on connectivity
             int iNrMaxGroups = iNrTrianglesIn * 3;
             Group[] groups = new Group[iNrMaxGroups];
             for (int g = 0; g < iNrMaxGroups; g++)
             {
-                groups[g] = new Group();
+                groups[g] = new Group(piGroupTrianglesBuffer);
             }
 
             //printf("gen 4rule groups begin\n");
-            int[] piGroupTrianglesBuffer = new int[iNrTrianglesIn * 3];
-            int iNrActiveGroups = Build4RuleGroups(pTriInfos, groups, piGroupTrianglesBuffer, piTriListIn, iNrTrianglesIn);
+            int iNrActiveGroups = Build4RuleGroups(pTriInfos, groups, piTriListIn, iNrTrianglesIn);
             //printf("gen 4rule groups end\n");
 
             //
@@ -938,7 +937,7 @@ namespace ContentTools.MikkTSpace
             }
         }
 
-        static int Build4RuleGroups(TriInfo[] triInfos, Group[] groups, int[] groupTrianglesBuffer, int[] triList, int nTriangles)
+        static int Build4RuleGroups(TriInfo[] triInfos, Group[] groups, int[] triList, int nTriangles)
         {
             int iNrMaxGroups = nTriangles * 3;
             int iNrActiveGroups = 0;
@@ -955,11 +954,10 @@ namespace ContentTools.MikkTSpace
                         triInfos[f].AssignedGroup[i] = groups[iNrActiveGroups];
                         triInfos[f].AssignedGroup[i].VertexRepresentitive = vert_index;
                         triInfos[f].AssignedGroup[i].OrientPreservering = (triInfos[f].Flag & ORIENT_PRESERVING) != 0;
-                        triInfos[f].AssignedGroup[i].NFaces = 0;
-                        triInfos[f].AssignedGroup[i].FaceIndices = groupTrianglesBuffer.Skip(iOffset).ToArray();
+                        triInfos[f].AssignedGroup[i].FaceIndicesOffset = iOffset;
                         iNrActiveGroups++;
 
-                        AddTriToGroup(ref triInfos[f].AssignedGroup[i], f);
+                        triInfos[f].AssignedGroup[i].AddTriToGroup(f);
                         bool bOrPre = (triInfos[f].Flag & ORIENT_PRESERVING) != 0;
                         int neigh_indexL = triInfos[f].FaceNeighbors[i];
                         int neigh_indexR = triInfos[f].FaceNeighbors[i > 0 ? (i - 1) : 2];
@@ -993,11 +991,6 @@ namespace ContentTools.MikkTSpace
             }
 
             return iNrActiveGroups;
-        }
-        static void AddTriToGroup(ref Group group, int triIndex)
-        {
-            group.FaceIndices[group.NFaces] = triIndex;
-            group.NFaces++;
         }
         static bool AssignRecur(int[] triList, TriInfo[] triInfos, int myTriIndex, Group group)
         {
@@ -1042,7 +1035,7 @@ namespace ContentTools.MikkTSpace
                 return false;
             }
 
-            AddTriToGroup(ref group, myTriIndex);
+            group.AddTriToGroup(myTriIndex);
             myTriInfo.AssignedGroup[i] = group;
 
             int neigh_indexL = myTriInfo.FaceNeighbors[i];
@@ -1084,7 +1077,7 @@ namespace ContentTools.MikkTSpace
 
                 for (int i = 0; i < pGroup.NFaces; i++)  // triangles
                 {
-                    int f = pGroup.FaceIndices[i];  // triangle number
+                    int f = pGroup.GetFaceIndex(i);  // triangle number
                     int index = -1;
                     if (triInfos[f].AssignedGroup[0] == pGroup) index = 0;
                     else if (triInfos[f].AssignedGroup[1] == pGroup) index = 1;
@@ -1109,7 +1102,7 @@ namespace ContentTools.MikkTSpace
                     int iMembers = 0;
                     for (int j = 0; j < pGroup.NFaces; j++)
                     {
-                        int t = pGroup.FaceIndices[j];  // triangle number
+                        int t = pGroup.GetFaceIndex(j);  // triangle number
                         int iOF_2 = triInfos[t].OrgFaceNumber;
 
                         // project

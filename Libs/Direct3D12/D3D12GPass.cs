@@ -35,6 +35,7 @@ namespace Direct3D12
             public MaterialTypes[] MaterialTypes = null;
             public uint[][] DescriptorIndices = null;
             public uint[] TextureCounts = null;
+            MaterialSurface[] MaterialSurfaces = null;
             public ulong[] PositionBuffers = null;
             public ulong[] ElementBuffers = null;
             public IndexBufferView[] IndexBufferViews = null;
@@ -53,6 +54,7 @@ namespace Direct3D12
                 sizeof(MaterialTypes) +             // material_types
                 sizeof(uint) +                      // TODO: descriptor_indices
                 sizeof(uint) +                      // texture_counts
+                Marshal.SizeOf<MaterialSurface>() + // material_surface
                 sizeof(ulong) +                     // position_buffers
                 sizeof(ulong) +                     // element_buffers
                 Marshal.SizeOf<IndexBufferView>() + // index_buffer_views
@@ -91,6 +93,7 @@ namespace Direct3D12
                     MaterialTypes = new MaterialTypes[itemsCount];
                     DescriptorIndices = new uint[itemsCount][];
                     TextureCounts = new uint[itemsCount];
+                    MaterialSurfaces = new MaterialSurface[itemsCount];
                     PositionBuffers = new ulong[itemsCount];
                     ElementBuffers = new ulong[itemsCount];
                     IndexBufferViews = new IndexBufferView[itemsCount];
@@ -131,6 +134,7 @@ namespace Direct3D12
                     MaterialTypes = MaterialTypes,
                     DescriptorIndices = DescriptorIndices,
                     TextureCounts = TextureCounts,
+                    MaterialSurfaces = MaterialSurfaces
                 };
             }
 
@@ -240,7 +244,7 @@ namespace Direct3D12
             return gpassMainBuffer.GetResource() != null && gpassDepthBuffer.GetResource() != null;
         }
 
-        private static void FillPerObjectData(ref D3D12FrameInfo d3d12Info)
+        private static void FillPerObjectData(ref D3D12FrameInfo d3d12Info, MaterialsCache materialsCache)
         {
             uint renderItemsCount = frameCache.Size();
             uint currentEntityId = uint.MaxValue;
@@ -254,11 +258,20 @@ namespace Direct3D12
                     Transform.GetTransformMatrices(currentEntityId, out var world, out var invWorld);
                     var wvp = Matrix4x4.Multiply(world, d3d12Info.Camera.ViewProjection);
 
+                    var surface = materialsCache.MaterialSurfaces[i];
+
                     Shaders.PerObjectData data = new()
                     {
                         World = world,
                         InvWorld = invWorld,
-                        WorldViewProjection = wvp
+                        WorldViewProjection = wvp,
+
+                        BaseColor = surface.BaseColor,
+                        Emissive = surface.Emissive,
+                        EmissiveIntensity = surface.EmissiveIntensity,
+                        AmbientOcclusion = surface.AmbientOcclusion,
+                        Metallic = surface.Metallic,
+                        Roughness = surface.Roughness,
                     };
 
                     currentGpuAddress = D3D12Graphics.CBuffer.Write(data);
@@ -309,7 +322,7 @@ namespace Direct3D12
             Material.GetMaterials(itemsCache.MaterialIds, ref materialsCache, ref frameCache.DescriptorIndexCount);
             frameCache.SetMaterials(materialsCache);
 
-            FillPerObjectData(ref d3d12Info);
+            FillPerObjectData(ref d3d12Info, materialsCache);
 
             if (frameCache.DescriptorIndexCount == 0)
             {
