@@ -81,6 +81,11 @@ namespace DX12Windows.Content
             info.ShaderIds[(uint)ShaderTypes.Vertex] = TestShaders.VsId;
             info.ShaderIds[(uint)ShaderTypes.Pixel] = TestShaders.PsId;
             info.Type = MaterialTypes.Opaque;
+
+            info.Surface.BaseColor = new(0.5f, 1f, 0.5f, 1f);
+            info.Surface.Roughness = 0.5f;
+            info.Surface.Metallic = 1.0f;
+
             mtlId = ContentToEngine.CreateResource(info, AssetTypes.Material);
         }
 

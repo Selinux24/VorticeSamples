@@ -242,42 +242,62 @@ namespace DX12Windows.Content
         {
             Debug.Assert(IdDetail.IsValid(TestShaders.VsId) && IdDetail.IsValid(TestShaders.PsId));
 
-            MaterialInitInfo info = new();
-            info.ShaderIds[(uint)ShaderTypes.Vertex] = TestShaders.VsId;
-            info.ShaderIds[(uint)ShaderTypes.Pixel] = TestShaders.PsId;
-            info.Type = MaterialTypes.Opaque;
-            defaultMtlId = ContentToEngine.CreateResource(info, AssetTypes.Material);
-
-            Array.Fill(pbrMtlIds, uint.MaxValue);
-            Vector2[] metalRough =
-            [
-                new(0f, 0.0f),
-                new(0f, 0.2f),
-                new(0f, 0.4f),
-                new(0f, 0.6f),
-                new(0f, 0.8f),
-                new(0f, 1f),
-                new(1f, 0.0f),
-                new(1f, 0.2f),
-                new(1f, 0.4f),
-                new(1f, 0.6f),
-                new(1f, 0.8f),
-                new(1f, 1f),
-            ];
-
-            MaterialSurface s = info.Surface;
-            s.BaseColor = new(0.5f, 0.5f, 0.5f, 1f);
-            for (int i = 0; i < pbrMtlIds.Length; i++)
             {
-                s.Metallic = metalRough[i].X;
-                s.Roughness = metalRough[i].Y;
-                pbrMtlIds[i] = ContentToEngine.CreateResource(info, AssetTypes.Material);
+                MaterialInitInfo info = new();
+                info.ShaderIds[(uint)ShaderTypes.Vertex] = TestShaders.VsId;
+                info.ShaderIds[(uint)ShaderTypes.Pixel] = TestShaders.PsId;
+                info.Type = MaterialTypes.Opaque;
+
+                defaultMtlId = ContentToEngine.CreateResource(info, AssetTypes.Material);
             }
 
-            info.ShaderIds[(uint)ShaderTypes.Pixel] = TestShaders.TexturedPsId;
-            info.TextureCount = (int)TextureUsages.Count;
-            info.TextureIds = textureIds;
-            fembotMtlId = ContentToEngine.CreateResource(info, AssetTypes.Material);
+            {
+                Array.Fill(pbrMtlIds, uint.MaxValue);
+                Vector2[] metalRough =
+                [
+                    new(0f, 0.0f),
+                    new(0f, 0.2f),
+                    new(0f, 0.4f),
+                    new(0f, 0.6f),
+                    new(0f, 0.8f),
+                    new(0f, 1f),
+                    new(1f, 0.0f),
+                    new(1f, 0.2f),
+                    new(1f, 0.4f),
+                    new(1f, 0.6f),
+                    new(1f, 0.8f),
+                    new(1f, 1f),
+                ];
+
+                MaterialInitInfo info = new();
+                info.ShaderIds[(uint)ShaderTypes.Vertex] = TestShaders.VsId;
+                info.ShaderIds[(uint)ShaderTypes.Pixel] = TestShaders.PsId;
+                info.Type = MaterialTypes.Opaque;
+
+                ref var s = ref info.Surface;
+                s.BaseColor = new(0.5f, 0.5f, 0.5f, 1f);
+
+                for (int i = 0; i < pbrMtlIds.Length; i++)
+                {
+                    s.Metallic = metalRough[i].X;
+                    s.Roughness = metalRough[i].Y;
+
+                    pbrMtlIds[i] = ContentToEngine.CreateResource(info, AssetTypes.Material);
+                }
+            }
+
+            {
+                MaterialInitInfo info = new();
+                info.ShaderIds[(uint)ShaderTypes.Vertex] = TestShaders.VsId;
+                info.ShaderIds[(uint)ShaderTypes.Pixel] = TestShaders.PsId;
+                info.ShaderIds[(uint)ShaderTypes.Pixel] = TestShaders.TexturedPsId;
+                info.Type = MaterialTypes.Opaque;
+
+                info.TextureCount = (int)TextureUsages.Count;
+                info.TextureIds = textureIds;
+
+                fembotMtlId = ContentToEngine.CreateResource(info, AssetTypes.Material);
+            }
         }
 
         public void DestroyRenderItems()

@@ -1,22 +1,19 @@
 ﻿using PrimalLike.Common;
+using System;
 
 namespace PrimalLike.Graphics
 {
     public struct MaterialInitInfo
     {
-        public MaterialSurface Surface;
-        public MaterialTypes Type;
-        public int TextureCount; // NOTE: textures are optional, so, texture count may be 0 and texture_ids may be nullptr.
-        public IdType[] ShaderIds;
-        public IdType[] TextureIds;
+        public MaterialSurface Surface = new();
+        public MaterialTypes Type = MaterialTypes.Opaque;
+        public IdType[] ShaderIds = new IdType[(uint)ShaderTypes.Count];
+        public IdType[] TextureIds = null;
+        public int TextureCount = 0; // NOTE: textures are optional, so, texture count may be 0 and texture_ids may be nullptr.
 
         public MaterialInitInfo()
         {
-            ShaderIds = new IdType[(uint)ShaderTypes.Count];
-            for (int i = 0; i < ShaderIds.Length; i++)
-            {
-                ShaderIds[i] = uint.MaxValue;
-            }
+            Array.Fill(ShaderIds, uint.MaxValue);
         }
 
         public readonly void GetShaderFlags(out ShaderFlags shaderFlags, out int shaderCount)
