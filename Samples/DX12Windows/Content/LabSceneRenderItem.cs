@@ -2,12 +2,11 @@
 using ContentTools;
 using DX12Windows.Scripts;
 using DX12Windows.Shaders;
-using PrimalLike;
 using PrimalLike.Common;
+using PrimalLike.Components;
 using PrimalLike.Content;
 using PrimalLike.Graphics;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -44,11 +43,13 @@ namespace DX12Windows.Content
         private uint intModelId = uint.MaxValue;
         private uint labModelId = uint.MaxValue;
         private uint fembotModelId = uint.MaxValue;
+        private uint sphereModelId = uint.MaxValue;
 
-        private uint fanItemId = uint.MaxValue;
-        private uint intItemId = uint.MaxValue;
-        private uint labItemId = uint.MaxValue;
-        private uint fembotItemId = uint.MaxValue;
+        private uint fanEntityId = uint.MaxValue;
+        private uint intEntityId = uint.MaxValue;
+        private uint labEntityId = uint.MaxValue;
+        private uint fembotEntityId = uint.MaxValue;
+        private readonly uint[] sphereEntityIds = new uint[12];
 
         private enum TextureUsages : uint
         {
@@ -65,8 +66,7 @@ namespace DX12Windows.Content
 
         private uint defaultMtlId = uint.MaxValue;
         private uint fembotMtlId = uint.MaxValue;
-
-        private readonly Dictionary<uint, uint> renderItemEntityMap = [];
+        private readonly uint[] pbrMtlIds = new uint[12];
 
         public Vector3 InitialCameraPosition { get; } = new(-5.49f, 1.73f, 9.26f);
         public Quaternion InitialCameraRotation { get; } = Quaternion.CreateFromYawPitchRoll(5.61f, 0.19f, 0f);
@@ -87,7 +87,7 @@ namespace DX12Windows.Content
                 string[] assets =
                 [
                     .. AssimpImporter.Read(modelPrimalLab, new(), assetsFolder),
-                    .. AssimpImporter.Read(modelFembot, new() { CalculateTangents = true }, assetsFolder),
+                    .. AssimpImporter.Read(modelFembot, new(), assetsFolder),
                     .. PrimitiveMesh.CreatePrimitiveMesh(new(), new() { Type = PrimitiveMeshType.UvSphere, Segments = [48, 48], Size = new Vector3(0.5f) }, assetsFolder),
                 ];
 
@@ -193,13 +193,9 @@ namespace DX12Windows.Content
                 new(() => { labModelId = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, intModelName)); }),
                 new(() => { intModelId = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, labModelName)); }),
                 new(() => { fembotModelId = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, fembotModelName)); }),
+                new(() => { sphereModelId = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, sphereModelName)); }),
                 new(TestShaders.LoadShaders),
             ];
-
-            uint fanEntityId = HelloWorldApp.CreateOneGameEntity<FanScript>(new Vector3(-10.47f, 5.93f, -6.7f), Vector3.Zero).Id;
-            uint labEntityId = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, Vector3.Zero).Id;
-            uint intEntityId = HelloWorldApp.CreateOneGameEntity<WibblyWobblyScript>(new Vector3(0f, 1.3f, -6.6f), Vector3.Zero).Id;
-            uint fembotEntityId = HelloWorldApp.CreateOneGameEntity<RotatorScript>(new Vector3(-6f, 0f, 10f), new Vector3(0f, MathF.PI, 0f)).Id;
 
             foreach (var t in tasks)
             {
@@ -211,20 +207,36 @@ namespace DX12Windows.Content
                 t.Join();
             }
 
+            GeometryInfo geometryInfo = new();
+
             // NOTE: we need shaders to be ready before creating materials
             CreateMaterial();
-            uint[] materials = [defaultMtlId];
-            uint[] fembotMaterials = [fembotMtlId, fembotMtlId];
 
-            fanItemId = ContentToEngine.AddRenderItem(fanEntityId, fanModelId, materials);
-            labItemId = ContentToEngine.AddRenderItem(labEntityId, labModelId, materials);
-            intItemId = ContentToEngine.AddRenderItem(intEntityId, intModelId, materials);
-            fembotItemId = ContentToEngine.AddRenderItem(fembotEntityId, fembotModelId, fembotMaterials);
+            geometryInfo.MaterialIds = [defaultMtlId];
 
-            renderItemEntityMap[fanItemId] = fanEntityId;
-            renderItemEntityMap[labItemId] = labEntityId;
-            renderItemEntityMap[intItemId] = intEntityId;
-            renderItemEntityMap[fembotItemId] = fembotEntityId;
+            geometryInfo.GeometryContentId = labModelId;
+            labEntityId = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, Quaternion.Identity, geometryInfo).Id;
+
+            geometryInfo.GeometryContentId = fanModelId;
+            fanEntityId = HelloWorldApp.CreateOneGameEntity(new(-10.47f, 5.93f, -6.7f), Quaternion.Identity, geometryInfo).Id;
+
+            geometryInfo.GeometryContentId = intModelId;
+            intEntityId = HelloWorldApp.CreateOneGameEntity(new(0f, 1.3f, -6.6f), Quaternion.Identity, geometryInfo).Id;
+
+            geometryInfo.GeometryContentId = fembotModelId;
+            geometryInfo.MaterialIds = [fembotMtlId, fembotMtlId];
+            fembotEntityId = HelloWorldApp.CreateOneGameEntity<RotatorScript>(new(-6f, 0f, 10f), Quaternion.CreateFromYawPitchRoll(MathF.PI, 0f, 0f), geometryInfo).Id;
+
+            Array.Fill(sphereEntityIds, uint.MaxValue);
+            geometryInfo.GeometryContentId = sphereModelId;
+            for (int i = 0; i < pbrMtlIds.Length; i++)
+            {
+                geometryInfo.MaterialIds = [pbrMtlIds[i]];
+                float x = -6f + i % 6;
+                float y = (i < 6) ? 7f : 5.5f;
+                float z = x;
+                sphereEntityIds[i] = HelloWorldApp.CreateOneGameEntity(new(x, y, z), Quaternion.Identity, geometryInfo).Id;
+            }
         }
         private void CreateMaterial()
         {
@@ -236,6 +248,32 @@ namespace DX12Windows.Content
             info.Type = MaterialTypes.Opaque;
             defaultMtlId = ContentToEngine.CreateResource(info, AssetTypes.Material);
 
+            Array.Fill(pbrMtlIds, uint.MaxValue);
+            Vector2[] metalRough =
+            [
+                new(0f, 0.0f),
+                new(0f, 0.2f),
+                new(0f, 0.4f),
+                new(0f, 0.6f),
+                new(0f, 0.8f),
+                new(0f, 1f),
+                new(1f, 0.0f),
+                new(1f, 0.2f),
+                new(1f, 0.4f),
+                new(1f, 0.6f),
+                new(1f, 0.8f),
+                new(1f, 1f),
+            ];
+
+            MaterialSurface s = info.Surface;
+            s.BaseColor = new(0.5f, 0.5f, 0.5f, 1f);
+            for (int i = 0; i < pbrMtlIds.Length; i++)
+            {
+                s.Metallic = metalRough[i].X;
+                s.Roughness = metalRough[i].Y;
+                pbrMtlIds[i] = ContentToEngine.CreateResource(info, AssetTypes.Material);
+            }
+
             info.ShaderIds[(uint)ShaderTypes.Pixel] = TestShaders.TexturedPsId;
             info.TextureCount = (int)TextureUsages.Count;
             info.TextureIds = textureIds;
@@ -244,10 +282,21 @@ namespace DX12Windows.Content
 
         public void DestroyRenderItems()
         {
-            RemoveItem(labItemId, labModelId);
-            RemoveItem(fanItemId, fanModelId);
-            RemoveItem(intItemId, intModelId);
-            RemoveItem(fembotItemId, fembotModelId);
+            HelloWorldApp.RemoveGameEntity(labEntityId);
+            HelloWorldApp.RemoveGameEntity(fanEntityId);
+            HelloWorldApp.RemoveGameEntity(intEntityId);
+            HelloWorldApp.RemoveGameEntity(fembotEntityId);
+
+            for (int i = 0; i < sphereEntityIds.Length; i++)
+            {
+                HelloWorldApp.RemoveGameEntity(sphereEntityIds[i]);
+            }
+
+            ITestRenderItem.RemoveModel(labModelId);
+            ITestRenderItem.RemoveModel(fanModelId);
+            ITestRenderItem.RemoveModel(intModelId);
+            ITestRenderItem.RemoveModel(fembotModelId);
+            ITestRenderItem.RemoveModel(sphereModelId);
 
             // remove material
             if (IdDetail.IsValid(defaultMtlId))
@@ -258,6 +307,14 @@ namespace DX12Windows.Content
             if (IdDetail.IsValid(fembotMtlId))
             {
                 ContentToEngine.DestroyResource(fembotMtlId, AssetTypes.Material);
+            }
+
+            foreach (uint id in pbrMtlIds)
+            {
+                if (IdDetail.IsValid(id))
+                {
+                    ContentToEngine.DestroyResource(id, AssetTypes.Material);
+                }
             }
 
             // remove textures
@@ -271,30 +328,6 @@ namespace DX12Windows.Content
 
             // remove shaders and textures
             TestShaders.RemoveShaders();
-        }
-        private void RemoveItem(uint itemId, uint modelId)
-        {
-            if (!IdDetail.IsValid(itemId))
-            {
-                return;
-            }
-
-            ContentToEngine.RemoveRenderItem(itemId);
-
-            if (renderItemEntityMap.TryGetValue(itemId, out var value))
-            {
-                Application.RemoveEntity(value);
-            }
-
-            if (IdDetail.IsValid(modelId))
-            {
-                ContentToEngine.DestroyResource(modelId, AssetTypes.Mesh);
-            }
-        }
-
-        public uint[] GetRenderItems()
-        {
-            return [labItemId, fanItemId, intItemId, fembotItemId];
         }
     }
 }

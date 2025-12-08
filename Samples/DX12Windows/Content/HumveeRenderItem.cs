@@ -1,11 +1,10 @@
 ﻿using AssetsImporter;
 using DX12Windows.Scripts;
 using DX12Windows.Shaders;
-using PrimalLike;
 using PrimalLike.Common;
+using PrimalLike.Components;
 using PrimalLike.Content;
 using PrimalLike.Graphics;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -24,12 +23,10 @@ namespace DX12Windows.Content
         private uint model1Id = uint.MaxValue;
         private uint model2Id = uint.MaxValue;
 
-        private uint item1Id = uint.MaxValue;
-        private uint item2Id = uint.MaxValue;
+        private uint entity1Id = uint.MaxValue;
+        private uint entity2Id = uint.MaxValue;
 
         private uint mtlId = uint.MaxValue;
-
-        private readonly Dictionary<uint, uint> renderItemEntityMap = [];
 
         public Vector3 InitialCameraPosition { get; } = new(0f, 0.8f, -3f);
         public Quaternion InitialCameraRotation { get; } = Quaternion.CreateFromYawPitchRoll(3.14f, 3.14f, 0f);
@@ -65,9 +62,6 @@ namespace DX12Windows.Content
             var _2 = new Thread(() => { model2Id = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, model2Name)); });
             var _3 = new Thread(TestShaders.LoadShaders);
 
-            uint entity1Id = HelloWorldApp.CreateOneGameEntity<RotatorScript>(Vector3.Zero, Vector3.Zero).Id;
-            uint entity2Id = HelloWorldApp.CreateOneGameEntity<RotatorScript>(Vector3.Zero, Vector3.Zero).Id;
-
             _1.Start();
             _2.Start();
             _3.Start();
@@ -76,15 +70,18 @@ namespace DX12Windows.Content
             _2.Join();
             _3.Join();
 
+            GeometryInfo geometryInfo = new();
+
             // NOTE: we need shaders to be ready before creating materials
             CreateMaterial();
-            uint[] materials = [mtlId];
 
-            item1Id = ContentToEngine.AddRenderItem(entity1Id, model1Id, materials);
-            item2Id = ContentToEngine.AddRenderItem(entity2Id, model2Id, materials);
+            geometryInfo.MaterialIds = [mtlId];
 
-            renderItemEntityMap[item1Id] = entity1Id;
-            renderItemEntityMap[item2Id] = entity2Id;
+            geometryInfo.GeometryContentId = model1Id;
+            entity1Id = HelloWorldApp.CreateOneGameEntity<RotatorScript>(Vector3.Zero, Quaternion.Identity, geometryInfo).Id;
+           
+            geometryInfo.GeometryContentId = model2Id;
+            entity2Id = HelloWorldApp.CreateOneGameEntity<RotatorScript>(Vector3.Zero, Quaternion.Identity, geometryInfo).Id;
         }
         private void CreateMaterial()
         {
@@ -99,8 +96,11 @@ namespace DX12Windows.Content
 
         public void DestroyRenderItems()
         {
-            RemoveItem(item1Id, model1Id);
-            RemoveItem(item2Id, model2Id);
+            HelloWorldApp.RemoveGameEntity(entity1Id);
+            HelloWorldApp.RemoveGameEntity(entity2Id);
+
+            ITestRenderItem.RemoveModel(model1Id);
+            ITestRenderItem.RemoveModel(model2Id);
 
             // remove material
             if (IdDetail.IsValid(mtlId))
@@ -110,28 +110,6 @@ namespace DX12Windows.Content
 
             // remove shaders and textures
             TestShaders.RemoveShaders();
-        }
-        private void RemoveItem(uint itemId, uint modelId)
-        {
-            if (IdDetail.IsValid(itemId))
-            {
-                ContentToEngine.RemoveRenderItem(itemId);
-
-                if (renderItemEntityMap.TryGetValue(itemId, out var value))
-                {
-                    Application.RemoveEntity(value);
-                }
-
-                if (IdDetail.IsValid(modelId))
-                {
-                    ContentToEngine.DestroyResource(modelId, AssetTypes.Mesh);
-                }
-            }
-        }
-
-        public uint[] GetRenderItems()
-        {
-            return [item1Id, item2Id];
         }
     }
 }

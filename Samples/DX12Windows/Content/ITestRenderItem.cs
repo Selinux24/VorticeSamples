@@ -13,7 +13,6 @@ namespace DX12Windows.Content
 
         void Load(string assetsFolder, string outputsFolder);
         void DestroyRenderItems();
-        uint[] GetRenderItems();
 
         public static uint LoadModel(string modelPath)
         {
@@ -32,6 +31,14 @@ namespace DX12Windows.Content
             Debug.Assert(IdDetail.IsValid(id));
 
             return id;
+        }
+
+        public static void RemoveModel(uint modelId)
+        {
+            if (IdDetail.IsValid(modelId))
+            {
+                ContentToEngine.DestroyResource(modelId, AssetTypes.Mesh);
+            }
         }
     }
 }

@@ -409,24 +409,6 @@ namespace ContentTools
             }
             Debug.Assert(m.Indices.Max() < m.Vertices.Count);
         }
-        private static List<int>[] GetMeshRawIdRefList(Mesh m)
-        {
-            List<List<int>> idxRef = [];
-
-            int numVertices = m.Positions.Length;
-            for (int i = 0; i < numVertices; i++)
-            {
-                idxRef.Add([]);
-            }
-
-            int numIndices = m.RawIndices.Length;
-            for (int i = 0; i < numIndices; i++)
-            {
-                idxRef[(int)m.RawIndices[i]].Add(i);
-            }
-
-            return [.. idxRef];
-        }
 
         private static void ProcessUVs(Mesh m)
         {
@@ -476,24 +458,6 @@ namespace ContentTools
                 }
             }
         }
-        private static List<int>[] GetMeshIdRefList(Mesh m)
-        {
-            List<List<int>> idxRef = [];
-
-            int numVertices = m.Vertices.Count;
-            for (int i = 0; i < numVertices; i++)
-            {
-                idxRef.Add([]);
-            }
-
-            int numIndices = m.Indices.Count;
-            for (int i = 0; i < numIndices; i++)
-            {
-                idxRef[(int)m.Indices[i]].Add(i);
-            }
-
-            return [.. idxRef];
-        }
         private static bool Vector2NearEqual(Vector2 a, Vector2 b, float eps)
         {
             return
@@ -527,7 +491,7 @@ namespace ContentTools
             m.ElementBuffer = msElementsType.ToArray();
         }
 
-        public static string PackData(Model model, string assetsFolder)
+        public static string PackData(Model model, string destinationFolder)
         {
             int sceneSize = GetSceneSize(model);
             IntPtr buffer = Marshal.AllocHGlobal(sceneSize);
@@ -556,10 +520,10 @@ namespace ContentTools
 
             Debug.Assert(sceneSize == blob.Offset);
 
-            string fileName = Path.Combine(assetsFolder, Path.ChangeExtension(model.Name, ".asset"));
-            if (!Directory.Exists(assetsFolder))
+            string fileName = Path.Combine(destinationFolder, Path.ChangeExtension(model.Name, ".asset"));
+            if (!Directory.Exists(destinationFolder))
             {
-                Directory.CreateDirectory(assetsFolder);
+                Directory.CreateDirectory(destinationFolder);
             }
             if (File.Exists(fileName))
             {
@@ -570,7 +534,7 @@ namespace ContentTools
 
             return fileName;
         }
-        public static string PackDataByLODGroup(LODGroup lodGroup, string assetsFolder)
+        public static string PackDataByLODGroup(LODGroup lodGroup, string destinationFolder)
         {
             int sceneSize = GetLODGroupSize(lodGroup);
             IntPtr buffer = Marshal.AllocHGlobal(sceneSize);
@@ -596,10 +560,10 @@ namespace ContentTools
 
             Debug.Assert(sceneSize == blob.Offset);
 
-            string fileName = Path.Combine(assetsFolder, Path.ChangeExtension(lodGroup.Name, ".asset"));
-            if (!Directory.Exists(assetsFolder))
+            string fileName = Path.Combine(destinationFolder, Path.ChangeExtension(lodGroup.Name, ".asset"));
+            if (!Directory.Exists(destinationFolder))
             {
-                Directory.CreateDirectory(assetsFolder);
+                Directory.CreateDirectory(destinationFolder);
             }
             if (File.Exists(fileName))
             {

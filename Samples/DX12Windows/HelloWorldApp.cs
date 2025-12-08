@@ -19,18 +19,31 @@ namespace DX12Windows
             return new HelloWorldApp(new TPlatform(), new TGraphics());
         }
 
-        public static Entity CreateOneGameEntity(Vector3 position, Vector3 rotation)
+        public static Entity CreateOneGameEntity(Vector3 position, Quaternion rotation)
         {
-            return CreateOneGameEntity(position, rotation, 1.0f);
+            return CreateOneGameEntityInternal(position, rotation, 1.0f, null);
         }
-        public static Entity CreateOneGameEntity(Vector3 position, Vector3 rotation, float scale)
+        public static Entity CreateOneGameEntity(Vector3 position, Quaternion rotation, float scale)
+        {
+            return CreateOneGameEntityInternal(position, rotation, scale, null);
+        }
+        public static Entity CreateOneGameEntity(Vector3 position, Quaternion rotation, GeometryInfo geometryInfo)
+        {
+            return CreateOneGameEntityInternal(position, rotation, 1.0f, geometryInfo);
+        }
+        public static Entity CreateOneGameEntity(Vector3 position, Quaternion rotation, float scale, GeometryInfo geometryInfo)
+        {
+            return CreateOneGameEntityInternal(position, rotation, scale, geometryInfo);
+        }
+        static Entity CreateOneGameEntityInternal(Vector3 position, Quaternion rotation, float scale, GeometryInfo? geometryInfo)
         {
             EntityInfo entityInfo = new()
             {
+                Geometry = geometryInfo,
                 Transform = new()
                 {
                     Position = position,
-                    Rotation = Quaternion.CreateFromYawPitchRoll(rotation.Y, rotation.X, rotation.Z),
+                    Rotation = rotation,
                     Scale = new(scale),
                 },
             };
@@ -40,20 +53,23 @@ namespace DX12Windows
             return ntt;
         }
 
-        public static Entity CreateOneGameEntity<T>(Vector3 position, Vector3 rotation) where T : EntityScript
-        {
-            return CreateOneGameEntity<T>(position, rotation, 1.0f);
-        }
         public static Entity CreateOneGameEntity<T>(Vector3 position, Quaternion rotation) where T : EntityScript
         {
-            return CreateOneGameEntity<T>(position, rotation, 1.0f);
-        }
-        public static Entity CreateOneGameEntity<T>(Vector3 position, Vector3 rotation, float scale) where T : EntityScript
-        {
-            var q = Quaternion.CreateFromYawPitchRoll(rotation.X, rotation.Y, rotation.Z);
-            return CreateOneGameEntity<T>(position, q, scale);
+            return CreateOneGameEntityInternal<T>(position, rotation, 1.0f, null);
         }
         public static Entity CreateOneGameEntity<T>(Vector3 position, Quaternion rotation, float scale) where T : EntityScript
+        {
+            return CreateOneGameEntityInternal<T>(position, rotation, scale, null);
+        }
+        public static Entity CreateOneGameEntity<T>(Vector3 position, Quaternion rotation, GeometryInfo geometryInfo) where T : EntityScript
+        {
+            return CreateOneGameEntityInternal<T>(position, rotation, 1.0f, geometryInfo);
+        }
+        public static Entity CreateOneGameEntity<T>(Vector3 position, Quaternion rotation, float scale, GeometryInfo geometryInfo) where T : EntityScript
+        {
+            return CreateOneGameEntityInternal<T>(position, rotation, scale, geometryInfo);
+        }
+        static Entity CreateOneGameEntityInternal<T>(Vector3 position, Quaternion rotation, float scale, GeometryInfo? geometryInfo) where T : EntityScript
         {
             if (!RegisterScript<T>())
             {
@@ -62,6 +78,7 @@ namespace DX12Windows
 
             EntityInfo entityInfo = new()
             {
+                Geometry = geometryInfo,
                 Transform = new()
                 {
                     Position = position,
@@ -77,6 +94,11 @@ namespace DX12Windows
             Entity ntt = CreateEntity(entityInfo);
             Debug.Assert(ntt.IsValid);
             return ntt;
+        }
+
+        public static void RemoveGameEntity(uint id)
+        {
+            RemoveEntity(id);
         }
     }
 }

@@ -271,7 +271,7 @@ namespace ContentTools
         {
         }
 
-        public static IEnumerable<string> CreatePrimitiveMesh(GeometryImportSettings settings, PrimitiveInitInfo info, string baseFolder = null)
+        public static IEnumerable<string> CreatePrimitiveMesh(GeometryImportSettings settings, PrimitiveInitInfo info, string destinationFolder = null)
         {
             Debug.Assert(settings != null && info != null);
             Debug.Assert(info.Type < PrimitiveMeshType.Count);
@@ -282,7 +282,7 @@ namespace ContentTools
             settings.CalculateNormals = true;
             Geometry.ProcessModel(scene, settings);
 
-            yield return Geometry.PackData(scene, baseFolder ?? Path.GetRandomFileName());
+            yield return Geometry.PackData(scene, destinationFolder ?? Path.GetRandomFileName());
         }
     }
 }

@@ -3,6 +3,7 @@ using DX12Windows.Content;
 using DX12Windows.Lights;
 using DX12Windows.Shaders;
 using PrimalLike;
+using PrimalLike.Components;
 using PrimalLike.EngineAPI;
 using System;
 using System.Collections.Generic;
@@ -20,6 +21,7 @@ namespace DX12Windows
         private static HelloWorldComponent renderComponent;
 
         private static ITestRenderItem renderItem;
+        private static uint[] renderItemIds;
 
         private static readonly List<HelloWorldComponent> surfaces = [];
         private static bool resized = false;
@@ -32,7 +34,7 @@ namespace DX12Windows
                 opt = ChooseScene();
             }
 
-            if (opt != 1)
+            if (opt == 0)
             {
                 return;
             }
@@ -45,7 +47,11 @@ namespace DX12Windows
 
             CreateWindow();
 
-            LightGenerator.GenerateLights();
+            LightGenerator.GenerateLights(opt);
+
+            renderItemIds = Geometry.GetRenderItemIds();
+
+            CreateCamera();
 
             InitializeInput();
 
@@ -55,43 +61,38 @@ namespace DX12Windows
         {
             Console.Clear();
             Console.WriteLine("Choose the scene: ");
-            Console.WriteLine("1. Model");
-            Console.WriteLine("2. LabScene");
-            Console.WriteLine("3. ToyTank");
-            Console.WriteLine("4. Humvee");
-            Console.WriteLine("5. M-24");
-            Console.WriteLine("6. Exit");
-            var key = Console.ReadKey();
+            Console.WriteLine("1. LabScene");
+            Console.WriteLine("2. ToyTank");
+            Console.WriteLine("3. Humvee");
+            Console.WriteLine("4. M-24");
+            Console.WriteLine("5. Exit");
+            var key = Console.ReadKey(true);
             if (key.KeyChar == '1')
             {
-                renderItem = new ModelRenderItem();
+                renderItem = new LabSceneRenderItem();
+                return 1;
             }
             else if (key.KeyChar == '2')
             {
-                renderItem = new LabSceneRenderItem();
+                renderItem = new ToyTankRenderItem();
+                return 2;
             }
             else if (key.KeyChar == '3')
             {
-                renderItem = new ToyTankRenderItem();
+                renderItem = new HumveeRenderItem();
+                return 3;
             }
             else if (key.KeyChar == '4')
             {
-                renderItem = new HumveeRenderItem();
+                renderItem = new M24RenderItem();
+                return 4;
             }
             else if (key.KeyChar == '5')
             {
-                renderItem = new M24RenderItem();
-            }
-            else if (key.KeyChar == '6')
-            {
                 return 0;
             }
-            else
-            {
-                return -1;
-            }
 
-            return 1;
+            return -1;
         }
 
         static void InitializeApp()
@@ -110,18 +111,19 @@ namespace DX12Windows
             };
             renderComponent = Application.CreateRenderComponent<HelloWorldComponent>(windowInfo);
 
+            surfaces.Add(renderComponent);
+        }
+        static void CreateCamera()
+        {
             Entity entity = HelloWorldApp.CreateOneGameEntity<Scripts.CameraScript>(renderItem.InitialCameraPosition, renderItem.InitialCameraRotation);
             renderComponent.CreateCamera(entity);
 
-            var renderItems = renderItem.GetRenderItems();
-            var thresholds = new float[renderItems.Length];
-            for (int i = 0; i < renderItems.Length; i++)
+            var thresholds = new float[renderItemIds.Length];
+            for (int i = 0; i < renderItemIds.Length; i++)
             {
                 thresholds[i] = 0.1f;
             }
-            renderComponent.UpdateFrameInfo(renderItem.GetRenderItems(), thresholds);
-
-            surfaces.Add(renderComponent);
+            renderComponent.UpdateFrameInfo(renderItemIds, thresholds);
         }
         static IntPtr CustomWndProc(IntPtr hwnd, uint msg, IntPtr wParam, IntPtr lParam)
         {

@@ -14,7 +14,7 @@ namespace Direct3D12
     /// </summary>
     class D3D12Surface : IDisposable
     {
-        public const Format DefaultBackBufferFormat = Format.R8G8B8A8_UNorm_SRgb;
+        public const Format DefaultBackBufferFormat = Format.R16G16B16A16_Float;
         const int BufferCount = 3;
 
         struct RenderTargetData

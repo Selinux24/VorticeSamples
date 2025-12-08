@@ -9,7 +9,7 @@ namespace Direct3D12
     /// </summary>
     public class D3D12ResourceBarrier : IDisposable
     {
-        const int MaxResourceBarriers = 32;
+        const int MaxResourceBarriers = 64;
 
         private readonly ResourceBarrier[] barriers;
         private uint offset;

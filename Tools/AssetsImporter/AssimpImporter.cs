@@ -22,7 +22,7 @@ namespace AssetsImporter
         private static AScene aScene;
         private static GeometryImportSettings importSettings;
 
-        public static IEnumerable<string> Read(string fileName, GeometryImportSettings settings, string assetsFolder, Progression progression = null)
+        public static IEnumerable<string> Read(string fileName, GeometryImportSettings settings, string destinationFolder, Progression progression = null)
         {
             importSettings = settings;
 
@@ -46,7 +46,7 @@ namespace AssetsImporter
                 // Pack the scene data (for editor)
                 foreach (var lodGroup in model.LODGroups)
                 {
-                    yield return Geometry.PackDataByLODGroup(lodGroup, assetsFolder);
+                    yield return Geometry.PackDataByLODGroup(lodGroup, destinationFolder);
                 }
             }
         }
@@ -294,15 +294,12 @@ namespace AssetsImporter
                 {
                     tangents.AddRange(aMesh.Tangents.Select((t, i) =>
                     {
-                        var n = aMesh.Normals[i];
-                        var b = aMesh.BiTangents[i];
-
-                        var tn = Vector3.Normalize(new Vector3(t.X, t.Y, t.Z));
-                        var nn = Vector3.Normalize(new Vector3(n.X, n.Y, n.Z));
-                        var bn = Vector3.Normalize(new Vector3(b.X, b.Y, b.Z));
+                        var tn = Vector3.Normalize(t);
+                        var nn = Vector3.Normalize(aMesh.Normals[i]);
+                        var bn = Vector3.Normalize(aMesh.BiTangents[i]);
 
                         // Calculate handedness per vertex: w = sign( dot( cross(normal, tangent), bitangent ) )
-                        float handedness = Vector3.Dot(Vector3.Cross(nn, tn), bn) < 0f ? -1f : 1f;
+                        float handedness = Vector3.Dot(Vector3.Cross(nn, tn), bn) < 0f ? 1f : -1f;
                         return new Vector4(tn, handedness);
                     }));
                 }

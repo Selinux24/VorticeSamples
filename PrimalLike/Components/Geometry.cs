@@ -79,10 +79,9 @@ namespace PrimalLike.Components
             return [.. renderItemIds];
         }
 
-        private static uint lastRenderId = 0;
         private static IdType AddRenderItem(EntityId entityId, GeometryInfo geometryInfo)
         {
-            return ++lastRenderId;
+            return Renderer.AddRenderItem(entityId, geometryInfo.GeometryContentId, geometryInfo.MaterialIds);
         }
     }
 }

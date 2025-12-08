@@ -44,7 +44,7 @@ namespace PrimalLike.Components
         }
         private static Vector3 CalculateOrientation(Quaternion rotation)
         {
-            return Vector3.Transform(Vector3.UnitZ, rotation);
+            return Vector3.Normalize(Vector3.Transform(Vector3.UnitZ, rotation));
         }
 
         private static void SetRotation(TransformId id, Quaternion rotation)

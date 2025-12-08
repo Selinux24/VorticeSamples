@@ -2,6 +2,7 @@
 using DX12Windows.Shaders;
 using PrimalLike;
 using PrimalLike.Common;
+using PrimalLike.Components;
 using PrimalLike.Content;
 using PrimalLike.Graphics;
 using System.Collections.Generic;
@@ -20,10 +21,8 @@ namespace DX12Windows.Content
 
         private const string modelName = "toytank_model.model";
         private uint modelId = uint.MaxValue;
-        private uint itemId = uint.MaxValue;
+        private uint entityId = uint.MaxValue;
         private uint mtlId = uint.MaxValue;
-
-        private readonly Dictionary<uint, uint> renderItemEntityMap = [];
 
         public Vector3 InitialCameraPosition { get; } = new(0, 0.2f, -3f);
         public Quaternion InitialCameraRotation { get; } = Quaternion.CreateFromYawPitchRoll(3.14f, 3.14f, 0);
@@ -57,8 +56,6 @@ namespace DX12Windows.Content
             var _1 = new Thread(() => { modelId = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, modelName)); });
             var _2 = new Thread(TestShaders.LoadShaders);
 
-            uint entityId = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, new(-MathHelper.PiOver2, MathHelper.PiOver4, 0), 25f).Id;
-
             _1.Start();
             _2.Start();
 
@@ -67,11 +64,14 @@ namespace DX12Windows.Content
 
             // NOTE: we need shaders to be ready before creating materials
             CreateMaterial();
-            uint[] materials = [mtlId];
 
-            itemId = ContentToEngine.AddRenderItem(entityId, modelId, materials);
+            GeometryInfo geometryInfo = new()
+            {
+                GeometryContentId = modelId,
+                MaterialIds = [mtlId],
+            };
 
-            renderItemEntityMap[itemId] = entityId;
+            entityId = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, Quaternion.CreateFromYawPitchRoll(MathHelper.PiOver4, -MathHelper.PiOver2, 0f), 25f, geometryInfo).Id;
         }
         private void CreateMaterial()
         {
@@ -86,7 +86,9 @@ namespace DX12Windows.Content
 
         public void DestroyRenderItems()
         {
-            RemoveItem(itemId, modelId);
+            HelloWorldApp.RemoveGameEntity(entityId);
+
+            ITestRenderItem.RemoveModel(modelId);
 
             // remove material
             if (IdDetail.IsValid(mtlId))
@@ -96,28 +98,6 @@ namespace DX12Windows.Content
 
             // remove shaders and textures
             TestShaders.RemoveShaders();
-        }
-        private void RemoveItem(uint itemId, uint modelId)
-        {
-            if (IdDetail.IsValid(itemId))
-            {
-                ContentToEngine.RemoveRenderItem(itemId);
-
-                if (renderItemEntityMap.TryGetValue(itemId, out var value))
-                {
-                    Application.RemoveEntity(value);
-                }
-
-                if (IdDetail.IsValid(modelId))
-                {
-                    ContentToEngine.DestroyResource(modelId, AssetTypes.Mesh);
-                }
-            }
-        }
-
-        public uint[] GetRenderItems()
-        {
-            return [itemId];
         }
     }
 }

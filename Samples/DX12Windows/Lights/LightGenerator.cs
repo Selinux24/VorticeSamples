@@ -39,7 +39,18 @@ namespace DX12Windows.Lights
             return MathF.Max(min, v);
         }
 
-        public static void GenerateLights()
+        public static void GenerateLights(int lightSet)
+        {
+            if (lightSet == 1)
+            {
+                GenerateLightsForLab();
+            }
+            else
+            {
+                GenerateLightsDefault();
+            }
+        }
+        private static void GenerateLightsForLab()
         {
             Application.CreateLightSet(leftSet);
             Application.CreateLightSet(rightSet);
@@ -47,7 +58,7 @@ namespace DX12Windows.Lights
             // LEFT_SET
             LightInitInfo info = new()
             {
-                EntityId = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, Vector3.Zero).Id,
+                EntityId = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, Quaternion.Identity).Id,
                 LightType = LightTypes.Directional,
                 LightSetKey = leftSet,
                 Intensity = 1f,
@@ -55,25 +66,25 @@ namespace DX12Windows.Lights
             };
             lights.Add(Application.CreateLight(info));
 
-            info.EntityId = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, new(MathHelper.PiOver2, 0, 0)).Id;
+            info.EntityId = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, Quaternion.CreateFromYawPitchRoll(0f, MathHelper.PiOver2, 0f)).Id;
             info.Color = RGBToColor(17, 27, 48);
             lights.Add(Application.CreateLight(info));
 
-            info.EntityId = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, new(-MathHelper.PiOver2, 0, 0)).Id;
+            info.EntityId = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, Quaternion.CreateFromYawPitchRoll(0f, -MathHelper.PiOver2, 0f)).Id;
             info.Color = RGBToColor(63, 47, 30);
             lights.Add(Application.CreateLight(info));
 
             // RIGHT_SET
-            info.EntityId = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, Vector3.Zero).Id;
+            info.EntityId = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, Quaternion.Identity).Id;
             info.LightSetKey = rightSet;
             info.Color = RGBToColor(150, 100, 200);
             lights.Add(Application.CreateLight(info));
 
-            info.EntityId = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, new(MathHelper.PiOver2, 0, 0)).Id;
+            info.EntityId = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, Quaternion.CreateFromYawPitchRoll(0f, MathHelper.PiOver2, 0f)).Id;
             info.Color = RGBToColor(17, 27, 48);
             lights.Add(Application.CreateLight(info));
 
-            info.EntityId = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, new(-MathHelper.PiOver2, 0, 0)).Id;
+            info.EntityId = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, Quaternion.CreateFromYawPitchRoll(0f, -MathHelper.PiOver2, 0f)).Id;
             info.Color = RGBToColor(163, 47, 30);
             lights.Add(Application.CreateLight(info));
 
@@ -107,6 +118,44 @@ namespace DX12Windows.Lights
             CreateLight(new(0, 0.1f, 7), new(0, 3.14f, 0), LightTypes.Spot, leftSet);
 #endif
         }
+        private static void GenerateLightsDefault()
+        {
+            Application.CreateLightSet(leftSet);
+            Application.CreateLightSet(rightSet);
+
+            // LEFT_SET
+            LightInitInfo info = new()
+            {
+                EntityId = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, Quaternion.Identity).Id,
+                LightType = LightTypes.Directional,
+                LightSetKey = leftSet,
+                Intensity = 1f,
+                Color = RGBToColor(174, 174, 174)
+            };
+            lights.Add(Application.CreateLight(info));
+
+            info.EntityId = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, Quaternion.CreateFromYawPitchRoll(0f, MathHelper.PiOver2, 0f)).Id;
+            info.Color = RGBToColor(17, 27, 48);
+            lights.Add(Application.CreateLight(info));
+
+            info.EntityId = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, Quaternion.CreateFromYawPitchRoll(0f, -MathHelper.PiOver2, 0f)).Id;
+            info.Color = RGBToColor(63, 47, 30);
+            lights.Add(Application.CreateLight(info));
+
+            // RIGHT_SET
+            info.EntityId = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, Quaternion.Identity).Id;
+            info.LightSetKey = rightSet;
+            info.Color = RGBToColor(150, 100, 200);
+            lights.Add(Application.CreateLight(info));
+
+            info.EntityId = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, Quaternion.CreateFromYawPitchRoll(0f, MathHelper.PiOver2, 0f)).Id;
+            info.Color = RGBToColor(17, 27, 48);
+            lights.Add(Application.CreateLight(info));
+
+            info.EntityId = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, Quaternion.CreateFromYawPitchRoll(0f, -MathHelper.PiOver2, 0f)).Id;
+            info.Color = RGBToColor(163, 47, 30);
+            lights.Add(Application.CreateLight(info));
+        }
         private static void CreateLight(Vector3 position, Vector3 rotation, LightTypes type, ulong lightSetKey)
         {
 #if ROTATE_LIGHTS
@@ -114,7 +163,7 @@ namespace DX12Windows.Lights
                 HelloWorldApp.CreateOneGameEntity<Scripts.RotatorScript>(position, rotation).Id :
                 HelloWorldApp.CreateOneGameEntity(position, rotation).Id;
 #else
-            uint entityId = HelloWorldApp.CreateOneGameEntity(position, rotation).Id;
+            uint entityId = HelloWorldApp.CreateOneGameEntity(position, Quaternion.CreateFromYawPitchRoll(rotation.Y, rotation.X, rotation.Z)).Id;
 #endif
 
             LightInitInfo info = new()
@@ -122,7 +171,7 @@ namespace DX12Windows.Lights
                 EntityId = entityId,
                 LightType = type,
                 LightSetKey = lightSetKey,
-                Intensity = 10f,
+                Intensity = 1f,
 
                 Color = new(Random(0.2f), Random(0.2f), Random(0.2f))
             };

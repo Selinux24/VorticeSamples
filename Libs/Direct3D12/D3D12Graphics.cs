@@ -478,12 +478,12 @@ namespace Direct3D12
             D3D12GPass.Render(cmdList, ref d3d12Info);
 
             // Post-process
+            D3D12GPass.AddTransitionsForPostProcess(resourceBarriers);
             resourceBarriers.AddTransitionBarrier(
                 currentBackBuffer,
                 ResourceStates.Present,
                 ResourceStates.RenderTarget,
                 ResourceBarrierFlags.EndOnly);
-            D3D12GPass.AddTransitionsForPostProcess(resourceBarriers);
             resourceBarriers.Apply(cmdList);
 
             // Will write to the current back buffer, so back buffer is a render target

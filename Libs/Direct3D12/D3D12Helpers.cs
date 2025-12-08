@@ -389,7 +389,7 @@ namespace Direct3D12
             {
                 DxCall(D3D12Graphics.Device.CreateCommittedResource(
                     isCpuAccessible ? HeapPropertiesCollection.UploadHeap : HeapPropertiesCollection.DefaultHeap,
-                    HeapFlags.None,
+                    HeapFlags.CreateNotZeroed,
                     desc,
                     resourceState,
                     out resource));

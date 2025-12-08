@@ -1,5 +1,4 @@
-﻿using DX12Windows.Lights;
-using PrimalLike;
+﻿using PrimalLike;
 using PrimalLike.EngineAPI;
 using PrimalLike.Graphics;
 using WindowsPlatform;
