@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using Utilities;
+using Vortice.Direct3D11;
 
 namespace TexturesImporter
 {
@@ -47,7 +48,7 @@ namespace TexturesImporter
             info.ArraySize = metadata.IsVolumemap() ? metadata.Depth : metadata.ArraySize;
             info.MipLevels = metadata.MipLevels;
             SetOrClearFlag(ref info.Flags, TextureFlags.HasAlpha, Helper.HasAlpha(format));
-            SetOrClearFlag(ref info.Flags, TextureFlags.IsHdr, format == DXGI_FORMAT.BC6H_UF16 || format == DXGI_FORMAT.BC6H_SF16);
+            SetOrClearFlag(ref info.Flags, TextureFlags.IsHdr, DeviceManager.IsHdr(format));
             SetOrClearFlag(ref info.Flags, TextureFlags.IsPremultipliedAlpha, metadata.IsPMAlpha());
             SetOrClearFlag(ref info.Flags, TextureFlags.IsCubeMap, metadata.IsCubemap());
             SetOrClearFlag(ref info.Flags, TextureFlags.IsVolumeMap, metadata.IsVolumemap());
@@ -264,7 +265,7 @@ namespace TexturesImporter
         {
             var settings = data.ImportSettings;
 
-            ScratchImage scratch;
+            ScratchImage scratch = null;
             {
                 // Scope for working scratch
                 var metadata = MetadataFromTextureInfo(data.Info);
@@ -279,12 +280,27 @@ namespace TexturesImporter
                 }
                 else if (settings.Dimension == TextureDimensions.TextureCube)
                 {
-                    if ((arraySize % 6) != 0)
+                    var image = images[0];
+
+                    if (Utils.Equal((float)image.Width / image.Height, 2f))
+                    {
+                        if (!DeviceManager.RunOnGPU((device) =>
+                        {
+                            EnvMapProcessing.EquirectangularToCubemapGPU(device, images, arraySize, settings.CubemapSize, settings.PrefilterCubemap, settings.MirrorCubemap, out scratch);
+                        }))
+                        {
+                            EnvMapProcessing.EquirectangularToCubemapCPU(images, arraySize, settings.CubemapSize, settings.PrefilterCubemap, settings.MirrorCubemap, out scratch);
+                        }
+                    }
+                    else if (arraySize % 6 > 0 || image.Width != image.Height)
                     {
                         data.Info.ImportError = ImportErrors.NeedSixImages;
                         return null;
                     }
-                    scratch = workingScratch.CreateCubeCopy(0, arraySize, CP_FLAGS.NONE);
+                    else
+                    {
+                        scratch = workingScratch.CreateCubeCopy(0, arraySize, CP_FLAGS.NONE);
+                    }
                 }
                 else
                 {
@@ -299,35 +315,36 @@ namespace TexturesImporter
                 }
             }
 
-            if (settings.MipLevels == 1)
+            if (settings.MipLevels == 1 || settings.PrefilterCubemap)
             {
                 return scratch;
             }
 
+            return GenerateMipmaps(scratch, data.Info, settings.PrefilterCubemap ? 0 : settings.MipLevels, settings.Dimension == TextureDimensions.Texture3D);
+        }
+        private static ScratchImage GenerateMipmaps(ScratchImage scratch, TextureInfo info, int mipLevels, bool is3d)
+        {
+            var metadata = scratch.GetMetadata();
+            mipLevels = Math.Clamp(mipLevels, 0, GetMaxMipCount(metadata.Width, metadata.Height, metadata.Depth));
+
             ScratchImage mipScratch;
+
+            if (!is3d)
             {
-                var metadata = scratch.GetMetadata();
-                int mipLevels = Math.Clamp(settings.MipLevels, 0, GetMaxMipCount(metadata.Width, metadata.Height, metadata.Depth));
-
-                if (settings.Dimension != TextureDimensions.Texture3D)
-                {
-                    mipScratch = scratch.GenerateMipMaps(0, TEX_FILTER_FLAGS.DEFAULT, mipLevels, false);
-                }
-                else
-                {
-                    mipScratch = scratch.GenerateMipMaps3D(0, scratch.GetImageCount(), TEX_FILTER_FLAGS.DEFAULT, mipLevels);
-                }
-
-                if (mipScratch == null)
-                {
-                    data.Info.ImportError = ImportErrors.MipmapGeneration;
-                    return null;
-                }
-
-                scratch.Dispose();
-
-                return mipScratch;
+                mipScratch = scratch.GenerateMipMaps(0, TEX_FILTER_FLAGS.DEFAULT, mipLevels, false);
             }
+            else
+            {
+                mipScratch = scratch.GenerateMipMaps3D(0, scratch.GetImageCount(), TEX_FILTER_FLAGS.DEFAULT, mipLevels);
+            }
+
+            if (mipScratch == null)
+            {
+                info.ImportError = ImportErrors.MipmapGeneration;
+                return null;
+            }
+
+            return mipScratch;
         }
         private static void CopyIcon(ScratchImage bcScratch, ref TextureData data)
         {
@@ -360,12 +377,11 @@ namespace TexturesImporter
 
             var outputFormat = DetermineOutputFormat(ref data, scratch, image);
 
-            ScratchImage bcScratch;
-            if (DeviceManager.CanUseGpu(outputFormat))
+            ScratchImage bcScratch = null;
+            if (!(DeviceManager.CanUseGpu(outputFormat) && DeviceManager.RunOnGPU((device) =>
             {
                 bcScratch = DeviceManager.CompressGpu(scratch, outputFormat);
-            }
-            else
+            })))
             {
                 bcScratch = scratch.Compress(outputFormat, TEX_COMPRESS_FLAGS.PARALLEL, data.ImportSettings.AlphaThreshold);
             }
@@ -498,7 +514,7 @@ namespace TexturesImporter
             Debug.Assert(Helper.IsCompressed((DXGI_FORMAT)data.Info.Format));
 
             Debug.Assert(data.ImportSettings.Compress);
-            Image[] images = SubresourceDataToImageAssets(ref data);
+            var images = SubresourceDataToImageAssets(ref data);
 
             var metadata = MetadataFromTextureInfo(data.Info);
             var tmp = Helper.InitializeTemporary([.. images], metadata);
