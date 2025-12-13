@@ -1,5 +1,6 @@
 ﻿using AssetsImporter;
 using ContentTools;
+using DX12Windows.Assets;
 using DX12Windows.Scripts;
 using DX12Windows.Shaders;
 using PrimalLike.Common;
@@ -51,18 +52,7 @@ namespace DX12Windows.Content
         private uint fembotEntityId = uint.MaxValue;
         private readonly uint[] sphereEntityIds = new uint[12];
 
-        private enum TextureUsages : uint
-        {
-            AmbientOcclusion = 0,
-            BaseColor,
-            Emissive,
-            MetalRough,
-            Normal,
-
-            Count
-        }
-
-        private readonly uint[] textureIds = new uint[(int)TextureUsages.Count];
+        private readonly uint[] textureIds = new uint[(int)TestShaders.TextureUsages.Count];
 
         private uint defaultMtlId = uint.MaxValue;
         private uint fembotMtlId = uint.MaxValue;
@@ -103,72 +93,11 @@ namespace DX12Windows.Content
                 }
             }
 
-            string outputAmbientOcclusionTexture = Path.Combine(outputsFolder, ambientOcclusionTextureName);
-            string outputBaseColorTexture = Path.Combine(outputsFolder, baseColorTextureName);
-            string outputEmissiveTexture = Path.Combine(outputsFolder, emissiveTextureName);
-            string outputMetalRoughTexture = Path.Combine(outputsFolder, metalRoughTextureName);
-            string outputNormalTexture = Path.Combine(outputsFolder, normalTextureName);
-
-            if (!File.Exists(outputAmbientOcclusionTexture))
-            {
-                TextureData ambientOcclusionData = new();
-                ambientOcclusionData.ImportSettings.Compress = true;
-                ambientOcclusionData.ImportSettings.PreferBc7 = true;
-                ambientOcclusionData.ImportSettings.AlphaThreshold = 0.5f;
-                ambientOcclusionData.ImportSettings.Sources = ambientOcclusionTexture;
-
-                TextureImporter.Import(ref ambientOcclusionData);
-                ambientOcclusionData.SaveTexture(outputAmbientOcclusionTexture);
-            }
-
-            if (!File.Exists(outputBaseColorTexture))
-            {
-                TextureData baseColorData = new();
-                baseColorData.ImportSettings.Compress = true;
-                baseColorData.ImportSettings.PreferBc7 = true;
-                baseColorData.ImportSettings.AlphaThreshold = 0.5f;
-                baseColorData.ImportSettings.Sources = baseColorTexture;
-
-                TextureImporter.Import(ref baseColorData);
-                baseColorData.SaveTexture(outputBaseColorTexture);
-            }
-
-            if (!File.Exists(outputEmissiveTexture))
-            {
-                TextureData emissiveData = new();
-                emissiveData.ImportSettings.Compress = true;
-                emissiveData.ImportSettings.PreferBc7 = true;
-                emissiveData.ImportSettings.AlphaThreshold = 0.5f;
-                emissiveData.ImportSettings.Sources = emissiveTexture;
-
-                TextureImporter.Import(ref emissiveData);
-                emissiveData.SaveTexture(outputEmissiveTexture);
-            }
-
-            if (!File.Exists(outputMetalRoughTexture))
-            {
-                TextureData metalRoughData = new();
-                metalRoughData.ImportSettings.Compress = true;
-                metalRoughData.ImportSettings.PreferBc7 = true;
-                metalRoughData.ImportSettings.AlphaThreshold = 0.5f;
-                metalRoughData.ImportSettings.OutputFormat = BCFormats.BC5DualChannelGray;
-                metalRoughData.ImportSettings.Sources = metalRoughTexture;
-
-                TextureImporter.Import(ref metalRoughData);
-                metalRoughData.SaveTexture(outputMetalRoughTexture);
-            }
-
-            if (!File.Exists(outputNormalTexture))
-            {
-                TextureData normalData = new();
-                normalData.ImportSettings.Compress = true;
-                normalData.ImportSettings.PreferBc7 = true;
-                normalData.ImportSettings.AlphaThreshold = 0.5f;
-                normalData.ImportSettings.Sources = normalTexture;
-
-                TextureImporter.Import(ref normalData);
-                normalData.SaveTexture(outputNormalTexture);
-            }
+            Importer.ImportAmbientOcclusionTexture(Path.Combine(outputsFolder, ambientOcclusionTextureName), ambientOcclusionTexture);
+            Importer.ImportBaseColorTexture(Path.Combine(outputsFolder, baseColorTextureName), baseColorTexture);
+            Importer.ImportEmissiveTexture(Path.Combine(outputsFolder, emissiveTextureName), emissiveTexture);
+            Importer.ImportMetalRoughTexture(Path.Combine(outputsFolder, metalRoughTextureName), metalRoughTexture);
+            Importer.ImportNormalTexture(Path.Combine(outputsFolder, normalTextureName), normalTexture);
 
             TextureImporter.ShutDownTextureTools();
 
@@ -183,17 +112,18 @@ namespace DX12Windows.Content
             //       You can replace them with any model that's available to you.
             Thread[] tasks =
             [
-                new(() => { textureIds[(uint)TextureUsages.AmbientOcclusion] = ITestRenderItem.LoadTexture(Path.Combine(outputsFolder, ambientOcclusionTextureName)); }),
-                new(() => { textureIds[(uint)TextureUsages.BaseColor] = ITestRenderItem.LoadTexture(Path.Combine(outputsFolder, baseColorTextureName)); }),
-                new(() => { textureIds[(uint)TextureUsages.Emissive] = ITestRenderItem.LoadTexture(Path.Combine(outputsFolder, emissiveTextureName)); }),
-                new(() => { textureIds[(uint)TextureUsages.MetalRough] = ITestRenderItem.LoadTexture(Path.Combine(outputsFolder, metalRoughTextureName)); }),
-                new(() => { textureIds[(uint)TextureUsages.Normal] = ITestRenderItem.LoadTexture(Path.Combine(outputsFolder, normalTextureName)); }),
+                new(() => { textureIds[(uint)TestShaders.TextureUsages.AmbientOcclusion] = ITestRenderItem.LoadTexture(Path.Combine(outputsFolder, ambientOcclusionTextureName)); }),
+                new(() => { textureIds[(uint)TestShaders.TextureUsages.BaseColor] = ITestRenderItem.LoadTexture(Path.Combine(outputsFolder, baseColorTextureName)); }),
+                new(() => { textureIds[(uint)TestShaders.TextureUsages.Emissive] = ITestRenderItem.LoadTexture(Path.Combine(outputsFolder, emissiveTextureName)); }),
+                new(() => { textureIds[(uint)TestShaders.TextureUsages.MetalRough] = ITestRenderItem.LoadTexture(Path.Combine(outputsFolder, metalRoughTextureName)); }),
+                new(() => { textureIds[(uint)TestShaders.TextureUsages.Normal] = ITestRenderItem.LoadTexture(Path.Combine(outputsFolder, normalTextureName)); }),
 
                 new(() => { fanModelId = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, fanModelName)); }),
                 new(() => { labModelId = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, intModelName)); }),
                 new(() => { intModelId = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, labModelName)); }),
                 new(() => { fembotModelId = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, fembotModelName)); }),
                 new(() => { sphereModelId = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, sphereModelName)); }),
+
                 new(TestShaders.LoadShaders),
             ];
 
@@ -218,10 +148,10 @@ namespace DX12Windows.Content
             labEntityId = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, Quaternion.Identity, geometryInfo).Id;
 
             geometryInfo.GeometryContentId = fanModelId;
-            fanEntityId = HelloWorldApp.CreateOneGameEntity(new(-10.47f, 5.93f, -6.7f), Quaternion.Identity, geometryInfo).Id;
+            fanEntityId = HelloWorldApp.CreateOneGameEntity<FanScript>(new(-10.47f, 5.93f, -6.7f), Quaternion.Identity, geometryInfo).Id;
 
             geometryInfo.GeometryContentId = intModelId;
-            intEntityId = HelloWorldApp.CreateOneGameEntity(new(0f, 1.3f, -6.6f), Quaternion.Identity, geometryInfo).Id;
+            intEntityId = HelloWorldApp.CreateOneGameEntity<WibblyWobblyScript>(new(0f, 1.3f, 0f), Quaternion.Identity, geometryInfo).Id;
 
             geometryInfo.GeometryContentId = fembotModelId;
             geometryInfo.MaterialIds = [fembotMtlId, fembotMtlId];
@@ -289,11 +219,10 @@ namespace DX12Windows.Content
             {
                 MaterialInitInfo info = new();
                 info.ShaderIds[(uint)ShaderTypes.Vertex] = TestShaders.VsId;
-                info.ShaderIds[(uint)ShaderTypes.Pixel] = TestShaders.PsId;
                 info.ShaderIds[(uint)ShaderTypes.Pixel] = TestShaders.TexturedPsId;
                 info.Type = MaterialTypes.Opaque;
 
-                info.TextureCount = (int)TextureUsages.Count;
+                info.TextureCount = (int)TestShaders.TextureUsages.Count;
                 info.TextureIds = textureIds;
 
                 fembotMtlId = ContentToEngine.CreateResource(info, AssetTypes.Material);

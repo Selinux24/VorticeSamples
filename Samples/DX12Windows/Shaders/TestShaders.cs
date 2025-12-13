@@ -10,6 +10,17 @@ namespace DX12Windows.Shaders
 {
     static class TestShaders
     {
+        public enum TextureUsages : uint
+        {
+            AmbientOcclusion = 0,
+            BaseColor,
+            Emissive,
+            MetalRough,
+            Normal,
+
+            Count
+        }
+
         private const string shadersSourcePath = "./Hlsl/";
         private const string shadersIncludeDir = "../../../../../Libs/Direct3D12/Hlsl/";
 

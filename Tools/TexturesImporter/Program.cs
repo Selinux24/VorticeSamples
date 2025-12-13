@@ -18,7 +18,7 @@ namespace TexturesImporter
 
         static void Main()
         {
-            ImportCube(textureCubeHorn, 1024);
+            ImportCube(textureCubeHorn, 256);
             Import(textureAmbientOcclusionPath);
             Import(textureBaseColorPath);
             Import(textureEmissivePath);
@@ -28,8 +28,9 @@ namespace TexturesImporter
 
             TextureImporter.ShutDownTextureTools();
 
+            Console.WriteLine();
             Console.WriteLine("Press any key to exit.");
-            Console.ReadKey();
+            Console.ReadKey(true);
         }
         private static void Import(string texturePath, BCFormats? format = null, bool compress = true, bool preferBc7 = true)
         {
@@ -64,6 +65,8 @@ namespace TexturesImporter
             textureData.ImportSettings.AlphaThreshold = 0.5f;
             textureData.ImportSettings.Dimension = TextureDimensions.TextureCube;
             textureData.ImportSettings.CubemapSize = size;
+            textureData.ImportSettings.MirrorCubemap = true;
+            textureData.ImportSettings.PrefilterCubemap = true;
 
             ImportInternal(ref textureData);
         }
@@ -73,7 +76,11 @@ namespace TexturesImporter
 
             textureData.SaveTexture(GetTexturePath(textureData.ImportSettings.Sources));
 
-            Console.WriteLine($"Texture imported successfully => {Path.GetFileName(textureData.ImportSettings.Sources)}");
+            Console.WriteLine($"{textureData.Info.ImportError} => {Path.GetFileName(textureData.ImportSettings.Sources)}");
+            if (textureData.Info.ImportError == ImportErrors.Succeeded)
+            {
+                Console.WriteLine($"  Size: {textureData.Info.Width}x{textureData.Info.Height}, ArraySize: {textureData.Info.ArraySize}, Mips: {textureData.Info.MipLevels}");
+            }
         }
         private static string GetTexturePath(string textureName)
         {

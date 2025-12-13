@@ -6,7 +6,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using Utilities;
-using Vortice.Direct3D11;
 
 namespace TexturesImporter
 {
@@ -286,10 +285,10 @@ namespace TexturesImporter
                     {
                         if (!DeviceManager.RunOnGPU((device) =>
                         {
-                            EnvMapProcessing.EquirectangularToCubemapGPU(device, images, arraySize, settings.CubemapSize, settings.PrefilterCubemap, settings.MirrorCubemap, out scratch);
+                            EnvMapProcessing.EquirectangularToCubemapGPU(device, images, settings.CubemapSize, settings.PrefilterCubemap, settings.MirrorCubemap, out scratch);
                         }))
                         {
-                            EnvMapProcessing.EquirectangularToCubemapCPU(images, arraySize, settings.CubemapSize, settings.PrefilterCubemap, settings.MirrorCubemap, out scratch);
+                            EnvMapProcessing.EquirectangularToCubemapCPU(images, settings.CubemapSize, settings.PrefilterCubemap, settings.MirrorCubemap, out scratch);
                         }
                     }
                     else if (arraySize % 6 > 0 || image.Width != image.Height)

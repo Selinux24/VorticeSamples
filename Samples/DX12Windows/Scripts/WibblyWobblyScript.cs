@@ -18,7 +18,7 @@ namespace DX12Windows.Scripts
 
         public override void Update(float deltaTime)
         {
-            angle -= 0.01f * deltaTime * MathHelper.TwoPi;
+            angle -= 0.02f * deltaTime * MathHelper.TwoPi;
             if (angle > MathHelper.TwoPi) angle += MathHelper.TwoPi;
             float x = angle * 2f - MathHelper.Pi;
             float s1 = 0.05f * MathF.Sin(x) * MathF.Sin(MathF.Sin(x / 1.62f) + MathF.Sin(1.62f * x) + MathF.Sin(3.24f * x));

@@ -1,4 +1,5 @@
 ﻿using AssetsImporter;
+using DX12Windows.Assets;
 using DX12Windows.Shaders;
 using PrimalLike.Common;
 using PrimalLike.Components;
@@ -9,6 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Numerics;
 using System.Threading;
+using TexturesImporter;
 using Vortice.Mathematics;
 
 namespace DX12Windows.Content
@@ -17,12 +19,16 @@ namespace DX12Windows.Content
     {
         private const string modelM24 = "../../../../../Assets/m24.dae";
 
+        private const string baseColorTexture = "../../../../../Assets/m24.dds";
+
         private const string model1Name = "m24_1_model.model";
         private const string model2Name = "m24_2_model.model";
         private const string model3Name = "m24_3_model.model";
         private const string model4Name = "m24_4_model.model";
         private const string model5Name = "m24_5_model.model";
         private const string model6Name = "m24_6_model.model";
+
+        private const string baseColorTextureName = "m24.texture";
 
         private uint model1Id = uint.MaxValue;
         private uint model2Id = uint.MaxValue;
@@ -37,6 +43,8 @@ namespace DX12Windows.Content
         private uint entity4Id = uint.MaxValue;
         private uint entity5Id = uint.MaxValue;
         private uint entity6Id = uint.MaxValue;
+
+        private readonly uint[] textureIds = new uint[(int)TestShaders.TextureUsages.Count];
 
         private uint mtlId = uint.MaxValue;
 
@@ -58,6 +66,7 @@ namespace DX12Windows.Content
             if (modelNames.Any(f => !File.Exists(f)))
             {
                 string[] assets = [.. AssimpImporter.Read(modelM24, new(), assetsFolder)];
+
                 Debug.Assert(assets.Length == modelNames.Length);
                 for (int i = 0; i < assets.Length; i++)
                 {
@@ -70,33 +79,37 @@ namespace DX12Windows.Content
                 }
             }
 
+            Importer.ImportBaseColorTexture(Path.Combine(outputsFolder, baseColorTextureName), baseColorTexture);
+
+            TextureImporter.ShutDownTextureTools();
+
             CreateRenderItems(outputsFolder);
         }
         private void CreateRenderItems(string outputsFolder)
         {
-            var _1 = new Thread(() => { model1Id = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, model1Name)); });
-            var _2 = new Thread(() => { model2Id = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, model2Name)); });
-            var _3 = new Thread(() => { model3Id = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, model3Name)); });
-            var _4 = new Thread(() => { model4Id = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, model4Name)); });
-            var _5 = new Thread(() => { model5Id = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, model5Name)); });
-            var _6 = new Thread(() => { model6Id = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, model6Name)); });
-            var _7 = new Thread(TestShaders.LoadShaders);
+            Thread[] tasks =
+            [
+                new(() => { textureIds[(uint)TestShaders.TextureUsages.BaseColor] = ITestRenderItem.LoadTexture(Path.Combine(outputsFolder, baseColorTextureName)); }),
 
-            _1.Start();
-            _2.Start();
-            _3.Start();
-            _4.Start();
-            _5.Start();
-            _6.Start();
-            _7.Start();
+                new(() => { model1Id = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, model1Name)); }),
+                new(() => { model2Id = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, model2Name)); }),
+                new(() => { model3Id = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, model3Name)); }),
+                new(() => { model4Id = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, model4Name)); }),
+                new(() => { model5Id = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, model5Name)); }),
+                new(() => { model6Id = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, model6Name)); }),
 
-            _1.Join();
-            _2.Join();
-            _3.Join();
-            _4.Join();
-            _5.Join();
-            _6.Join();
-            _7.Join();
+                new(TestShaders.LoadShaders),
+            ];
+
+            foreach (var t in tasks)
+            {
+                t.Start();
+            }
+
+            foreach (var t in tasks)
+            {
+                t.Join();
+            }
 
             GeometryInfo geometryInfo = new();
 
@@ -125,8 +138,11 @@ namespace DX12Windows.Content
 
             MaterialInitInfo info = new();
             info.ShaderIds[(uint)ShaderTypes.Vertex] = TestShaders.VsId;
-            info.ShaderIds[(uint)ShaderTypes.Pixel] = TestShaders.PsId;
+            info.ShaderIds[(uint)ShaderTypes.Pixel] = TestShaders.TexturedPsId;
             info.Type = MaterialTypes.Opaque;
+            info.TextureCount = (int)TestShaders.TextureUsages.Count;
+            info.TextureIds = textureIds;
+
             mtlId = ContentToEngine.CreateResource(info, AssetTypes.Material);
         }
 
