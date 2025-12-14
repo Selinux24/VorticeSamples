@@ -9,11 +9,13 @@ using Vortice.DXGI;
 
 namespace TexturesImporter
 {
-    class EnvMapProcessingShader
+    class PrefilterDiffuseEnvMap
     {
         const string ShaderFileName = "./EnvMapProcessing.hlsl";
-        const string ShaderEntryPoint = "EquirectangularToCubeMapCS";
         const string ShaderProfile = "cs_5_0";
+        const string ShaderPrefilterEntryPoint = "PrefilterDiffuseEnvMapCS";
+
+        const int PrefilteredDiffuseCubemapSize = 64;
 
         public struct ShaderConstants
         {
@@ -32,48 +34,74 @@ namespace TexturesImporter
         readonly ID3D11Buffer[] zeroBuffers;
 
         private readonly ID3D11Device device;
-        private readonly uint cubemapSize;
+        private readonly uint sampleCount;
         private readonly uint arraySize;
+        private readonly uint cubeMapSize;
+        private readonly uint cubemapCount;
         private readonly Format format;
 
-        private readonly ID3D11Texture2D cubemaps;
+        private readonly ID3D11Texture2D cubemapsIn;
+        private readonly ID3D11Texture2D cubemapsOut;
         private readonly ID3D11Texture2D cubemapsCpu;
-        private readonly ID3D11ComputeShader shader;
+        private readonly ID3D11ComputeShader shaderPrefilter;
         private readonly ID3D11Buffer constantBuffer;
         private readonly ID3D11SamplerState linearSampler;
 
-        public EnvMapProcessingShader(ID3D11Device device, uint cubemapSize, uint arraySize, DXGI_FORMAT format)
+        public PrefilterDiffuseEnvMap(ID3D11Device device, ScratchImage cubemaps, uint arraySize, uint cubeMapSize, uint cubemapCount, DXGI_FORMAT format, uint sampleCount)
         {
             this.device = device;
-            this.cubemapSize = cubemapSize;
             this.arraySize = arraySize;
+            this.cubeMapSize = cubeMapSize;
+            this.cubemapCount = cubemapCount;
             this.format = (Format)format;
+            this.sampleCount = sampleCount;
 
-            // Create output resources
-            Texture2DDescription descTx = new()
+            TexMetadata metaData = cubemaps.GetMetadata();
+            Debug.Assert(device != null && metaData.IsCubemap() && cubemapCount > 0 && (arraySize % 6) == 0);
+
+            // Upload source cubemaps and create output resources
+            Texture2DDescription desc = new()
             {
-                Width = cubemapSize,
-                Height = cubemapSize,
-                MipLevels = 1,
+                Width = (uint)metaData.Width,
+                Height = (uint)metaData.Height,
+                MipLevels = (uint)metaData.MipLevels,
                 ArraySize = arraySize,
                 Format = (Format)format,
                 SampleDescription = new(1, 0),
                 Usage = ResourceUsage.Default,
-                BindFlags = BindFlags.UnorderedAccess,
-                CPUAccessFlags = 0,
-                MiscFlags = 0
+                BindFlags = BindFlags.ShaderResource,
+                CPUAccessFlags = CpuAccessFlags.None,
+                MiscFlags = ResourceOptionFlags.TextureCube
             };
 
-            cubemaps = device.CreateTexture2D(descTx);
+            uint imageCount = (uint)cubemaps.GetImageCount();
+            SubresourceData[] inputData = new SubresourceData[imageCount];
+            for (uint i = 0; i < imageCount; i++)
+            {
+                var img = cubemaps.GetImage((int)i);
 
-            descTx.BindFlags = 0;
-            descTx.Usage = ResourceUsage.Staging;
-            descTx.CPUAccessFlags = CpuAccessFlags.Read;
+                inputData[i] = new SubresourceData
+                {
+                    DataPointer = img.Pixels,
+                    RowPitch = (uint)img.RowPitch,
+                    SlicePitch = (uint)img.SlicePitch
+                };
+            }
+            cubemapsIn = device.CreateTexture2D(desc, inputData);
 
-            cubemapsCpu = device.CreateTexture2D(descTx);
+            desc.Width = desc.Height = PrefilteredDiffuseCubemapSize;
+            desc.MipLevels = 1;
+            desc.BindFlags = BindFlags.UnorderedAccess;
+            desc.MiscFlags = 0;
+            cubemapsOut = device.CreateTexture2D(desc);
 
-            var shaderCode = Compiler.CompileFromFile(ShaderFileName, ShaderEntryPoint, ShaderProfile);
-            shader = device.CreateComputeShader(shaderCode.ToArray());
+            desc.BindFlags = 0;
+            desc.Usage = ResourceUsage.Staging;
+            desc.CPUAccessFlags = CpuAccessFlags.Read;
+            cubemapsCpu = device.CreateTexture2D(desc);
+
+            var shaderCode = Compiler.CompileFromFile(ShaderFileName, ShaderPrefilterEntryPoint, ShaderProfile);
+            shaderPrefilter = device.CreateComputeShader(shaderCode.ToArray());
 
             constantBuffer = CreateConstantBuffer();
 
@@ -118,15 +146,16 @@ namespace TexturesImporter
             return device.CreateSamplerState(desc);
         }
 
-        public bool Run(Image[] envMaps, bool mirrorCubemap)
+        public bool Run()
         {
             var ctx = device.ImmediateContext;
             Debug.Assert(ctx != null);
 
             ShaderConstants constants = new()
             {
-                CubeMapOutSize = cubemapSize,
-                SampleCount = mirrorCubemap ? 1u : 0u // Misusing sampleCount as a toggle for mirroring the cubemap.
+                CubeMapInSize = cubeMapSize,
+                CubeMapOutSize = PrefilteredDiffuseCubemapSize,
+                SampleCount = sampleCount,
             };
             if (!SetConstants(constants))
             {
@@ -135,52 +164,22 @@ namespace TexturesImporter
 
             ResetD3d11Context();
 
-            for (uint i = 0; i < envMaps.Length; i++)
+            for (uint i = 0; i < cubemapCount; i++)
             {
-                var cubemapUav = CreateTexture2dUav(i * 6);
-                if (cubemapUav == null)
+                ID3D11ShaderResourceView cubemapInSrv = CreateCubemapSrv(i * 6);
+                if (cubemapInSrv == null)
                 {
                     return false;
                 }
 
-                var src = envMaps[i];
-
-                // Upload source image to GPU
-                Texture2DDescription desc = new()
-                {
-                    Width = (uint)src.Width,
-                    Height = (uint)src.Height,
-                    MipLevels = 1,
-                    ArraySize = 1,
-                    Format = format,
-                    SampleDescription = new(1, 0),
-                    Usage = ResourceUsage.Immutable,
-                    BindFlags = BindFlags.ShaderResource,
-                    CPUAccessFlags = 0,
-                    MiscFlags = 0
-                };
-
-                SubresourceData data = new()
-                {
-                    DataPointer = src.Pixels,
-                    RowPitch = (uint)src.RowPitch
-                };
-
-                var envMap = device.CreateTexture2D(desc, data);
-                if (envMap == null)
+                ID3D11UnorderedAccessView cubemapOutUav = CreateTexture2dUav(i * 6);
+                if (cubemapOutUav == null)
                 {
                     return false;
                 }
 
-                var envMapSrv = device.CreateShaderResourceView(envMap);
-                if (envMapSrv == null)
-                {
-                    return false;
-                }
-
-                uint blockSize = (cubemapSize + 15) >> 4;
-
-                Dispatch(envMapSrv, cubemapUav, constantBuffer, linearSampler, shader, [blockSize, blockSize, 6]);
+                uint blockSize = (PrefilteredDiffuseCubemapSize + 15) >> 4;
+                Dispatch(cubemapInSrv, cubemapOutUav, constantBuffer, linearSampler, shaderPrefilter, [blockSize, blockSize, 6]);
             }
 
             ResetD3d11Context();
@@ -211,6 +210,20 @@ namespace TexturesImporter
             ctx.CSSetShaderResources(0u, zeroSrvs);
             ctx.CSSetConstantBuffers(0u, new Span<ID3D11Buffer>(zeroBuffers));
         }
+        ID3D11ShaderResourceView CreateCubemapSrv(uint firstArraySlice)
+        {
+            ShaderResourceViewDescription desc = new()
+            {
+                Format = format,
+                ViewDimension = Vortice.Direct3D.ShaderResourceViewDimension.TextureCubeArray
+            };
+
+            desc.TextureCubeArray.NumCubes = 1;
+            desc.TextureCubeArray.First2DArrayFace = firstArraySlice;
+            desc.TextureCubeArray.MipLevels = 1;
+
+            return device.CreateShaderResourceView(cubemapsIn, desc);
+        }
         ID3D11UnorderedAccessView CreateTexture2dUav(uint firstArraySlice)
         {
             UnorderedAccessViewDescription desc = new()
@@ -222,7 +235,7 @@ namespace TexturesImporter
             desc.Texture2DArray.FirstArraySlice = firstArraySlice;
             desc.Texture2DArray.MipSlice = 0;
 
-            return device.CreateUnorderedAccessView(cubemaps, desc);
+            return device.CreateUnorderedAccessView(cubemapsOut, desc);
         }
         void Dispatch(ID3D11ShaderResourceView srvArray, ID3D11UnorderedAccessView uavArray, ID3D11Buffer buffersArray, ID3D11SamplerState samplersArray, ID3D11ComputeShader shader, uint[] groupCount)
         {
@@ -240,7 +253,7 @@ namespace TexturesImporter
         {
             var ctx = device.ImmediateContext;
 
-            ctx.CopyResource(cubemapsCpu, cubemaps);
+            ctx.CopyResource(cubemapsCpu, cubemapsOut);
 
             for (uint imgIdx = 0; imgIdx < arraySize; imgIdx++)
             {

@@ -181,7 +181,7 @@ namespace TexturesImporter
             }
             scratchImages.Clear();
 
-            if (!settings.Compress)
+            if (!settings.Compress || scratch.GetMetadata().IsCubemap() && settings.PrefilterCubemap)
             {
                 CopySubresources(scratch, ref data);
                 TextureInfoFromMetadata(scratch.GetMetadata(), ref data.Info);
@@ -561,6 +561,66 @@ namespace TexturesImporter
             }
 
             return images;
+        }
+
+        public static void PrefilterIbl(ref TextureData data, IblFilter filterType)
+        {
+            Debug.Assert(data.ImportSettings.PrefilterCubemap);
+            var info = data.Info;
+            DXGI_FORMAT format = (DXGI_FORMAT)info.Format;
+            Debug.Assert(!Helper.IsCompressed(format));
+            var images = SubresourceDataToImageAssets(ref data);
+            Debug.Assert(images.Length > 0 && !Helper.IsCompressed(images[0].Format));
+            Debug.Assert((info.Flags & TextureFlags.IsCubeMap) != 0);
+            Debug.Assert(info.Width == info.Height);
+            int cubemapCount = info.ArraySize / 6;
+            Debug.Assert(info.MipLevels == MathF.Log2(info.Width) + 1);
+
+            var cubemaps = Helper.InitializeCube(format, info.Width, info.Height, cubemapCount, info.MipLevels, CP_FLAGS.NONE);
+            if (cubemaps == null)
+            {
+                info.ImportError = ImportErrors.Unknown;
+                return;
+            }
+
+            for (int imgIdx = 0; imgIdx < cubemaps.GetImageCount(); imgIdx++)
+            {
+                var image = cubemaps.GetImage(imgIdx);
+                Debug.Assert(image.SlicePitch == images[imgIdx].SlicePitch);
+                BlobStreamWriter writer = new(image.Pixels, (int)image.SlicePitch);
+                writer.Write(images[imgIdx].Pixels, (int)image.SlicePitch);
+            }
+
+            int sampleCount = 1024;
+
+            bool hr = false;
+            DeviceManager.RunOnGPU((device) =>
+            {
+                hr = filterType == IblFilter.Diffuse ?
+                    EnvMapProcessing.PrefilterDiffuse(device, cubemaps, sampleCount, out cubemaps) :
+                    EnvMapProcessing.PrefilterSpecular(device, cubemaps, sampleCount, out cubemaps);
+            });
+
+            if (!hr)
+            {
+                info.ImportError = ImportErrors.Unknown;
+                return;
+            }
+
+            if (data.ImportSettings.Compress)
+            {
+                var bcScratch = CompressImage(ref data, cubemaps);
+                if (data.Info.ImportError != ImportErrors.Succeeded) return;
+
+                // Decompress the first image to be used for the icon.
+                Debug.Assert(bcScratch.GetImageCount() > 0);
+                CopyIcon(bcScratch, ref data);
+
+                cubemaps = bcScratch;
+            }
+
+            CopySubresources(cubemaps, ref data);
+            TextureInfoFromMetadata(cubemaps.GetMetadata(), ref data.Info);
         }
     }
 }

@@ -172,16 +172,48 @@ namespace TexturesImporter
 
             var format = envMaps[0].Format;
             int arraySize = envMaps.Length * 6;
+            int cubemapCount = arraySize / 6;
             int mipLevels = 1;
 
-            EnvMapProcessingShader shader = new(device, (uint)cubemapSize, (uint)arraySize, format);
+            EquirectangularToCubeMap shader = new(device, (uint)cubemapSize, (uint)arraySize, format);
             if (!shader.Run(envMaps, mirrorCubemap)) return false;
 
-            var result = Helper.InitializeCube(format, cubemapSize, cubemapSize, arraySize / 6, mipLevels, CP_FLAGS.NONE);
+            var result = Helper.InitializeCube(format, cubemapSize, cubemapSize, cubemapCount, mipLevels, CP_FLAGS.NONE);
             if (!shader.DownloadCubemaps(result, (uint)mipLevels)) return false;
 
             cubeMaps = result;
             return true;
+        }
+
+        public static bool PrefilterDiffuse(ID3D11Device device, ScratchImage cubemaps, int sampleCount, out ScratchImage prefilteredDiffuse)
+        {
+            Debug.Assert(device != null);
+
+            prefilteredDiffuse = null;
+
+            var metaData = cubemaps.GetMetadata();
+            int arraySize = metaData.ArraySize;
+            int cubeMapSize = metaData.Width;
+            int cubemapCount = arraySize / 6;
+            var format = metaData.Format;
+            int mipLevels = 1;
+
+            PrefilterDiffuseEnvMap shader = new(device, cubemaps, (uint)arraySize, (uint)cubeMapSize, (uint)cubemapCount, format, (uint)sampleCount);
+            if (!shader.Run()) return false;
+
+            var result = Helper.InitializeCube(format, cubeMapSize, cubeMapSize, cubemapCount, mipLevels, CP_FLAGS.NONE);
+            if (!shader.DownloadCubemaps(result, 1)) return false;
+
+            prefilteredDiffuse = result;
+            return false;
+        }
+        public static bool PrefilterSpecular(ID3D11Device device, ScratchImage cubemaps, int sampleCount, out ScratchImage prefilteredDiffuse)
+        {
+            Debug.Assert(device != null);
+
+            prefilteredDiffuse = null;
+
+            return false;
         }
     }
 }
