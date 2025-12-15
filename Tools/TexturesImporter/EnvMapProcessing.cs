@@ -15,7 +15,7 @@ namespace TexturesImporter
 
         private static TexHelper Helper => TexHelper.Instance;
 
-        public static bool EquirectangularToCubemapCPU(Image[] envMaps, int cubemapSize, bool usePrefilterSize, bool mirrorCubemap, out ScratchImage cubeMaps)
+        public static ScratchImage EquirectangularToCubemapCPU(Image[] envMaps, int cubemapSize, bool usePrefilterSize, bool mirrorCubemap)
         {
             Debug.Assert(envMaps != null && envMaps.Length > 0);
 
@@ -26,11 +26,6 @@ namespace TexturesImporter
 
             // Initialize 1 texture cube for each image.
             var workingScratch = Helper.InitializeCube(DXGI_FORMAT.R32G32B32A32_FLOAT, cubemapSize, cubemapSize, envMaps.Length, 1, CP_FLAGS.NONE);
-            if (workingScratch == null)
-            {
-                cubeMaps = null;
-                return false;
-            }
 
             for (int i = 0; i < envMaps.Length; i++)
             {
@@ -40,40 +35,28 @@ namespace TexturesImporter
                 // NOTE: all env_maps are equirectangular images with the same size and format.
                 //       We already checked for matching size and format in the main import function.
                 //       Here we convert each env_map to a linear color space 32-bit float for easier sampling.
-                ScratchImage f32EnvMap;
-                if (envMaps[0].Format != DXGI_FORMAT.R32G32B32A32_FLOAT)
-                {
-                    f32EnvMap = workingScratch.Convert(i, DXGI_FORMAT.R32G32B32A32_FLOAT, TEX_FILTER_FLAGS.DEFAULT, ThresholdDefault);
-                    if (f32EnvMap == null)
-                    {
-                        cubeMaps = null;
-                        return false;
-                    }
-                }
-                else
-                {
-                    f32EnvMap = workingScratch.CreateImageCopy(i, true, CP_FLAGS.NONE);
-                }
+                bool is32 = envMaps[0].Format == DXGI_FORMAT.R32G32B32A32_FLOAT;
+                using var f32EnvMap = is32 ?
+                    workingScratch.CreateImageCopy(i, true, CP_FLAGS.NONE) :
+                    workingScratch.Convert(i, DXGI_FORMAT.R32G32B32A32_FLOAT, TEX_FILTER_FLAGS.DEFAULT, ThresholdDefault);
 
                 Debug.Assert(f32EnvMap.GetImageCount() == 1);
-                Image[] dstImages = new Image[6];
+                var envMapImage = f32EnvMap.GetImage(i);
+                var dstImages = new Image[6];
                 for (int j = i * 6; j < 6; j++)
                 {
                     dstImages[j] = workingScratch.GetImage(j);
                 }
-                var envMapImage = f32EnvMap.GetImage(i);
-                bool mirror = mirrorCubemap;
 
                 Thread[] tasks =
                 [
-                    new(() => { SampleCubeFace(envMapImage, dstImages[0], 0, mirror); }),
-                    new(() => { SampleCubeFace(envMapImage, dstImages[1], 1, mirror); }),
-                    new(() => { SampleCubeFace(envMapImage, dstImages[2], 2, mirror); }),
-                    new(() => { SampleCubeFace(envMapImage, dstImages[3], 3, mirror); }),
-                    new(() => { SampleCubeFace(envMapImage, dstImages[4], 4, mirror); }),
+                    new(() => { SampleCubeFace(envMapImage, dstImages[0], 0, mirrorCubemap); }),
+                    new(() => { SampleCubeFace(envMapImage, dstImages[1], 1, mirrorCubemap); }),
+                    new(() => { SampleCubeFace(envMapImage, dstImages[2], 2, mirrorCubemap); }),
+                    new(() => { SampleCubeFace(envMapImage, dstImages[3], 3, mirrorCubemap); }),
+                    new(() => { SampleCubeFace(envMapImage, dstImages[4], 4, mirrorCubemap); }),
+                    new(() => { SampleCubeFace(envMapImage, dstImages[5], 5, mirrorCubemap); }),
                 ];
-
-                SampleCubeFace(f32EnvMap.GetImage(i), dstImages[5], 5, mirror);
 
                 foreach (var t in tasks)
                 {
@@ -88,14 +71,14 @@ namespace TexturesImporter
 
             if (envMaps[0].Format != DXGI_FORMAT.R32G32B32A32_FLOAT)
             {
-                cubeMaps = workingScratch.Convert(envMaps[0].Format, TEX_FILTER_FLAGS.DEFAULT, ThresholdDefault);
+                var result = workingScratch.Convert(envMaps[0].Format, TEX_FILTER_FLAGS.DEFAULT, ThresholdDefault);
+                workingScratch.Dispose();
+                return result;
             }
             else
             {
-                cubeMaps = workingScratch;
+                return workingScratch;
             }
-
-            return true;
         }
         static void SampleCubeFace(Image envMap, Image cubeFace, int faceIndex, bool mirror)
         {
@@ -158,12 +141,10 @@ namespace TexturesImporter
             return new(s, t);
         }
 
-        public static bool EquirectangularToCubemapGPU(ID3D11Device device, Image[] envMaps, int cubemapSize, bool usePrefilterSize, bool mirrorCubemap, out ScratchImage cubeMaps)
+        public static ScratchImage EquirectangularToCubemapGPU(ID3D11Device device, Image[] envMaps, int cubemapSize, bool usePrefilterSize, bool mirrorCubemap)
         {
             Debug.Assert(device != null);
             Debug.Assert(envMaps != null && envMaps.Length > 0);
-
-            cubeMaps = null;
 
             if (usePrefilterSize)
             {
@@ -175,14 +156,13 @@ namespace TexturesImporter
             int cubemapCount = arraySize / 6;
             int mipLevels = 1;
 
-            EquirectangularToCubeMap shader = new(device, (uint)cubemapSize, (uint)arraySize, format);
-            if (!shader.Run(envMaps, mirrorCubemap)) return false;
+            using EquirectangularToCubeMap shader = new(device, (uint)cubemapSize, (uint)arraySize, format);
+            if (!shader.Run(envMaps, mirrorCubemap)) return null;
 
             var result = Helper.InitializeCube(format, cubemapSize, cubemapSize, cubemapCount, mipLevels, CP_FLAGS.NONE);
-            if (!shader.DownloadCubemaps(result, (uint)mipLevels)) return false;
+            if (!shader.DownloadCubemaps(result, (uint)mipLevels)) return null;
 
-            cubeMaps = result;
-            return true;
+            return result;
         }
 
         public static bool PrefilterDiffuse(ID3D11Device device, ScratchImage cubemaps, int sampleCount, out ScratchImage prefilteredDiffuse)
@@ -198,7 +178,7 @@ namespace TexturesImporter
             var format = metaData.Format;
             int mipLevels = 1;
 
-            PrefilterDiffuseEnvMap shader = new(device, cubemaps, (uint)arraySize, (uint)cubeMapSize, (uint)cubemapCount, format, (uint)sampleCount);
+            using PrefilterDiffuseEnvMap shader = new(device, cubemaps, (uint)arraySize, (uint)cubeMapSize, (uint)cubemapCount, format, (uint)sampleCount);
             if (!shader.Run()) return false;
 
             var result = Helper.InitializeCube(format, cubeMapSize, cubeMapSize, cubemapCount, mipLevels, CP_FLAGS.NONE);

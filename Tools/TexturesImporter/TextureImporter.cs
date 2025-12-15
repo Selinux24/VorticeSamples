@@ -144,12 +144,9 @@ namespace TexturesImporter
                     return;
                 }
 
-                uint arraySize = (uint)metadata.ArraySize;
-                uint depth = (uint)metadata.Depth;
-
-                for (int arrayIndex = 0; arrayIndex < arraySize; arrayIndex++)
+                for (int arrayIndex = 0; arrayIndex < metadata.ArraySize; arrayIndex++)
                 {
-                    for (int depthIndex = 0; depthIndex < depth; depthIndex++)
+                    for (int depthIndex = 0; depthIndex < metadata.Depth; depthIndex++)
                     {
                         var image = scratchFile.GetImage(0, arrayIndex, depthIndex);
                         if (image == null)
@@ -170,16 +167,16 @@ namespace TexturesImporter
             }
 
             using var scratch = InitializeFromImages(ref data, [.. images]);
-            if (data.Info.ImportError != 0)
-            {
-                return;
-            }
-
             for (int i = 0; i < scratchImages.Count; i++)
             {
                 scratchImages[i].Dispose();
             }
             scratchImages.Clear();
+
+            if (data.Info.ImportError != ImportErrors.Succeeded)
+            {
+                return;
+            }
 
             if (!settings.Compress || scratch.GetMetadata().IsCubemap() && settings.PrefilterCubemap)
             {
@@ -225,12 +222,15 @@ namespace TexturesImporter
 
             var scratch = Helper.LoadFromWICFile(file, wicFlags);
 
-            // It wasn't a WIC format. Try TGA.
-            scratch ??= Helper.LoadFromTGAFile(file);
-
-            // It wasn't a TGA either. Try HDR.
             if (scratch == null)
             {
+                // It wasn't a WIC format. Try TGA.
+                scratch = Helper.LoadFromTGAFile(file);
+            }
+
+            if (scratch == null)
+            {
+                // It wasn't a TGA either. Try HDR.
                 scratch = Helper.LoadFromHDRFile(file);
                 if (scratch != null)
                 {
@@ -238,9 +238,9 @@ namespace TexturesImporter
                 }
             }
 
-            // It wasn't HDR. Try DDS.
             if (scratch == null)
             {
+                // It wasn't HDR. Try DDS.
                 scratch = Helper.LoadFromDDSFile(file, DDS_FLAGS.FORCE_RGB);
                 if (scratch != null)
                 {
@@ -248,6 +248,7 @@ namespace TexturesImporter
                     var mipScratch = scratch.Decompress(0, DXGI_FORMAT.UNKNOWN);
                     if (mipScratch != null)
                     {
+                        scratch.Dispose();
                         scratch = mipScratch;
                     }
                 }
@@ -264,54 +265,52 @@ namespace TexturesImporter
         {
             var settings = data.ImportSettings;
 
+            // Scope for working scratch
+            var metadata = MetadataFromTextureInfo(data.Info);
+            using var workingScratch = Helper.InitializeTemporary(images, metadata);
+            int arraySize = images.Length;
+
             ScratchImage scratch = null;
+            if (settings.Dimension == TextureDimensions.Texture1D || settings.Dimension == TextureDimensions.Texture2D)
             {
-                // Scope for working scratch
-                var metadata = MetadataFromTextureInfo(data.Info);
-                using var workingScratch = Helper.InitializeTemporary(images, metadata);
-                int arraySize = images.Length;
+                bool allow1d = settings.Dimension == TextureDimensions.Texture1D;
+                Debug.Assert(arraySize >= 1 && images.Length >= 1);
+                scratch = workingScratch.CreateArrayCopy(0, arraySize, allow1d, CP_FLAGS.NONE);
+            }
+            else if (settings.Dimension == TextureDimensions.TextureCube)
+            {
+                var image = images[0];
 
-                if (settings.Dimension == TextureDimensions.Texture1D || settings.Dimension == TextureDimensions.Texture2D)
+                if (Utils.Equal((float)image.Width / image.Height, 2f))
                 {
-                    bool allow1d = settings.Dimension == TextureDimensions.Texture1D;
-                    Debug.Assert(arraySize >= 1 && images.Length >= 1);
-                    scratch = workingScratch.CreateArrayCopy(0, arraySize, allow1d, CP_FLAGS.NONE);
+                    if (!DeviceManager.RunOnGPU((device) =>
+                    {
+                        scratch = EnvMapProcessing.EquirectangularToCubemapGPU(device, images, settings.CubemapSize, settings.PrefilterCubemap, settings.MirrorCubemap);
+                    }))
+                    {
+                        scratch = EnvMapProcessing.EquirectangularToCubemapCPU(images, settings.CubemapSize, settings.PrefilterCubemap, settings.MirrorCubemap);
+                    }
                 }
-                else if (settings.Dimension == TextureDimensions.TextureCube)
+                else if (arraySize % 6 > 0 || image.Width != image.Height)
                 {
-                    var image = images[0];
-
-                    if (Utils.Equal((float)image.Width / image.Height, 2f))
-                    {
-                        if (!DeviceManager.RunOnGPU((device) =>
-                        {
-                            EnvMapProcessing.EquirectangularToCubemapGPU(device, images, settings.CubemapSize, settings.PrefilterCubemap, settings.MirrorCubemap, out scratch);
-                        }))
-                        {
-                            EnvMapProcessing.EquirectangularToCubemapCPU(images, settings.CubemapSize, settings.PrefilterCubemap, settings.MirrorCubemap, out scratch);
-                        }
-                    }
-                    else if (arraySize % 6 > 0 || image.Width != image.Height)
-                    {
-                        data.Info.ImportError = ImportErrors.NeedSixImages;
-                        return null;
-                    }
-                    else
-                    {
-                        scratch = workingScratch.CreateCubeCopy(0, arraySize, CP_FLAGS.NONE);
-                    }
+                    data.Info.ImportError = ImportErrors.NeedSixImages;
+                    return null;
                 }
                 else
                 {
-                    Debug.Assert(settings.Dimension == TextureDimensions.Texture3D);
-                    scratch = workingScratch.CreateVolumeCopy(0, arraySize, CP_FLAGS.NONE);
+                    scratch = workingScratch.CreateCubeCopy(0, arraySize, CP_FLAGS.NONE);
                 }
+            }
+            else
+            {
+                Debug.Assert(settings.Dimension == TextureDimensions.Texture3D);
+                scratch = workingScratch.CreateVolumeCopy(0, arraySize, CP_FLAGS.NONE);
+            }
 
-                if (scratch == null)
-                {
-                    data.Info.ImportError = ImportErrors.Unknown;
-                    return null;
-                }
+            if (scratch == null)
+            {
+                data.Info.ImportError = ImportErrors.Unknown;
+                return null;
             }
 
             if (settings.MipLevels == 1 || settings.PrefilterCubemap)
@@ -319,7 +318,9 @@ namespace TexturesImporter
                 return scratch;
             }
 
-            return GenerateMipmaps(scratch, data.Info, settings.PrefilterCubemap ? 0 : settings.MipLevels, settings.Dimension == TextureDimensions.Texture3D);
+            var mipMaps = GenerateMipmaps(scratch, data.Info, settings.PrefilterCubemap ? 0 : settings.MipLevels, settings.Dimension == TextureDimensions.Texture3D);
+            scratch.Dispose();
+            return mipMaps;
         }
         private static ScratchImage GenerateMipmaps(ScratchImage scratch, TextureInfo info, int mipLevels, bool is3d)
         {
@@ -518,7 +519,7 @@ namespace TexturesImporter
             var metadata = MetadataFromTextureInfo(data.Info);
             var tmp = Helper.InitializeTemporary([.. images], metadata);
 
-            var scratch = tmp.Decompress(0, DXGI_FORMAT.UNKNOWN);
+            using var scratch = tmp.Decompress(0, DXGI_FORMAT.UNKNOWN);
             if (scratch != null)
             {
                 CopySubresources(scratch, ref data);
