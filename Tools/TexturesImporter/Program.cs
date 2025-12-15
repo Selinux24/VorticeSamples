@@ -7,8 +7,10 @@ namespace TexturesImporter
     {
         private const string outputFolder = "./Content/";
         private const string outputTextureExt = ".texture";
+        private const string outputDiffuseExt = ".diffuse";
+        private const string outputSpecularExt = ".specular";
 
-        private const string textureCubeHorn = "../../../../../Assets/horn-koppe_spring.jpg";
+        private const string textureCube = "../../../../../Assets/sunny_rose_garden_4k.hdr";
         private const string textureAmbientOcclusionPath = "../../../../../Assets/AmbientOcclusion.png";
         private const string textureBaseColorPath = "../../../../../Assets/BaseColor.png";
         private const string textureEmissivePath = "../../../../../Assets/Emissive.png";
@@ -18,7 +20,7 @@ namespace TexturesImporter
 
         static void Main()
         {
-            ImportCube(textureCubeHorn, 256);
+            ImportCube(textureCube, 256, true, IblFilter.Diffuse);
             Import(textureAmbientOcclusionPath);
             Import(textureBaseColorPath);
             Import(textureEmissivePath);
@@ -32,6 +34,7 @@ namespace TexturesImporter
             Console.WriteLine("Press any key to exit.");
             Console.ReadKey(true);
         }
+      
         private static void Import(string texturePath, BCFormats? format = null, bool compress = true, bool preferBc7 = true)
         {
             if (!File.Exists(texturePath))
@@ -49,7 +52,7 @@ namespace TexturesImporter
 
             ImportInternal(ref textureData);
         }
-        private static void ImportCube(string texturePath, int size, BCFormats? format = null, bool compress = true, bool preferBc7 = true)
+        private static void ImportCube(string texturePath, int size, bool mirror, IblFilter filter = IblFilter.None, BCFormats? format = null, bool compress = true, bool preferBc7 = true)
         {
             if (!File.Exists(texturePath))
             {
@@ -65,27 +68,51 @@ namespace TexturesImporter
             textureData.ImportSettings.AlphaThreshold = 0.5f;
             textureData.ImportSettings.Dimension = TextureDimensions.TextureCube;
             textureData.ImportSettings.CubemapSize = size;
-            textureData.ImportSettings.MirrorCubemap = true;
-            textureData.ImportSettings.PrefilterCubemap = false;
+            textureData.ImportSettings.MirrorCubemap = mirror;
+            textureData.ImportSettings.PrefilterCubemap = filter != IblFilter.None;
 
             ImportInternal(ref textureData);
+
+            if (textureData.ImportSettings.PrefilterCubemap)
+            {
+                Prefilter(ref textureData, filter);
+            }
         }
+     
         private static void ImportInternal(ref TextureData textureData)
         {
             TextureImporter.Import(ref textureData);
+            Console.WriteLine($"{textureData.Info.ImportError} => {Path.GetFileName(textureData.ImportSettings.Sources)}");
+
+            if (textureData.Info.ImportError != ImportErrors.Succeeded)
+            {
+                return;
+            }
 
             textureData.SaveTexture(GetTexturePath(textureData.ImportSettings.Sources));
-
-            Console.WriteLine($"{textureData.Info.ImportError} => {Path.GetFileName(textureData.ImportSettings.Sources)}");
-            if (textureData.Info.ImportError == ImportErrors.Succeeded)
-            {
-                Console.WriteLine($"  Size: {textureData.Info.Width}x{textureData.Info.Height}, ArraySize: {textureData.Info.ArraySize}, Mips: {textureData.Info.MipLevels}");
-            }
+            Console.WriteLine($"  Size: {textureData.Info.Width}x{textureData.Info.Height}, ArraySize: {textureData.Info.ArraySize}, Mips: {textureData.Info.MipLevels}");
         }
         private static string GetTexturePath(string textureName)
         {
             string fileName = Path.GetFileName(textureName);
             return Path.Combine(outputFolder, Path.ChangeExtension(fileName, outputTextureExt));
+        }
+
+        private static void Prefilter(ref TextureData textureData, IblFilter filter)
+        {
+            TextureImporter.PrefilterIbl(ref textureData, filter);
+            if (textureData.Info.ImportError != ImportErrors.Succeeded)
+            {
+                return;
+            }
+
+            textureData.SaveTexture(GetTextureFilterPath(textureData.ImportSettings.Sources, filter));
+            Console.WriteLine($"  Size: {textureData.Info.Width}x{textureData.Info.Height}, ArraySize: {textureData.Info.ArraySize}, Mips: {textureData.Info.MipLevels}");
+        }
+        private static string GetTextureFilterPath(string textureName, IblFilter filter)
+        {
+            string fileName = Path.GetFileName(textureName);
+            return Path.Combine(outputFolder, Path.ChangeExtension(fileName, filter == IblFilter.Diffuse ? outputDiffuseExt : outputSpecularExt));
         }
     }
 }

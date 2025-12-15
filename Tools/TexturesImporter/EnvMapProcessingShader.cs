@@ -165,13 +165,12 @@ namespace TexturesImporter
                     var img = result.GetImage((int)mip, (int)imgIdx, 0);
 
                     var src = map.DataPointer;
-                    int srcSize = (int)map.RowPitch;
-                    BlobStreamWriter dst = new(img.Pixels, img.Height * srcSize);
+                    BlobStreamWriter dst = new(img.Pixels, (int)img.SlicePitch);
 
                     for (uint row = 0; row < img.Height; row++)
                     {
                         dst.Write(src, (int)img.RowPitch);
-                        src += srcSize;
+                        src += (int)map.RowPitch;
                     }
 
                     ctx.Unmap(texCpu, resIdx);

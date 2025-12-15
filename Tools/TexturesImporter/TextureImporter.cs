@@ -214,6 +214,50 @@ namespace TexturesImporter
                 TextureInfoFromMetadata(scratch.GetMetadata(), ref data.Info);
             }
         }
+        private static ScratchImage LoadFromWICFile(string szFile, WIC_FLAGS flags)
+        {
+            try
+            {
+                return Helper.LoadFromWICFile(szFile, flags);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+        private static ScratchImage LoadFromTGAFile(string szFile)
+        {
+            try
+            {
+                return Helper.LoadFromTGAFile(szFile);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+        private static ScratchImage LoadFromHDRFile(string szFile)
+        {
+            try
+            {
+                return Helper.LoadFromHDRFile(szFile);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+        private static ScratchImage LoadFromDDSFile(string szFile, DDS_FLAGS flags)
+        {
+            try
+            {
+                return Helper.LoadFromDDSFile(szFile, flags);
+            }
+            catch
+            {
+                return null;
+            }
+        }
         private static ScratchImage LoadFromFile(ref TextureData data, string fileName)
         {
             Debug.Assert(File.Exists(fileName));
@@ -238,18 +282,15 @@ namespace TexturesImporter
             // Try one of WIC formats first (e.g. BMP, JPEG, PNG, etc.).
             wicFlags |= WIC_FLAGS.FORCE_RGB;
 
-            var scratch = Helper.LoadFromWICFile(file, wicFlags);
+            var scratch = LoadFromWICFile(file, wicFlags);
 
-            if (scratch == null)
-            {
-                // It wasn't a WIC format. Try TGA.
-                scratch = Helper.LoadFromTGAFile(file);
-            }
+            // It wasn't a WIC format. Try TGA.
+            scratch ??= LoadFromTGAFile(file);
 
             if (scratch == null)
             {
                 // It wasn't a TGA either. Try HDR.
-                scratch = Helper.LoadFromHDRFile(file);
+                scratch = LoadFromHDRFile(file);
                 if (scratch != null)
                 {
                     data.Info.Flags |= TextureFlags.IsHdr;
@@ -259,7 +300,7 @@ namespace TexturesImporter
             if (scratch == null)
             {
                 // It wasn't HDR. Try DDS.
-                scratch = Helper.LoadFromDDSFile(file, DDS_FLAGS.FORCE_RGB);
+                scratch = LoadFromDDSFile(file, DDS_FLAGS.FORCE_RGB);
                 if (scratch != null)
                 {
                     data.Info.ImportError = ImportErrors.Decompress;

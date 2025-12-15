@@ -8,8 +8,6 @@ namespace TexturesImporter
 {
     class PrefilterDiffuseEnvMap : IDisposable
     {
-        const int PrefilteredDiffuseCubemapSize = 64;
-
         private readonly ID3D11Device device;
         private readonly uint sampleCount;
         private readonly uint arraySize;
@@ -66,7 +64,7 @@ namespace TexturesImporter
             }
             cubemapsIn = device.CreateTexture2D(desc, inputData);
 
-            desc.Width = desc.Height = PrefilteredDiffuseCubemapSize;
+            desc.Width = desc.Height = EnvMapProcessing.PrefilteredDiffuseCubemapSize;
             desc.MipLevels = 1;
             desc.BindFlags = BindFlags.UnorderedAccess;
             desc.MiscFlags = 0;
@@ -114,7 +112,7 @@ namespace TexturesImporter
             EnvMapProcessingShader.ShaderConstants constants = new()
             {
                 CubeMapInSize = cubeMapSize,
-                CubeMapOutSize = PrefilteredDiffuseCubemapSize,
+                CubeMapOutSize = EnvMapProcessing.PrefilteredDiffuseCubemapSize,
                 SampleCount = sampleCount,
             };
             if (!EnvMapProcessingShader.SetConstants(ctx, constantBuffer, constants))
@@ -138,7 +136,7 @@ namespace TexturesImporter
                     return false;
                 }
 
-                EnvMapProcessingShader.Dispatch(ctx, cubemapInSrv, cubemapOutUav, constantBuffer, linearSampler, shaderPrefilter, PrefilteredDiffuseCubemapSize);
+                EnvMapProcessingShader.Dispatch(ctx, cubemapInSrv, cubemapOutUav, constantBuffer, linearSampler, shaderPrefilter, EnvMapProcessing.PrefilteredDiffuseCubemapSize);
             }
 
             EnvMapProcessingShader.ResetD3d11Context(ctx);

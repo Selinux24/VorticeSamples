@@ -10,8 +10,10 @@ namespace TexturesImporter
 {
     static class EnvMapProcessing
     {
-        const int PrefilteredSpecularCubemapSize = 256;
         const float ThresholdDefault = 0.5f;
+
+        public const int PrefilteredDiffuseCubemapSize = 64;
+        public const int PrefilteredSpecularCubemapSize = 256;
 
         private static TexHelper Helper => TexHelper.Instance;
 
@@ -171,7 +173,7 @@ namespace TexturesImporter
 
             var metaData = cubemaps.GetMetadata();
             int arraySize = metaData.ArraySize;
-            int cubeMapSize = metaData.Width;
+            int cubeMapSize = PrefilteredDiffuseCubemapSize;
             int cubemapCount = arraySize / 6;
             var format = metaData.Format;
             int mipLevels = 1;
