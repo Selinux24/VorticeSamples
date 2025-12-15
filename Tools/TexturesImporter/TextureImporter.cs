@@ -65,14 +65,37 @@ namespace TexturesImporter
             }
         }
 
-        private static long GetImageAssetSize(Image image)
+        private static ulong GetImageAssetSize(ScratchImage scratch)
         {
-            return
+            ulong totalSize = 0;
+
+            int imageCount = scratch.GetImageCount();
+            for (int i = 0; i < imageCount; i++)
+            {
+                totalSize += GetImageAssetSize(scratch.GetImage(i));
+            }
+
+            return totalSize;
+        }
+        private static ulong GetImageAssetSize(Image image)
+        {
+            long totalSize = 
                 sizeof(int) +       // Width
                 sizeof(int) +       // Height
                 sizeof(uint) +      // RowPitch
                 sizeof(uint) +      // SlicePitch
                 image.SlicePitch;   // Pixels size
+
+            return (ulong)totalSize;
+        }
+        private static void WriteImageAsset(this BlobStreamWriter blob, ScratchImage scratch)
+        {
+            int imageCount = scratch.GetImageCount();
+
+            for (int i = 0; i < imageCount; i++)
+            {
+                blob.WriteImageAsset(scratch.GetImage(i));
+            }
         }
         private static void WriteImageAsset(this BlobStreamWriter blob, Image image)
         {
@@ -173,28 +196,23 @@ namespace TexturesImporter
             }
             scratchImages.Clear();
 
-            if (data.Info.ImportError != ImportErrors.Succeeded)
-            {
-                return;
-            }
+            if (data.Info.ImportError != ImportErrors.Succeeded) return;
 
-            if (!settings.Compress || scratch.GetMetadata().IsCubemap() && settings.PrefilterCubemap)
+            if (settings.Compress && !(scratch.GetMetadata().IsCubemap() && settings.PrefilterCubemap))
+            {
+                using var bcScratch = CompressImage(ref data, scratch);
+                if (data.Info.ImportError != 0) return;
+
+                // Decompress the first image to be used for the icon.
+                CopyIcon(bcScratch, ref data);
+                CopySubresources(bcScratch, ref data);
+                TextureInfoFromMetadata(bcScratch.GetMetadata(), ref data.Info);
+            }
+            else
             {
                 CopySubresources(scratch, ref data);
                 TextureInfoFromMetadata(scratch.GetMetadata(), ref data.Info);
-                return;
             }
-
-            using var bcScratch = CompressImage(ref data, scratch);
-            if (data.Info.ImportError != 0)
-            {
-                return;
-            }
-
-            // Decompress the first image to be used for the icon.
-            CopyIcon(bcScratch, ref data);
-            CopySubresources(bcScratch, ref data);
-            TextureInfoFromMetadata(bcScratch.GetMetadata(), ref data.Info);
         }
         private static ScratchImage LoadFromFile(ref TextureData data, string fileName)
         {
@@ -313,14 +331,14 @@ namespace TexturesImporter
                 return null;
             }
 
-            if (settings.MipLevels == 1 || settings.PrefilterCubemap)
+            if (settings.MipLevels != 1 || settings.PrefilterCubemap)
             {
-                return scratch;
+                var mipMaps = GenerateMipmaps(scratch, data.Info, settings.PrefilterCubemap ? 0 : settings.MipLevels, settings.Dimension == TextureDimensions.Texture3D);
+                scratch.Dispose();
+                return mipMaps;
             }
 
-            var mipMaps = GenerateMipmaps(scratch, data.Info, settings.PrefilterCubemap ? 0 : settings.MipLevels, settings.Dimension == TextureDimensions.Texture3D);
-            scratch.Dispose();
-            return mipMaps;
+            return scratch;
         }
         private static ScratchImage GenerateMipmaps(ScratchImage scratch, TextureInfo info, int mipLevels, bool is3d)
         {
@@ -331,11 +349,11 @@ namespace TexturesImporter
 
             if (!is3d)
             {
-                mipScratch = scratch.GenerateMipMaps(0, TEX_FILTER_FLAGS.DEFAULT, mipLevels, false);
+                mipScratch = scratch.GenerateMipMaps(TEX_FILTER_FLAGS.DEFAULT, mipLevels);
             }
             else
             {
-                mipScratch = scratch.GenerateMipMaps3D(0, scratch.GetImageCount(), TEX_FILTER_FLAGS.DEFAULT, mipLevels);
+                mipScratch = scratch.GenerateMipMaps3D(TEX_FILTER_FLAGS.DEFAULT, mipLevels);
             }
 
             if (mipScratch == null)
@@ -354,8 +372,8 @@ namespace TexturesImporter
             Debug.Assert(scratch.GetImageCount() > 0);
             var image = scratch.GetImage(0);
 
-            long size = GetImageAssetSize(image);
-            Debug.Assert(size <= int.MaxValue);
+            ulong size = GetImageAssetSize(image);
+            Debug.Assert(size <= uint.MaxValue);
             data.IconSize = (uint)size;
 
             data.Icon = Marshal.AllocHGlobal((int)size);
@@ -465,15 +483,8 @@ namespace TexturesImporter
         private static void CopySubresources(ScratchImage scratch, ref TextureData data)
         {
             Debug.Assert(scratch.GetMetadata().MipLevels > 0 && scratch.GetMetadata().MipLevels <= TextureData.MaxMips);
-
-            ulong subresourceSize = 0;
-
-            int imageCount = scratch.GetImageCount();
-            for (int i = 0; i < imageCount; i++)
-            {
-                subresourceSize += (ulong)GetImageAssetSize(scratch.GetImage(i));
-            }
-
+            
+            ulong subresourceSize = GetImageAssetSize(scratch);
             if (subresourceSize > uint.MaxValue)
             {
                 // Support up to 4GB per resource.
@@ -486,13 +497,7 @@ namespace TexturesImporter
             Debug.Assert(data.SubresourceData != IntPtr.Zero);
 
             BlobStreamWriter blob = new(data.SubresourceData, (int)data.SubresourceSize);
-
-            for (int i = 0; i < imageCount; i++)
-            {
-                var image = scratch.GetImage(i);
-
-                blob.WriteImageAsset(image);
-            }
+            blob.WriteImageAsset(scratch);
         }
         private static int GetMaxMipCount(int width, int height, int depth)
         {
@@ -517,7 +522,12 @@ namespace TexturesImporter
             var images = SubresourceDataToImageAssets(ref data);
 
             var metadata = MetadataFromTextureInfo(data.Info);
-            var tmp = Helper.InitializeTemporary([.. images], metadata);
+            using var tmp = Helper.InitializeTemporary([.. images], metadata);
+            if (tmp == null)
+            {
+                data.Info.ImportError = ImportErrors.Unknown;
+                return;
+            }
 
             using var scratch = tmp.Decompress(0, DXGI_FORMAT.UNKNOWN);
             if (scratch != null)
@@ -577,7 +587,7 @@ namespace TexturesImporter
             int cubemapCount = info.ArraySize / 6;
             Debug.Assert(info.MipLevels == MathF.Log2(info.Width) + 1);
 
-            var cubemaps = Helper.InitializeCube(format, info.Width, info.Height, cubemapCount, info.MipLevels, CP_FLAGS.NONE);
+            using var cubemaps = Helper.InitializeCube(format, info.Width, info.Height, cubemapCount, info.MipLevels, CP_FLAGS.NONE);
             if (cubemaps == null)
             {
                 info.ImportError = ImportErrors.Unknown;
@@ -592,36 +602,41 @@ namespace TexturesImporter
                 writer.Write(images[imgIdx].Pixels, (int)image.SlicePitch);
             }
 
+            ScratchImage filtered = null;
             int sampleCount = 1024;
-
-            bool hr = false;
             DeviceManager.RunOnGPU((device) =>
             {
-                hr = filterType == IblFilter.Diffuse ?
-                    EnvMapProcessing.PrefilterDiffuse(device, cubemaps, sampleCount, out cubemaps) :
-                    EnvMapProcessing.PrefilterSpecular(device, cubemaps, sampleCount, out cubemaps);
+                filtered = filterType == IblFilter.Diffuse ?
+                    EnvMapProcessing.PrefilterDiffuse(device, cubemaps, sampleCount) :
+                    EnvMapProcessing.PrefilterSpecular(device, cubemaps, sampleCount);
             });
 
-            if (!hr)
+            if (filtered == null)
             {
                 info.ImportError = ImportErrors.Unknown;
                 return;
             }
 
-            if (data.ImportSettings.Compress)
+            using (filtered)
             {
-                var bcScratch = CompressImage(ref data, cubemaps);
-                if (data.Info.ImportError != ImportErrors.Succeeded) return;
+                if (data.ImportSettings.Compress)
+                {
+                    using var compressed = CompressImage(ref data, filtered);
+                    if (data.Info.ImportError != ImportErrors.Succeeded) return;
 
-                // Decompress the first image to be used for the icon.
-                Debug.Assert(bcScratch.GetImageCount() > 0);
-                CopyIcon(bcScratch, ref data);
+                    // Decompress the first image to be used for the icon.
+                    Debug.Assert(compressed.GetImageCount() > 0);
+                    CopyIcon(compressed, ref data);
 
-                cubemaps = bcScratch;
+                    CopySubresources(compressed, ref data);
+                    TextureInfoFromMetadata(compressed.GetMetadata(), ref data.Info);
+                }
+                else
+                {
+                    CopySubresources(filtered, ref data);
+                    TextureInfoFromMetadata(filtered.GetMetadata(), ref data.Info);
+                }
             }
-
-            CopySubresources(cubemaps, ref data);
-            TextureInfoFromMetadata(cubemaps.GetMetadata(), ref data.Info);
         }
     }
 }

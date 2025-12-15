@@ -66,7 +66,7 @@ namespace TexturesImporter
             textureData.ImportSettings.Dimension = TextureDimensions.TextureCube;
             textureData.ImportSettings.CubemapSize = size;
             textureData.ImportSettings.MirrorCubemap = true;
-            textureData.ImportSettings.PrefilterCubemap = true;
+            textureData.ImportSettings.PrefilterCubemap = false;
 
             ImportInternal(ref textureData);
         }

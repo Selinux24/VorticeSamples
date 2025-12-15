@@ -156,20 +156,18 @@ namespace TexturesImporter
             int cubemapCount = arraySize / 6;
             int mipLevels = 1;
 
-            using EquirectangularToCubeMap shader = new(device, (uint)cubemapSize, (uint)arraySize, format);
+            using EquirectangularToCubeMap shader = new(device, cubemapSize, arraySize, format);
             if (!shader.Run(envMaps, mirrorCubemap)) return null;
 
             var result = Helper.InitializeCube(format, cubemapSize, cubemapSize, cubemapCount, mipLevels, CP_FLAGS.NONE);
-            if (!shader.DownloadCubemaps(result, (uint)mipLevels)) return null;
+            if (!shader.DownloadCubemaps(result, mipLevels)) return null;
 
             return result;
         }
 
-        public static bool PrefilterDiffuse(ID3D11Device device, ScratchImage cubemaps, int sampleCount, out ScratchImage prefilteredDiffuse)
+        public static ScratchImage PrefilterDiffuse(ID3D11Device device, ScratchImage cubemaps, int sampleCount)
         {
             Debug.Assert(device != null);
-
-            prefilteredDiffuse = null;
 
             var metaData = cubemaps.GetMetadata();
             int arraySize = metaData.ArraySize;
@@ -178,22 +176,19 @@ namespace TexturesImporter
             var format = metaData.Format;
             int mipLevels = 1;
 
-            using PrefilterDiffuseEnvMap shader = new(device, cubemaps, (uint)arraySize, (uint)cubeMapSize, (uint)cubemapCount, format, (uint)sampleCount);
-            if (!shader.Run()) return false;
+            using PrefilterDiffuseEnvMap shader = new(device, cubemaps, arraySize, cubeMapSize, cubemapCount, format, sampleCount);
+            if (!shader.Run()) return null;
 
             var result = Helper.InitializeCube(format, cubeMapSize, cubeMapSize, cubemapCount, mipLevels, CP_FLAGS.NONE);
-            if (!shader.DownloadCubemaps(result, 1)) return false;
+            if (!shader.DownloadCubemaps(result, mipLevels)) return null;
 
-            prefilteredDiffuse = result;
-            return false;
+            return result;
         }
-        public static bool PrefilterSpecular(ID3D11Device device, ScratchImage cubemaps, int sampleCount, out ScratchImage prefilteredDiffuse)
+        public static ScratchImage PrefilterSpecular(ID3D11Device device, ScratchImage cubemaps, int sampleCount)
         {
             Debug.Assert(device != null);
 
-            prefilteredDiffuse = null;
-
-            return false;
+            return null;
         }
     }
 }

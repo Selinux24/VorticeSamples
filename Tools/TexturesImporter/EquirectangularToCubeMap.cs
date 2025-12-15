@@ -19,20 +19,20 @@ namespace TexturesImporter
         private readonly ID3D11Buffer constantBuffer;
         private readonly ID3D11SamplerState linearSampler;
 
-        public EquirectangularToCubeMap(ID3D11Device device, uint cubemapSize, uint arraySize, DXGI_FORMAT format)
+        public EquirectangularToCubeMap(ID3D11Device device, int cubemapSize, int arraySize, DXGI_FORMAT format)
         {
             this.device = device;
-            this.cubemapSize = cubemapSize;
-            this.arraySize = arraySize;
+            this.cubemapSize = (uint)cubemapSize;
+            this.arraySize = (uint)arraySize;
             this.format = (Format)format;
 
             // Create output resources
             Texture2DDescription descTx = new()
             {
-                Width = cubemapSize,
-                Height = cubemapSize,
+                Width = (uint)cubemapSize,
+                Height = (uint)cubemapSize,
                 MipLevels = 1,
-                ArraySize = arraySize,
+                ArraySize = (uint)arraySize,
                 Format = (Format)format,
                 SampleDescription = new(1, 0),
                 Usage = ResourceUsage.Default,
@@ -96,7 +96,7 @@ namespace TexturesImporter
 
             for (uint i = 0; i < envMaps.Length; i++)
             {
-                var cubemapUav = EnvMapProcessingShader.CreateTexture2DUav(device, format, cubemaps, i * 6);
+                using var cubemapUav = EnvMapProcessingShader.CreateTexture2DUav(device, format, cubemaps, i * 6);
                 if (cubemapUav == null)
                 {
                     return false;
@@ -125,10 +125,10 @@ namespace TexturesImporter
                     RowPitch = (uint)src.RowPitch
                 };
 
-                var envMap = device.CreateTexture2D(desc, data);
+                using var envMap = device.CreateTexture2D(desc, data);
                 if (envMap == null) return false;
 
-                var envMapSrv = device.CreateShaderResourceView(envMap);
+                using var envMapSrv = device.CreateShaderResourceView(envMap);
                 if (envMapSrv == null) return false;
 
                 EnvMapProcessingShader.Dispatch(ctx, envMapSrv, cubemapUav, constantBuffer, linearSampler, shaderCubeMap, cubemapSize);
@@ -139,12 +139,12 @@ namespace TexturesImporter
             return true;
         }
 
-        public bool DownloadCubemaps(ScratchImage result, uint mipLevels)
+        public bool DownloadCubemaps(ScratchImage result, int mipLevels)
         {
             var ctx = device.ImmediateContext;
             Debug.Assert(ctx != null);
 
-            return EnvMapProcessingShader.DownloadCubemaps(ctx, cubemapsCpu, cubemaps, arraySize, mipLevels, result);
+            return EnvMapProcessingShader.DownloadCubemaps(ctx, cubemapsCpu, cubemaps, arraySize, (uint)mipLevels, result);
         }
     }
 }
