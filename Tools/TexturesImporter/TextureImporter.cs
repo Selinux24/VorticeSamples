@@ -79,7 +79,7 @@ namespace TexturesImporter
         }
         private static ulong GetImageAssetSize(Image image)
         {
-            long totalSize = 
+            long totalSize =
                 sizeof(int) +       // Width
                 sizeof(int) +       // Height
                 sizeof(uint) +      // RowPitch
@@ -345,6 +345,7 @@ namespace TexturesImporter
                     if (!DeviceManager.RunOnGPU((device) =>
                     {
                         scratch = EnvMapProcessing.EquirectangularToCubemapGPU(device, images, settings.CubemapSize, settings.PrefilterCubemap, settings.MirrorCubemap);
+                        return scratch != null;
                     }))
                     {
                         scratch = EnvMapProcessing.EquirectangularToCubemapCPU(images, settings.CubemapSize, settings.PrefilterCubemap, settings.MirrorCubemap);
@@ -372,9 +373,10 @@ namespace TexturesImporter
                 return null;
             }
 
-            if (settings.MipLevels != 1 || settings.PrefilterCubemap)
+            bool generateFullMipchain = settings.PrefilterCubemap && settings.Dimension == TextureDimensions.TextureCube;
+            if (settings.MipLevels != 1 || generateFullMipchain)
             {
-                var mipMaps = GenerateMipmaps(scratch, data.Info, settings.PrefilterCubemap ? 0 : settings.MipLevels, settings.Dimension == TextureDimensions.Texture3D);
+                var mipMaps = GenerateMipmaps(scratch, data.Info, generateFullMipchain ? 0 : settings.MipLevels, settings.Dimension == TextureDimensions.Texture3D);
                 scratch.Dispose();
                 return mipMaps;
             }
@@ -440,6 +442,7 @@ namespace TexturesImporter
             if (!(DeviceManager.CanUseGpu(outputFormat) && DeviceManager.RunOnGPU((device) =>
             {
                 bcScratch = DeviceManager.CompressGpu(scratch, outputFormat);
+                return bcScratch != null;
             })))
             {
                 bcScratch = scratch.Compress(outputFormat, TEX_COMPRESS_FLAGS.PARALLEL, data.ImportSettings.AlphaThreshold);
@@ -524,7 +527,7 @@ namespace TexturesImporter
         private static void CopySubresources(ScratchImage scratch, ref TextureData data)
         {
             Debug.Assert(scratch.GetMetadata().MipLevels > 0 && scratch.GetMetadata().MipLevels <= TextureData.MaxMips);
-            
+
             ulong subresourceSize = GetImageAssetSize(scratch);
             if (subresourceSize > uint.MaxValue)
             {
@@ -650,6 +653,7 @@ namespace TexturesImporter
                 filtered = filterType == IblFilter.Diffuse ?
                     EnvMapProcessing.PrefilterDiffuse(device, cubemaps, sampleCount) :
                     EnvMapProcessing.PrefilterSpecular(device, cubemaps, sampleCount);
+                return filtered != null;
             });
 
             if (filtered == null)

@@ -13,7 +13,8 @@ namespace TexturesImporter
         const string ShaderFileName = "./EnvMapProcessing.hlsl";
         const string ShaderProfile = "cs_5_0";
         const string ShaderCubeMapEntryPoint = "EquirectangularToCubeMapCS";
-        const string ShaderPrefilterEntryPoint = "PrefilterDiffuseEnvMapCS";
+        const string ShaderPrefilterDiffuseEntryPoint = "PrefilterDiffuseEnvMapCS";
+        const string ShaderPrefilterSpecularEntryPoint = "PrefilterSpecularEnvMapCS";
 
         const int D3D11_1_UAV_SLOT_COUNT = 64;
         const int D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT = 128;
@@ -33,12 +34,19 @@ namespace TexturesImporter
 
         public static ID3D11ComputeShader GetCubeMapShader(ID3D11Device device)
         {
-            var shaderCode = Compiler.CompileFromFile(ShaderFileName, ShaderCubeMapEntryPoint, ShaderProfile);
-            return device.CreateComputeShader(shaderCode.ToArray());
+            return CreateComputeShader(device, ShaderCubeMapEntryPoint);
         }
-        public static ID3D11ComputeShader GetPrefilterShader(ID3D11Device device)
+        public static ID3D11ComputeShader GetPrefilterDiffuseShader(ID3D11Device device)
         {
-            var shaderCode = Compiler.CompileFromFile(ShaderFileName, ShaderPrefilterEntryPoint, ShaderProfile);
+            return CreateComputeShader(device, ShaderPrefilterDiffuseEntryPoint);
+        }
+        public static ID3D11ComputeShader GetPrefilterSpecularShader(ID3D11Device device)
+        {
+            return CreateComputeShader(device, ShaderPrefilterSpecularEntryPoint);
+        }
+        static ID3D11ComputeShader CreateComputeShader(ID3D11Device device, string entryPoint)
+        {
+            var shaderCode = Compiler.CompileFromFile(ShaderFileName, entryPoint, ShaderProfile);
             return device.CreateComputeShader(shaderCode.ToArray());
         }
         public static ID3D11Buffer CreateConstantBuffer(ID3D11Device device)
@@ -71,7 +79,7 @@ namespace TexturesImporter
             return device.CreateSamplerState(desc);
         }
 
-        public static ID3D11ShaderResourceView CreateCubemapSrv(ID3D11Device device, Format format, ID3D11Texture2D cubemap, uint firstArraySlice)
+        public static ID3D11ShaderResourceView CreateCubemapSrv(ID3D11Device device, Format format, ID3D11Texture2D cubemap, uint firstArraySlice, uint mipLevels = 1)
         {
             ShaderResourceViewDescription desc = new()
             {
@@ -81,11 +89,11 @@ namespace TexturesImporter
 
             desc.TextureCubeArray.NumCubes = 1;
             desc.TextureCubeArray.First2DArrayFace = firstArraySlice;
-            desc.TextureCubeArray.MipLevels = 1;
+            desc.TextureCubeArray.MipLevels = mipLevels;
 
             return device.CreateShaderResourceView(cubemap, desc);
         }
-        public static ID3D11UnorderedAccessView CreateTexture2DUav(ID3D11Device device, Format format, ID3D11Texture2D cubemap, uint firstArraySlice)
+        public static ID3D11UnorderedAccessView CreateTexture2DUav(ID3D11Device device, Format format, ID3D11Texture2D cubemap, uint firstArraySlice, uint mipSlice = 0)
         {
             UnorderedAccessViewDescription desc = new()
             {
@@ -94,7 +102,7 @@ namespace TexturesImporter
             };
             desc.Texture2DArray.ArraySize = 6;
             desc.Texture2DArray.FirstArraySlice = firstArraySlice;
-            desc.Texture2DArray.MipSlice = 0;
+            desc.Texture2DArray.MipSlice = mipSlice;
 
             return device.CreateUnorderedAccessView(cubemap, desc);
         }

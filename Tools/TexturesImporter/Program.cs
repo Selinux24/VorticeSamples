@@ -20,7 +20,7 @@ namespace TexturesImporter
 
         static void Main()
         {
-            ImportCube(textureCube, 256, true, IblFilter.Diffuse);
+            ImportCube(textureCube, 256, true, true);
             Import(textureAmbientOcclusionPath);
             Import(textureBaseColorPath);
             Import(textureEmissivePath);
@@ -34,7 +34,7 @@ namespace TexturesImporter
             Console.WriteLine("Press any key to exit.");
             Console.ReadKey(true);
         }
-      
+
         private static void Import(string texturePath, BCFormats? format = null, bool compress = true, bool preferBc7 = true)
         {
             if (!File.Exists(texturePath))
@@ -52,7 +52,7 @@ namespace TexturesImporter
 
             ImportInternal(ref textureData);
         }
-        private static void ImportCube(string texturePath, int size, bool mirror, IblFilter filter = IblFilter.None, BCFormats? format = null, bool compress = true, bool preferBc7 = true)
+        private static void ImportCube(string texturePath, int size, bool mirror, bool prefilter, BCFormats? format = null, bool compress = true, bool preferBc7 = true)
         {
             if (!File.Exists(texturePath))
             {
@@ -69,16 +69,20 @@ namespace TexturesImporter
             textureData.ImportSettings.Dimension = TextureDimensions.TextureCube;
             textureData.ImportSettings.CubemapSize = size;
             textureData.ImportSettings.MirrorCubemap = mirror;
-            textureData.ImportSettings.PrefilterCubemap = filter != IblFilter.None;
+            textureData.ImportSettings.PrefilterCubemap = prefilter;
 
             ImportInternal(ref textureData);
 
             if (textureData.ImportSettings.PrefilterCubemap)
             {
-                Prefilter(ref textureData, filter);
+                var diff = textureData.Copy();
+                var spec = textureData.Copy();
+
+                Prefilter(ref diff, IblFilter.Diffuse);
+                Prefilter(ref spec, IblFilter.Specular);
             }
         }
-     
+
         private static void ImportInternal(ref TextureData textureData)
         {
             TextureImporter.Import(ref textureData);

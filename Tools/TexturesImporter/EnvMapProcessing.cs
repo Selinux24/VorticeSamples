@@ -12,8 +12,9 @@ namespace TexturesImporter
     {
         const float ThresholdDefault = 0.5f;
 
-        public const int PrefilteredDiffuseCubemapSize = 64;
+        public const int PrefilteredDiffuseCubemapSize = 32;
         public const int PrefilteredSpecularCubemapSize = 256;
+        public const int RoughnessMipLevels = 6;
 
         private static TexHelper Helper => TexHelper.Instance;
 
@@ -177,6 +178,7 @@ namespace TexturesImporter
             int cubemapCount = arraySize / 6;
             var format = metaData.Format;
             int mipLevels = 1;
+            Debug.Assert(metaData.IsCubemap() && cubemapCount > 0 && (arraySize % 6) == 0);
 
             using PrefilterDiffuseEnvMap shader = new(device, cubemaps, arraySize, cubeMapSize, cubemapCount, format, sampleCount);
             if (!shader.Run()) return null;
@@ -190,7 +192,32 @@ namespace TexturesImporter
         {
             Debug.Assert(device != null);
 
-            return null;
+            var metaData = cubemaps.GetMetadata();
+            int arraySize = metaData.ArraySize;
+            int cubeMapSize = PrefilteredSpecularCubemapSize;
+            int cubemapCount = arraySize / 6;
+            var format = metaData.Format;
+            int mipLevels = RoughnessMipLevels;
+            Debug.Assert(metaData.IsCubemap() && cubemapCount > 0 && (arraySize % 6) == 0);
+
+            using PrefilterSpecularEnvMap shader = new(device, cubemaps, arraySize, cubeMapSize, cubemapCount, format, sampleCount);
+            if (!shader.Run()) return null;
+
+            var result = Helper.InitializeCube(format, cubeMapSize, cubeMapSize, cubemapCount, mipLevels, CP_FLAGS.NONE);
+            if (!shader.DownloadCubemaps(result, mipLevels)) return null;
+
+            Debug.Assert(metaData.Width == result.GetMetadata().Width);
+            // Copy mip 0 from the source cubemap
+            for (int imgIdx = 0; imgIdx < arraySize; imgIdx++)
+            {
+                var src = cubemaps.GetImage(0, imgIdx, 0);
+                var dst = result.GetImage(0, imgIdx, 0);
+
+                BlobStreamWriter writer = new(dst.Pixels, (int)dst.SlicePitch);
+                writer.Write(src.Pixels, (int)src.SlicePitch);
+            }
+
+            return result;
         }
     }
 }

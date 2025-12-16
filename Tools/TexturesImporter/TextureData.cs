@@ -132,5 +132,18 @@ namespace TexturesImporter
 
             return slices;
         }
+
+        public TextureData Copy()
+        {
+            return new TextureData()
+            {
+                SubresourceData = SubresourceData,
+                SubresourceSize = SubresourceSize,
+                Icon = Icon,
+                IconSize = IconSize,
+                Info = Info,
+                ImportSettings = ImportSettings,
+            };
+        }
     }
 }

@@ -18,7 +18,7 @@ namespace TexturesImporter
 
         private const uint WarpId = 0x1414;
 
-        private static readonly object deviceCreationMutex = new();
+        private static readonly Lock deviceCreationMutex = new();
         private static bool tryOnce = false;
         private static readonly List<D3D11Device> d3d11Devices = [];
 
@@ -26,11 +26,11 @@ namespace TexturesImporter
         {
             return format switch
             {
-                DXGI_FORMAT.BC6H_TYPELESS or 
-                DXGI_FORMAT.BC6H_UF16 or 
-                DXGI_FORMAT.BC6H_SF16 or 
-                DXGI_FORMAT.BC7_TYPELESS or 
-                DXGI_FORMAT.BC7_UNORM or 
+                DXGI_FORMAT.BC6H_TYPELESS or
+                DXGI_FORMAT.BC6H_UF16 or
+                DXGI_FORMAT.BC6H_SF16 or
+                DXGI_FORMAT.BC7_TYPELESS or
+                DXGI_FORMAT.BC7_UNORM or
                 DXGI_FORMAT.BC7_UNORM_SRGB => true,
                 _ => false,
             };
@@ -129,7 +129,7 @@ namespace TexturesImporter
 
             return d3d11Devices.Count > 0;
         }
-        public static bool RunOnGPU(Action<ID3D11Device> func)
+        public static bool RunOnGPU(Func<ID3D11Device, bool> func)
         {
             if (!TryCreateDevice())
             {
@@ -137,13 +137,14 @@ namespace TexturesImporter
             }
 
             bool wait = true;
+            bool result = false;
             while (wait)
             {
                 for (int i = 0; i < d3d11Devices.Count; i++)
                 {
                     if (Monitor.TryEnter(d3d11Devices[i].HwCompressionMutex))
                     {
-                        func.Invoke(d3d11Devices[i].Device);
+                        result = func.Invoke(d3d11Devices[i].Device);
                         Monitor.Exit(d3d11Devices[i].HwCompressionMutex);
                         wait = false;
                         break;
@@ -155,7 +156,7 @@ namespace TexturesImporter
                 }
             }
 
-            return true;
+            return result;
         }
 
         public static ScratchImage CompressGpu(ScratchImage scratch, DXGI_FORMAT outputFormat)

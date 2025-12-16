@@ -6,7 +6,7 @@ using Vortice.DXGI;
 
 namespace TexturesImporter
 {
-    class PrefilterDiffuseEnvMap : IDisposable
+    class PrefilterSpecularEnvMap : IDisposable
     {
         private readonly ID3D11Device device;
         private readonly uint sampleCount;
@@ -14,6 +14,7 @@ namespace TexturesImporter
         private readonly uint cubeMapSize;
         private readonly uint cubemapCount;
         private readonly Format format;
+        private readonly uint mipLevels;
 
         private readonly ID3D11Texture2D cubemapsIn;
         private readonly ID3D11Texture2D cubemapsOut;
@@ -22,16 +23,17 @@ namespace TexturesImporter
         private readonly ID3D11Buffer constantBuffer;
         private readonly ID3D11SamplerState linearSampler;
 
-        public PrefilterDiffuseEnvMap(ID3D11Device device, ScratchImage cubemaps, int arraySize, int cubeMapSize, int cubemapCount, DXGI_FORMAT format, int sampleCount)
+        public PrefilterSpecularEnvMap(ID3D11Device device, ScratchImage cubemaps, int arraySize, int cubeMapSize, int cubemapCount, DXGI_FORMAT format, int sampleCount)
         {
             this.device = device;
+            this.sampleCount = (uint)sampleCount;
             this.arraySize = (uint)arraySize;
             this.cubeMapSize = (uint)cubeMapSize;
             this.cubemapCount = (uint)cubemapCount;
             this.format = (Format)format;
-            this.sampleCount = (uint)sampleCount;
 
             TexMetadata metaData = cubemaps.GetMetadata();
+            mipLevels = (uint)metaData.MipLevels;
 
             // Upload source cubemaps and create output resources
             Texture2DDescription desc = new()
@@ -63,8 +65,8 @@ namespace TexturesImporter
             }
             cubemapsIn = device.CreateTexture2D(desc, inputData);
 
-            desc.Width = desc.Height = EnvMapProcessing.PrefilteredDiffuseCubemapSize;
-            desc.MipLevels = 1;
+            desc.Width = desc.Height = EnvMapProcessing.PrefilteredSpecularCubemapSize;
+            desc.MipLevels = EnvMapProcessing.RoughnessMipLevels;
             desc.BindFlags = BindFlags.UnorderedAccess;
             desc.MiscFlags = 0;
             cubemapsOut = device.CreateTexture2D(desc);
@@ -74,13 +76,13 @@ namespace TexturesImporter
             desc.CPUAccessFlags = CpuAccessFlags.Read;
             cubemapsCpu = device.CreateTexture2D(desc);
 
-            shaderPrefilter = EnvMapProcessingShader.GetPrefilterDiffuseShader(device);
+            shaderPrefilter = EnvMapProcessingShader.GetPrefilterSpecularShader(device);
 
             constantBuffer = EnvMapProcessingShader.CreateConstantBuffer(device);
 
             linearSampler = EnvMapProcessingShader.CreateLinearSampler(device);
         }
-        ~PrefilterDiffuseEnvMap()
+        ~PrefilterSpecularEnvMap()
         {
             Dispose(false);
         }
@@ -108,34 +110,43 @@ namespace TexturesImporter
             var ctx = device.ImmediateContext;
             Debug.Assert(ctx != null);
 
-            EnvMapProcessingShader.ShaderConstants constants = new()
-            {
-                CubeMapInSize = cubeMapSize,
-                CubeMapOutSize = EnvMapProcessing.PrefilteredDiffuseCubemapSize,
-                SampleCount = sampleCount,
-            };
-            if (!EnvMapProcessingShader.SetConstants(ctx, constantBuffer, constants))
-            {
-                return false;
-            }
-
             EnvMapProcessingShader.ResetD3d11Context(ctx);
 
             for (uint i = 0; i < cubemapCount; i++)
             {
-                using var cubemapInSrv = EnvMapProcessingShader.CreateCubemapSrv(device, format, cubemapsIn, i * 6);
+                using var cubemapInSrv = EnvMapProcessingShader.CreateCubemapSrv(device, format, cubemapsIn, i * 6, mipLevels);
                 if (cubemapInSrv == null)
                 {
                     return false;
                 }
 
-                using var cubemapOutUav = EnvMapProcessingShader.CreateTexture2DUav(device, format, cubemapsOut, i * 6);
-                if (cubemapOutUav == null)
+                // NOTE: Start from mip level 1, because mip 0 is identical to the source and we can copy it
+                // instead of filtering it.
+                for (uint mip = 1; mip < EnvMapProcessing.RoughnessMipLevels; mip++)
                 {
-                    return false;
-                }
+                    using var cubemapOutUav = EnvMapProcessingShader.CreateTexture2DUav(device, format, cubemapsOut, i * 6, mip);
+                    if (cubemapOutUav == null)
+                    {
+                        return false;
+                    }
 
-                EnvMapProcessingShader.Dispatch(ctx, cubemapInSrv, cubemapOutUav, constantBuffer, linearSampler, shaderPrefilter, EnvMapProcessing.PrefilteredDiffuseCubemapSize);
+                    uint outSize = (uint)MathF.Max(1, EnvMapProcessing.PrefilteredSpecularCubemapSize >> (int)mip);
+                    float roughness = mip * (1f / EnvMapProcessing.RoughnessMipLevels);
+
+                    EnvMapProcessingShader.ShaderConstants constants = new()
+                    {
+                        CubeMapInSize = cubeMapSize,
+                        CubeMapOutSize = outSize,
+                        SampleCount = sampleCount,
+                        Roughness = roughness,
+                    };
+                    if (!EnvMapProcessingShader.SetConstants(ctx, constantBuffer, constants))
+                    {
+                        return false;
+                    }
+
+                    EnvMapProcessingShader.Dispatch(ctx, cubemapInSrv, cubemapOutUav, constantBuffer, linearSampler, shaderPrefilter, outSize);
+                }
             }
 
             EnvMapProcessingShader.ResetD3d11Context(ctx);
