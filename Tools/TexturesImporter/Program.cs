@@ -10,23 +10,26 @@ namespace TexturesImporter
         private const string outputDiffuseExt = ".diffuse";
         private const string outputSpecularExt = ".specular";
 
-        private const string textureCube = "../../../../../Assets/sunny_rose_garden_4k.hdr";
-        private const string textureAmbientOcclusionPath = "../../../../../Assets/AmbientOcclusion.png";
-        private const string textureBaseColorPath = "../../../../../Assets/BaseColor.png";
-        private const string textureEmissivePath = "../../../../../Assets/Emissive.png";
-        private const string textureMetalRoughPath = "../../../../../Assets/MetalRough.png";
-        private const string textureNormalPath = "../../../../../Assets/Normal.png";
-        private const string textureM24Path = "../../../../../Assets/M24.dds";
+        private const string assetFolder = "../../../../../Assets/";
+        private const string textureEnvMap = "sunny_rose_garden_4k.hdr";
+        private const string textureAmbientOcclusion = "AmbientOcclusion.png";
+        private const string textureBaseColor = "BaseColor.png";
+        private const string textureEmissive = "Emissive.png";
+        private const string textureMetalRough = "MetalRough.png";
+        private const string textureNormal = "Normal.png";
+        private const string textureHumvee = "humvee.jpg";
+        private const string textureM24 = "M24.dds";
 
         static void Main()
         {
-            ImportCube(textureCube, 256, true, true);
-            Import(textureAmbientOcclusionPath);
-            Import(textureBaseColorPath);
-            Import(textureEmissivePath);
-            Import(textureMetalRoughPath);
-            Import(textureNormalPath);
-            Import(textureM24Path, BCFormats.BC6HDR);
+            ImportEnvMap(textureEnvMap, 256, true, true);
+            Import(textureAmbientOcclusion);
+            Import(textureBaseColor);
+            Import(textureEmissive);
+            Import(textureMetalRough, BCFormats.BC5DualChannelGray);
+            Import(textureNormal);
+            Import(textureHumvee);
+            Import(textureM24, BCFormats.BC6HDR);
 
             TextureImporter.ShutDownTextureTools();
 
@@ -35,8 +38,9 @@ namespace TexturesImporter
             Console.ReadKey(true);
         }
 
-        private static void Import(string texturePath, BCFormats? format = null, bool compress = true, bool preferBc7 = true)
+        private static void Import(string fileName, BCFormats format = BCFormats.PickBestFit, bool compress = true, bool preferBc7 = true)
         {
+            string texturePath = Path.Combine(assetFolder, fileName);
             if (!File.Exists(texturePath))
             {
                 Console.WriteLine($"Texture not found => {Path.GetFileName(texturePath)}");
@@ -45,15 +49,17 @@ namespace TexturesImporter
 
             TextureData textureData = new();
             textureData.ImportSettings.Sources = texturePath;
-            if (format.HasValue) textureData.ImportSettings.OutputFormat = format.Value;
+            textureData.ImportSettings.OutputFormat = format;
             textureData.ImportSettings.Compress = compress;
             textureData.ImportSettings.PreferBc7 = preferBc7;
             textureData.ImportSettings.AlphaThreshold = 0.5f;
+            textureData.ImportSettings.Dimension = TextureDimensions.Texture2D;
 
             ImportInternal(ref textureData);
         }
-        private static void ImportCube(string texturePath, int size, bool mirror, bool prefilter, BCFormats? format = null, bool compress = true, bool preferBc7 = true)
+        private static void ImportEnvMap(string fileName, int size, bool mirror, bool prefilter, BCFormats format = BCFormats.PickBestFit, bool compress = false, bool preferBc7 = true)
         {
+            string texturePath = Path.Combine(assetFolder, fileName);
             if (!File.Exists(texturePath))
             {
                 Console.WriteLine($"Texture not found => {Path.GetFileName(texturePath)}");
@@ -62,7 +68,7 @@ namespace TexturesImporter
 
             TextureData textureData = new();
             textureData.ImportSettings.Sources = texturePath;
-            if (format.HasValue) textureData.ImportSettings.OutputFormat = format.Value;
+            textureData.ImportSettings.OutputFormat = format;
             textureData.ImportSettings.Compress = compress;
             textureData.ImportSettings.PreferBc7 = preferBc7;
             textureData.ImportSettings.AlphaThreshold = 0.5f;

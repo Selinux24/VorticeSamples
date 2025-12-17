@@ -38,6 +38,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Assets", "Assets", "{53D3EA
 		Assets\humvee.obj = Assets\humvee.obj
 		Assets\m24.dae = Assets\m24.dae
 		Assets\m24.dds = Assets\m24.dds
+		Assets\sunny_rose_garden_4k.hdr = Assets\sunny_rose_garden_4k.hdr
 		Assets\ToyTank.fbx = Assets\ToyTank.fbx
 	EndProjectSection
 EndProject
