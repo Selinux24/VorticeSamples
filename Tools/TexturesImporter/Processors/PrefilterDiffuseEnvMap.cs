@@ -4,7 +4,7 @@ using System.Diagnostics;
 using Vortice.Direct3D11;
 using Vortice.DXGI;
 
-namespace TexturesImporter
+namespace TexturesImporter.Processors
 {
     class PrefilterDiffuseEnvMap : IDisposable
     {
@@ -129,7 +129,7 @@ namespace TexturesImporter
                     return false;
                 }
 
-                using var cubemapOutUav = EnvMapProcessingShader.CreateTexture2DUav(device, format, cubemapsOut, i * 6);
+                using var cubemapOutUav = EnvMapProcessingShader.CreateTexture2DUav(device, format, 6, i * 6, 0, cubemapsOut);
                 if (cubemapOutUav == null)
                 {
                     return false;
@@ -143,12 +143,12 @@ namespace TexturesImporter
             return true;
         }
 
-        public bool DownloadCubemaps(ScratchImage result, int mipLevels)
+        public bool Download(ScratchImage result, int mipLevels)
         {
             var ctx = device.ImmediateContext;
             Debug.Assert(ctx != null);
 
-            return EnvMapProcessingShader.DownloadCubemaps(ctx, cubemapsCpu, cubemapsOut, arraySize, (uint)mipLevels, result);
+            return EnvMapProcessingShader.DownloadTexture2D(ctx,  cubemapsOut, cubemapsCpu, arraySize, (uint)mipLevels, result);
         }
     }
 }

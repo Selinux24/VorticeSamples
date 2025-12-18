@@ -9,6 +9,7 @@ namespace TexturesImporter
         private const string outputTextureExt = ".texture";
         private const string outputDiffuseExt = ".diffuse";
         private const string outputSpecularExt = ".specular";
+        private const string outputBrdfLutExt = ".brdf";
 
         private const string assetFolder = "../../../../../Assets/";
         private const string textureEnvMap = "sunny_rose_garden_4k.hdr";
@@ -83,9 +84,11 @@ namespace TexturesImporter
             {
                 var diff = textureData.Copy();
                 var spec = textureData.Copy();
+                var brdf = textureData.Copy();
 
                 Prefilter(ref diff, IblFilter.Diffuse);
                 Prefilter(ref spec, IblFilter.Specular);
+                BrdfIntegrationLut(ref brdf);
             }
         }
 
@@ -100,7 +103,7 @@ namespace TexturesImporter
             }
 
             textureData.SaveTexture(GetTexturePath(textureData.ImportSettings.Sources));
-            Console.WriteLine($"  Size: {textureData.Info.Width}x{textureData.Info.Height}, ArraySize: {textureData.Info.ArraySize}, Mips: {textureData.Info.MipLevels}");
+            Console.WriteLine($"  ASSET - Size: {textureData.Info.Width}x{textureData.Info.Height}, ArraySize: {textureData.Info.ArraySize}, Mips: {textureData.Info.MipLevels}");
         }
         private static string GetTexturePath(string textureName)
         {
@@ -117,12 +120,30 @@ namespace TexturesImporter
             }
 
             textureData.SaveTexture(GetTextureFilterPath(textureData.ImportSettings.Sources, filter));
-            Console.WriteLine($"  Size: {textureData.Info.Width}x{textureData.Info.Height}, ArraySize: {textureData.Info.ArraySize}, Mips: {textureData.Info.MipLevels}");
+            string filterStr = filter == IblFilter.Diffuse ? "FDIFF" : "FSPEC";
+            Console.WriteLine($"  {filterStr} - Size: {textureData.Info.Width}x{textureData.Info.Height}, ArraySize: {textureData.Info.ArraySize}, Mips: {textureData.Info.MipLevels}");
         }
         private static string GetTextureFilterPath(string textureName, IblFilter filter)
         {
             string fileName = Path.GetFileName(textureName);
             return Path.Combine(outputFolder, Path.ChangeExtension(fileName, filter == IblFilter.Diffuse ? outputDiffuseExt : outputSpecularExt));
+        }
+
+        private static void BrdfIntegrationLut(ref TextureData textureData)
+        {
+            TextureImporter.ComputeBrdfIntegrationLut(ref textureData);
+            if (textureData.Info.ImportError != ImportErrors.Succeeded)
+            {
+                return;
+            }
+
+            textureData.SaveTexture(GetTextureBrdfIntegrationLutPath(textureData.ImportSettings.Sources));
+            Console.WriteLine($"  BRDFL - Size: {textureData.Info.Width}x{textureData.Info.Height}, ArraySize: {textureData.Info.ArraySize}, Mips: {textureData.Info.MipLevels}");
+        }
+        private static string GetTextureBrdfIntegrationLutPath(string textureName)
+        {
+            string fileName = Path.GetFileName(textureName);
+            return Path.Combine(outputFolder, Path.ChangeExtension(fileName, outputBrdfLutExt));
         }
     }
 }

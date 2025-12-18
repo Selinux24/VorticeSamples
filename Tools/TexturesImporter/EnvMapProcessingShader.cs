@@ -15,6 +15,7 @@ namespace TexturesImporter
         const string ShaderCubeMapEntryPoint = "EquirectangularToCubeMapCS";
         const string ShaderPrefilterDiffuseEntryPoint = "PrefilterDiffuseEnvMapCS";
         const string ShaderPrefilterSpecularEntryPoint = "PrefilterSpecularEnvMapCS";
+        const string ShaderBrdfIntegrationLutEntryPoint = "ComputeBrdfIntegrationLutCS";
 
         const int D3D11_1_UAV_SLOT_COUNT = 64;
         const int D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT = 128;
@@ -43,6 +44,10 @@ namespace TexturesImporter
         public static ID3D11ComputeShader GetPrefilterSpecularShader(ID3D11Device device)
         {
             return CreateComputeShader(device, ShaderPrefilterSpecularEntryPoint);
+        }
+        public static ID3D11ComputeShader GetBrdfIntegrationLutShader(ID3D11Device device)
+        {
+            return CreateComputeShader(device, ShaderBrdfIntegrationLutEntryPoint);
         }
         static ID3D11ComputeShader CreateComputeShader(ID3D11Device device, string entryPoint)
         {
@@ -93,14 +98,14 @@ namespace TexturesImporter
 
             return device.CreateShaderResourceView(cubemap, desc);
         }
-        public static ID3D11UnorderedAccessView CreateTexture2DUav(ID3D11Device device, Format format, ID3D11Texture2D cubemap, uint firstArraySlice, uint mipSlice = 0)
+        public static ID3D11UnorderedAccessView CreateTexture2DUav(ID3D11Device device, Format format, uint arraySize, uint firstArraySlice, uint mipSlice, ID3D11Texture2D cubemap)
         {
             UnorderedAccessViewDescription desc = new()
             {
                 Format = format,
                 ViewDimension = UnorderedAccessViewDimension.Texture2DArray
             };
-            desc.Texture2DArray.ArraySize = 6;
+            desc.Texture2DArray.ArraySize = arraySize;
             desc.Texture2DArray.FirstArraySlice = firstArraySlice;
             desc.Texture2DArray.MipSlice = mipSlice;
 
@@ -155,9 +160,9 @@ namespace TexturesImporter
             ctx.Dispatch(blockSize, blockSize, 6);
         }
 
-        public static bool DownloadCubemaps(ID3D11DeviceContext ctx, ID3D11Texture2D texCpu, ID3D11Texture2D texOut, uint arraySize, uint mipLevels, ScratchImage result)
+        public static bool DownloadTexture2D(ID3D11DeviceContext ctx, ID3D11Texture2D gpuResource, ID3D11Texture2D cpuResource, uint arraySize, uint mipLevels, ScratchImage result)
         {
-            ctx.CopyResource(texCpu, texOut);
+            ctx.CopyResource(cpuResource, gpuResource);
 
             for (uint imgIdx = 0; imgIdx < arraySize; imgIdx++)
             {
@@ -165,7 +170,7 @@ namespace TexturesImporter
                 {
                     uint resIdx = mip + (imgIdx * mipLevels);
 
-                    var hr = ctx.Map(texCpu, resIdx, MapMode.Read, 0, out var map);
+                    var hr = ctx.Map(cpuResource, resIdx, MapMode.Read, 0, out var map);
                     if (hr.Failure)
                     {
                         return false;
@@ -181,7 +186,7 @@ namespace TexturesImporter
                         src += (int)map.RowPitch;
                     }
 
-                    ctx.Unmap(texCpu, resIdx);
+                    ctx.Unmap(cpuResource, resIdx);
                 }
             }
 

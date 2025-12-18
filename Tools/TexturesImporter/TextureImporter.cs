@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using Utilities;
+using Vortice.Direct3D11;
 
 namespace TexturesImporter
 {
@@ -204,12 +205,18 @@ namespace TexturesImporter
                 if (data.Info.ImportError != 0) return;
 
                 // Decompress the first image to be used for the icon.
+#if DEBUG || DEBUG_EDITOR
+                SaveDbgFile(bcScratch, data.ImportSettings.Sources, "texture");
+#endif
                 CopyIcon(bcScratch, ref data);
                 CopySubresources(bcScratch, ref data);
                 TextureInfoFromMetadata(bcScratch.GetMetadata(), ref data.Info);
             }
             else
             {
+#if DEBUG || DEBUG_EDITOR
+                SaveDbgFile(scratch, data.ImportSettings.Sources, "texture");
+#endif
                 CopySubresources(scratch, ref data);
                 TextureInfoFromMetadata(scratch.GetMetadata(), ref data.Info);
             }
@@ -621,7 +628,7 @@ namespace TexturesImporter
         public static void PrefilterIbl(ref TextureData data, IblFilter filterType)
         {
             Debug.Assert(data.ImportSettings.PrefilterCubemap);
-            var info = data.Info;
+            ref var info = ref data.Info;
             DXGI_FORMAT format = (DXGI_FORMAT)info.Format;
             Debug.Assert(!Helper.IsCompressed(format));
             var images = SubresourceDataToImageAssets(ref data);
@@ -648,15 +655,13 @@ namespace TexturesImporter
 
             ScratchImage filtered = null;
             int sampleCount = 1024;
-            DeviceManager.RunOnGPU((device) =>
+            if (!DeviceManager.RunOnGPU((device) =>
             {
                 filtered = filterType == IblFilter.Diffuse ?
                     EnvMapProcessing.PrefilterDiffuse(device, cubemaps, sampleCount) :
                     EnvMapProcessing.PrefilterSpecular(device, cubemaps, sampleCount);
                 return filtered != null;
-            });
-
-            if (filtered == null)
+            }))
             {
                 info.ImportError = ImportErrors.Unknown;
                 return;
@@ -673,15 +678,60 @@ namespace TexturesImporter
                     Debug.Assert(compressed.GetImageCount() > 0);
                     CopyIcon(compressed, ref data);
 
+#if DEBUG || DEBUG_EDITOR
+                    SaveDbgFile(compressed, data.ImportSettings.Sources, filterType == IblFilter.Diffuse ? "diffuse" : "specular");
+#endif
                     CopySubresources(compressed, ref data);
                     TextureInfoFromMetadata(compressed.GetMetadata(), ref data.Info);
                 }
                 else
                 {
+#if DEBUG || DEBUG_EDITOR
+                    SaveDbgFile(filtered, data.ImportSettings.Sources, filterType == IblFilter.Diffuse ? "diffuse" : "specular");
+#endif
                     CopySubresources(filtered, ref data);
                     TextureInfoFromMetadata(filtered.GetMetadata(), ref data.Info);
                 }
             }
         }
+
+        public static void ComputeBrdfIntegrationLut(ref TextureData data)
+        {
+            int sampleCount = 1024;
+
+            ScratchImage result = null;
+            if (!DeviceManager.RunOnGPU((device) =>
+            {
+                result = EnvMapProcessing.BrdfIntegrationLut(device, sampleCount);
+                return result != null;
+            }))
+            {
+                data.Info.ImportError = ImportErrors.Unknown;
+                return;
+            }
+
+            using (result)
+            {
+#if DEBUG || DEBUG_EDITOR
+                SaveDbgFile(result, data.ImportSettings.Sources, "brdf");
+#endif
+                CopySubresources(result, ref data);
+                TextureInfoFromMetadata(result.GetMetadata(), ref data.Info);
+            }
+        }
+
+#if DEBUG || DEBUG_EDITOR
+        const string TmpFolder = "./tex_importer_dbg/";
+        static void SaveDbgFile(ScratchImage image, string fileName, string assetType)
+        {
+            if (!Directory.Exists(TmpFolder))
+            {
+                Directory.CreateDirectory(TmpFolder);
+            }
+
+            string path = Path.Combine(TmpFolder, $"tmp_{Path.GetFileName(fileName)}_{assetType}.dds");
+            image.SaveToDDSFile(DDS_FLAGS.NONE, path);
+        }
+#endif
     }
 }

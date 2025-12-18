@@ -4,7 +4,7 @@ using System.Diagnostics;
 using Vortice.Direct3D11;
 using Vortice.DXGI;
 
-namespace TexturesImporter
+namespace TexturesImporter.Processors
 {
     class PrefilterSpecularEnvMap : IDisposable
     {
@@ -124,7 +124,7 @@ namespace TexturesImporter
                 // instead of filtering it.
                 for (uint mip = 1; mip < EnvMapProcessing.RoughnessMipLevels; mip++)
                 {
-                    using var cubemapOutUav = EnvMapProcessingShader.CreateTexture2DUav(device, format, cubemapsOut, i * 6, mip);
+                    using var cubemapOutUav = EnvMapProcessingShader.CreateTexture2DUav(device, format, 6, i * 6, mip, cubemapsOut);
                     if (cubemapOutUav == null)
                     {
                         return false;
@@ -154,12 +154,12 @@ namespace TexturesImporter
             return true;
         }
 
-        public bool DownloadCubemaps(ScratchImage result, int mipLevels)
+        public bool Download(ScratchImage result, int mipLevels)
         {
             var ctx = device.ImmediateContext;
             Debug.Assert(ctx != null);
 
-            return EnvMapProcessingShader.DownloadCubemaps(ctx, cubemapsCpu, cubemapsOut, arraySize, (uint)mipLevels, result);
+            return EnvMapProcessingShader.DownloadTexture2D(ctx, cubemapsOut, cubemapsCpu, arraySize, (uint)mipLevels, result);
         }
     }
 }

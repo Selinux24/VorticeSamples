@@ -3,6 +3,7 @@ using System;
 using System.Diagnostics;
 using System.Numerics;
 using System.Threading;
+using TexturesImporter.Processors;
 using Utilities;
 using Vortice.Direct3D11;
 
@@ -15,6 +16,7 @@ namespace TexturesImporter
         public const int PrefilteredDiffuseCubemapSize = 32;
         public const int PrefilteredSpecularCubemapSize = 256;
         public const int RoughnessMipLevels = 6;
+        public const int BrdfIntegrationLutSize = 256;
 
         private static TexHelper Helper => TexHelper.Instance;
 
@@ -163,7 +165,7 @@ namespace TexturesImporter
             if (!shader.Run(envMaps, mirrorCubemap)) return null;
 
             var result = Helper.InitializeCube(format, cubemapSize, cubemapSize, cubemapCount, mipLevels, CP_FLAGS.NONE);
-            if (!shader.DownloadCubemaps(result, mipLevels)) return null;
+            if (!shader.Download(result, mipLevels)) return null;
 
             return result;
         }
@@ -184,7 +186,7 @@ namespace TexturesImporter
             if (!shader.Run()) return null;
 
             var result = Helper.InitializeCube(format, cubeMapSize, cubeMapSize, cubemapCount, mipLevels, CP_FLAGS.NONE);
-            if (!shader.DownloadCubemaps(result, mipLevels)) return null;
+            if (!shader.Download(result, mipLevels)) return null;
 
             return result;
         }
@@ -204,7 +206,7 @@ namespace TexturesImporter
             if (!shader.Run()) return null;
 
             var result = Helper.InitializeCube(format, cubeMapSize, cubeMapSize, cubemapCount, mipLevels, CP_FLAGS.NONE);
-            if (!shader.DownloadCubemaps(result, mipLevels)) return null;
+            if (!shader.Download(result, mipLevels)) return null;
 
             Debug.Assert(metaData.Width == result.GetMetadata().Width);
             // Copy mip 0 from the source cubemap
@@ -217,6 +219,21 @@ namespace TexturesImporter
                 writer.Write(src.Pixels, (int)src.SlicePitch);
             }
 
+            return result;
+        }
+
+        public static ScratchImage BrdfIntegrationLut(ID3D11Device device, int sampleCount)
+        {
+            Debug.Assert(device != null);
+
+            int lutSize = BrdfIntegrationLutSize;
+            var format = DXGI_FORMAT.R16G16_FLOAT;
+
+            using BrdfIntegrationLut shader = new(device, lutSize, format, sampleCount);
+            if (!shader.Run()) return null;
+
+            var result = Helper.Initialize2D(format, lutSize, lutSize, 1, 1, CP_FLAGS.NONE);
+            if (!shader.Download(result, 1)) return null;
             return result;
         }
     }
