@@ -133,17 +133,32 @@ namespace TexturesImporter
             return slices;
         }
 
-        public TextureData Copy()
+        public readonly TextureData Copy()
         {
-            return new TextureData()
+            TextureData data = new();
+
+            if (SubresourceData != IntPtr.Zero && SubresourceSize > 0)
             {
-                SubresourceData = SubresourceData,
-                SubresourceSize = SubresourceSize,
-                Icon = Icon,
-                IconSize = IconSize,
-                Info = Info,
-                ImportSettings = ImportSettings,
-            };
+                var bytes = new byte[SubresourceSize];
+                data.SubresourceData = Marshal.AllocCoTaskMem((int)SubresourceSize);
+                data.SubresourceSize = SubresourceSize;
+                Marshal.Copy(SubresourceData, bytes, 0, (int)SubresourceSize);
+                Marshal.Copy(bytes, 0, data.SubresourceData, (int)SubresourceSize);
+            }
+
+            if (Icon != IntPtr.Zero && IconSize > 0)
+            {
+                var bytes = new byte[IconSize];
+                data.Icon = Marshal.AllocCoTaskMem((int)IconSize);
+                data.IconSize = IconSize;
+                Marshal.Copy(Icon, bytes, 0, (int)IconSize);
+                Marshal.Copy(bytes, 0, data.Icon, (int)IconSize);
+            }
+
+            data.Info = Info;
+            data.ImportSettings = ImportSettings;
+
+            return data;
         }
     }
 }

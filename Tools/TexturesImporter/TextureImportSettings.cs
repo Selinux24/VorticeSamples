@@ -26,5 +26,19 @@ namespace TexturesImporter
         public int CubemapSize;
         public bool MirrorCubemap;
         public bool PrefilterCubemap;
+
+        public void FromContentSettings(TextureImportSettings settings)
+        {
+            Sources = string.Join(";", settings.Sources);
+            Dimension = settings.Dimension;
+            MipLevels = settings.MipLevels;
+            AlphaThreshold = settings.AlphaThreshold;
+            PreferBc7 = settings.PreferBc7;
+            OutputFormat = settings.OutputFormat;
+            Compress = settings.Compress;
+            CubemapSize = settings.CubemapSize;
+            MirrorCubemap = settings.MirrorCubemap;
+            PrefilterCubemap = settings.PrefilterCubemap;
+        }
     }
 }

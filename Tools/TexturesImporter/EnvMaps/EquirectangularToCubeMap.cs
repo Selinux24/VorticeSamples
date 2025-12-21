@@ -4,7 +4,7 @@ using System.Diagnostics;
 using Vortice.Direct3D11;
 using Vortice.DXGI;
 
-namespace TexturesImporter.Processors
+namespace TexturesImporter.EnvMaps
 {
     class EquirectangularToCubeMap : IDisposable
     {
@@ -139,12 +139,14 @@ namespace TexturesImporter.Processors
             return true;
         }
 
-        public bool Download(ScratchImage result, int mipLevels)
+        public bool Download(out ScratchImage result)
         {
             var ctx = device.ImmediateContext;
             Debug.Assert(ctx != null);
 
-            return EnvMapProcessingShader.DownloadTexture2D(ctx, cubemaps, cubemapsCpu, arraySize, (uint)mipLevels, result);
+            result = TexHelper.Instance.InitializeCube((DXGI_FORMAT)format, (int)cubemapSize, (int)cubemapSize, (int)arraySize / 6, 1, CP_FLAGS.NONE);
+
+            return EnvMapProcessingShader.DownloadTexture2D(ctx, cubemaps, cubemapsCpu, arraySize, 1, result);
         }
     }
 }

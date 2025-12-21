@@ -5,13 +5,15 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using TexturesImporter.EnvMaps;
 using Utilities;
-using Vortice.Direct3D11;
 
 namespace TexturesImporter
 {
     public static class TextureImporter
     {
+        const int SampleCount = 1024;
+
         private static TexHelper Helper => TexHelper.Instance;
 
         public static void ShutDownTextureTools()
@@ -654,12 +656,11 @@ namespace TexturesImporter
             }
 
             ScratchImage filtered = null;
-            int sampleCount = 1024;
             if (!DeviceManager.RunOnGPU((device) =>
             {
                 filtered = filterType == IblFilter.Diffuse ?
-                    EnvMapProcessing.PrefilterDiffuse(device, cubemaps, sampleCount) :
-                    EnvMapProcessing.PrefilterSpecular(device, cubemaps, sampleCount);
+                    EnvMapProcessing.PrefilterDiffuse(device, cubemaps, SampleCount) :
+                    EnvMapProcessing.PrefilterSpecular(device, cubemaps, SampleCount);
                 return filtered != null;
             }))
             {
@@ -697,12 +698,10 @@ namespace TexturesImporter
 
         public static void ComputeBrdfIntegrationLut(ref TextureData data)
         {
-            int sampleCount = 1024;
-
             ScratchImage result = null;
             if (!DeviceManager.RunOnGPU((device) =>
             {
-                result = EnvMapProcessing.BrdfIntegrationLut(device, sampleCount);
+                result = EnvMapProcessing.BrdfIntegrationLut(device, SampleCount);
                 return result != null;
             }))
             {

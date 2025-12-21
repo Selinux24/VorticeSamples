@@ -3,20 +3,14 @@ using System;
 using System.Diagnostics;
 using System.Numerics;
 using System.Threading;
-using TexturesImporter.Processors;
 using Utilities;
 using Vortice.Direct3D11;
 
-namespace TexturesImporter
+namespace TexturesImporter.EnvMaps
 {
     static class EnvMapProcessing
     {
         const float ThresholdDefault = 0.5f;
-
-        public const int PrefilteredDiffuseCubemapSize = 32;
-        public const int PrefilteredSpecularCubemapSize = 256;
-        public const int RoughnessMipLevels = 6;
-        public const int BrdfIntegrationLutSize = 256;
 
         private static TexHelper Helper => TexHelper.Instance;
 
@@ -26,7 +20,7 @@ namespace TexturesImporter
 
             if (usePrefilterSize)
             {
-                cubemapSize = PrefilteredSpecularCubemapSize;
+                cubemapSize = (int)PrefilterSpecularEnvMap.PrefilteredSpecularCubemapSize;
             }
 
             // Initialize 1 texture cube for each image.
@@ -101,11 +95,11 @@ namespace TexturesImporter
 
             for (int y = 0; y < cubeFace.Height; y++)
             {
-                float v = (y * invHeight) * 2f - 1f;
+                float v = y * invHeight * 2f - 1f;
 
                 for (int x = 0; x < cubeFace.Width; x++)
                 {
-                    float u = (x * invWidth) * 2f - 1f;
+                    float u = x * invWidth * 2f - 1f;
 
                     Vector3 sampleDirection = GetSampleDirectionEquirectangular(faceIndex, u, v);
                     Vector2 uv = DirectionToEquirectangular(sampleDirection);
@@ -153,40 +147,33 @@ namespace TexturesImporter
 
             if (usePrefilterSize)
             {
-                cubemapSize = PrefilteredSpecularCubemapSize;
+                cubemapSize = (int)PrefilterSpecularEnvMap.PrefilteredSpecularCubemapSize;
             }
 
             var format = envMaps[0].Format;
             int arraySize = envMaps.Length * 6;
-            int cubemapCount = arraySize / 6;
-            int mipLevels = 1;
 
             using EquirectangularToCubeMap shader = new(device, cubemapSize, arraySize, format);
             if (!shader.Run(envMaps, mirrorCubemap)) return null;
 
-            var result = Helper.InitializeCube(format, cubemapSize, cubemapSize, cubemapCount, mipLevels, CP_FLAGS.NONE);
-            if (!shader.Download(result, mipLevels)) return null;
+            if (!shader.Download(out var result)) return null;
 
             return result;
         }
-
         public static ScratchImage PrefilterDiffuse(ID3D11Device device, ScratchImage cubemaps, int sampleCount)
         {
             Debug.Assert(device != null);
 
             var metaData = cubemaps.GetMetadata();
             int arraySize = metaData.ArraySize;
-            int cubeMapSize = PrefilteredDiffuseCubemapSize;
-            int cubemapCount = arraySize / 6;
             var format = metaData.Format;
-            int mipLevels = 1;
-            Debug.Assert(metaData.IsCubemap() && cubemapCount > 0 && (arraySize % 6) == 0);
+            Debug.Assert(metaData.IsCubemap() && arraySize / 6 > 0 && arraySize % 6 == 0);
 
-            using PrefilterDiffuseEnvMap shader = new(device, cubemaps, arraySize, cubeMapSize, cubemapCount, format, sampleCount);
+            using PrefilterDiffuseEnvMap shader = new(device, cubemaps, arraySize, format, sampleCount);
+
             if (!shader.Run()) return null;
 
-            var result = Helper.InitializeCube(format, cubeMapSize, cubeMapSize, cubemapCount, mipLevels, CP_FLAGS.NONE);
-            if (!shader.Download(result, mipLevels)) return null;
+            if (!shader.Download(out var result)) return null;
 
             return result;
         }
@@ -196,17 +183,13 @@ namespace TexturesImporter
 
             var metaData = cubemaps.GetMetadata();
             int arraySize = metaData.ArraySize;
-            int cubeMapSize = PrefilteredSpecularCubemapSize;
-            int cubemapCount = arraySize / 6;
             var format = metaData.Format;
-            int mipLevels = RoughnessMipLevels;
-            Debug.Assert(metaData.IsCubemap() && cubemapCount > 0 && (arraySize % 6) == 0);
+            Debug.Assert(metaData.IsCubemap() && arraySize / 6 > 0 && arraySize % 6 == 0);
 
-            using PrefilterSpecularEnvMap shader = new(device, cubemaps, arraySize, cubeMapSize, cubemapCount, format, sampleCount);
+            using PrefilterSpecularEnvMap shader = new(device, cubemaps, arraySize, format, sampleCount);
             if (!shader.Run()) return null;
 
-            var result = Helper.InitializeCube(format, cubeMapSize, cubeMapSize, cubemapCount, mipLevels, CP_FLAGS.NONE);
-            if (!shader.Download(result, mipLevels)) return null;
+            if (!shader.Download(out var result)) return null;
 
             Debug.Assert(metaData.Width == result.GetMetadata().Width);
             // Copy mip 0 from the source cubemap
@@ -221,19 +204,16 @@ namespace TexturesImporter
 
             return result;
         }
-
         public static ScratchImage BrdfIntegrationLut(ID3D11Device device, int sampleCount)
         {
             Debug.Assert(device != null);
 
-            int lutSize = BrdfIntegrationLutSize;
-            var format = DXGI_FORMAT.R16G16_FLOAT;
+            using BrdfIntegrationLut shader = new(device, sampleCount);
 
-            using BrdfIntegrationLut shader = new(device, lutSize, format, sampleCount);
             if (!shader.Run()) return null;
 
-            var result = Helper.Initialize2D(format, lutSize, lutSize, 1, 1, CP_FLAGS.NONE);
-            if (!shader.Download(result, 1)) return null;
+            if (!shader.Download(out var result)) return null;
+
             return result;
         }
     }

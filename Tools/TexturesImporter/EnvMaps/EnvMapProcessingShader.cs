@@ -6,7 +6,7 @@ using Vortice.D3DCompiler;
 using Vortice.Direct3D11;
 using Vortice.DXGI;
 
-namespace TexturesImporter
+namespace TexturesImporter.EnvMaps
 {
     static class EnvMapProcessingShader
     {
@@ -115,7 +115,7 @@ namespace TexturesImporter
         public static bool SetConstants(ID3D11DeviceContext ctx, ID3D11Buffer constantBuffer, ShaderConstants constants)
         {
             var hr = ctx.Map(constantBuffer, 0, MapMode.WriteDiscard, 0, out var mappedBuffer);
-            if (hr.Failure || mappedBuffer.DataPointer == IntPtr.Zero)
+            if (hr.Failure || mappedBuffer.DataPointer == nint.Zero)
             {
                 return false;
             }
@@ -131,17 +131,17 @@ namespace TexturesImporter
             if (zeroUav == null)
             {
                 zeroUav = new ID3D11UnorderedAccessView[D3D11_1_UAV_SLOT_COUNT];
-                Array.Fill(zeroUav, new ID3D11UnorderedAccessView(IntPtr.Zero));
+                Array.Fill(zeroUav, new ID3D11UnorderedAccessView(nint.Zero));
             }
             if (zeroSrvs == null)
             {
                 zeroSrvs = new ID3D11ShaderResourceView[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT];
-                Array.Fill(zeroSrvs, new ID3D11ShaderResourceView(IntPtr.Zero));
+                Array.Fill(zeroSrvs, new ID3D11ShaderResourceView(nint.Zero));
             }
             if (zeroBuffers == null)
             {
                 zeroBuffers = new ID3D11Buffer[D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT];
-                Array.Fill(zeroBuffers, new ID3D11Buffer(IntPtr.Zero));
+                Array.Fill(zeroBuffers, new ID3D11Buffer(nint.Zero));
             }
 
             ctx.CSSetUnorderedAccessViews(0, zeroUav);
@@ -150,7 +150,7 @@ namespace TexturesImporter
         }
         public static void Dispatch(ID3D11DeviceContext ctx, ID3D11ShaderResourceView srvArray, ID3D11UnorderedAccessView uavArray, ID3D11Buffer buffersArray, ID3D11SamplerState samplersArray, ID3D11ComputeShader shader, uint size)
         {
-            uint blockSize = (size + 15) >> 4;
+            uint blockSize = size + 15 >> 4;
 
             ctx.CSSetShaderResource(0, srvArray);
             ctx.CSSetUnorderedAccessView(0, uavArray);
@@ -168,7 +168,7 @@ namespace TexturesImporter
             {
                 for (uint mip = 0; mip < mipLevels; mip++)
                 {
-                    uint resIdx = mip + (imgIdx * mipLevels);
+                    uint resIdx = mip + imgIdx * mipLevels;
 
                     var hr = ctx.Map(cpuResource, resIdx, MapMode.Read, 0, out var map);
                     if (hr.Failure)

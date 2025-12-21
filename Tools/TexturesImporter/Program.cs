@@ -1,4 +1,5 @@
-﻿using System;
+﻿using PrimalLike.Content;
+using System;
 using System.IO;
 
 namespace TexturesImporter
@@ -23,7 +24,7 @@ namespace TexturesImporter
 
         static void Main()
         {
-            ImportEnvMap(textureEnvMap, 256, true, true);
+            ImportEnvMap(textureEnvMap, 1024, true, true);
             Import(textureAmbientOcclusion);
             Import(textureBaseColor);
             Import(textureEmissive);
@@ -48,15 +49,17 @@ namespace TexturesImporter
                 return;
             }
 
-            TextureData textureData = new();
-            textureData.ImportSettings.Sources = texturePath;
-            textureData.ImportSettings.OutputFormat = format;
-            textureData.ImportSettings.Compress = compress;
-            textureData.ImportSettings.PreferBc7 = preferBc7;
-            textureData.ImportSettings.AlphaThreshold = 0.5f;
-            textureData.ImportSettings.Dimension = TextureDimensions.Texture2D;
+            TextureImportSettings settings = new()
+            {
+                Sources = texturePath,
+                OutputFormat = format,
+                Compress = compress,
+                PreferBc7 = preferBc7,
+                AlphaThreshold = 0.5f,
+                Dimension = TextureDimensions.Texture2D
+            };
 
-            ImportInternal(ref textureData);
+            ImportInternal(settings);
         }
         private static void ImportEnvMap(string fileName, int size, bool mirror, bool prefilter, BCFormats format = BCFormats.PickBestFit, bool compress = false, bool preferBc7 = true)
         {
@@ -67,43 +70,54 @@ namespace TexturesImporter
                 return;
             }
 
-            TextureData textureData = new();
-            textureData.ImportSettings.Sources = texturePath;
-            textureData.ImportSettings.OutputFormat = format;
-            textureData.ImportSettings.Compress = compress;
-            textureData.ImportSettings.PreferBc7 = preferBc7;
-            textureData.ImportSettings.AlphaThreshold = 0.5f;
-            textureData.ImportSettings.Dimension = TextureDimensions.TextureCube;
-            textureData.ImportSettings.CubemapSize = size;
-            textureData.ImportSettings.MirrorCubemap = mirror;
-            textureData.ImportSettings.PrefilterCubemap = prefilter;
-
-            ImportInternal(ref textureData);
-
-            if (textureData.ImportSettings.PrefilterCubemap)
+            TextureImportSettings settings = new()
             {
-                var diff = textureData.Copy();
-                var spec = textureData.Copy();
-                var brdf = textureData.Copy();
+                Sources = texturePath,
+                OutputFormat = format,
+                Compress = compress,
+                PreferBc7 = preferBc7,
+                AlphaThreshold = 0.5f,
+                Dimension = TextureDimensions.TextureCube,
+                CubemapSize = size,
+                MirrorCubemap = mirror,
+                PrefilterCubemap = prefilter
+            };
 
-                Prefilter(ref diff, IblFilter.Diffuse);
-                Prefilter(ref spec, IblFilter.Specular);
-                BrdfIntegrationLut(ref brdf);
-            }
+            ImportInternal(settings);
         }
 
-        private static void ImportInternal(ref TextureData textureData)
+        private static void ImportInternal(TextureImportSettings settings)
         {
+            TextureData textureData = new()
+            {
+                ImportSettings = settings
+            };
             TextureImporter.Import(ref textureData);
             Console.WriteLine($"{textureData.Info.ImportError} => {Path.GetFileName(textureData.ImportSettings.Sources)}");
 
             if (textureData.Info.ImportError != ImportErrors.Succeeded)
             {
+                Console.WriteLine($"Texture import error: {textureData.Info.ImportError}");
                 return;
             }
 
             textureData.SaveTexture(GetTexturePath(textureData.ImportSettings.Sources));
             Console.WriteLine($"  ASSET - Size: {textureData.Info.Width}x{textureData.Info.Height}, ArraySize: {textureData.Info.ArraySize}, Mips: {textureData.Info.MipLevels}");
+
+            if (textureData.ImportSettings.PrefilterCubemap && textureData.Info.Flags.HasFlag(TextureFlags.IsCubeMap))
+            {
+                var diff = textureData.Copy();
+                Prefilter(ref diff, IblFilter.Diffuse);
+
+                var spec = textureData.Copy();
+                Prefilter(ref spec, IblFilter.Specular);
+
+                TextureData brdf = new()
+                {
+                    ImportSettings = settings
+                };
+                BrdfIntegrationLut(ref brdf);
+            }
         }
         private static string GetTexturePath(string textureName)
         {
@@ -116,6 +130,7 @@ namespace TexturesImporter
             TextureImporter.PrefilterIbl(ref textureData, filter);
             if (textureData.Info.ImportError != ImportErrors.Succeeded)
             {
+                Console.WriteLine($"Texture import error: {textureData.Info.ImportError}");
                 return;
             }
 
@@ -131,9 +146,13 @@ namespace TexturesImporter
 
         private static void BrdfIntegrationLut(ref TextureData textureData)
         {
+            textureData.ImportSettings.Compress = false;
+            textureData.ImportSettings.MipLevels = 1;
+
             TextureImporter.ComputeBrdfIntegrationLut(ref textureData);
             if (textureData.Info.ImportError != ImportErrors.Succeeded)
             {
+                Console.WriteLine($"Texture import error: {textureData.Info.ImportError}");
                 return;
             }
 

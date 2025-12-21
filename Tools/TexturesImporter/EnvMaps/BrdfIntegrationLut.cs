@@ -4,13 +4,14 @@ using System.Diagnostics;
 using Vortice.Direct3D11;
 using Vortice.DXGI;
 
-namespace TexturesImporter.Processors
+namespace TexturesImporter.EnvMaps
 {
     class BrdfIntegrationLut : IDisposable
     {
+        const uint BrdfIntegrationLutSize = 256;
+        const Format BrdfIntegrationLutFormat = Format.R16G16_Float;
+
         private readonly ID3D11Device device;
-        private readonly uint lutSize;
-        private readonly Format format;
         private readonly uint sampleCount;
 
         private readonly ID3D11Texture2D output;
@@ -19,21 +20,19 @@ namespace TexturesImporter.Processors
         private readonly ID3D11Buffer constantBuffer;
         private readonly ID3D11SamplerState linearSampler;
 
-        public BrdfIntegrationLut(ID3D11Device device, int lutSize, DXGI_FORMAT format, int sampleCount)
+        public BrdfIntegrationLut(ID3D11Device device, int sampleCount)
         {
             this.device = device;
-            this.lutSize = (uint)lutSize;
-            this.format = (Format)format;
             this.sampleCount = (uint)sampleCount;
 
             // Upload source cubemaps and create output resources
             Texture2DDescription desc = new()
             {
-                Width = (uint)lutSize,
-                Height = (uint)lutSize,
+                Width = BrdfIntegrationLutSize,
+                Height = BrdfIntegrationLutSize,
                 MipLevels = 1,
                 ArraySize = 1,
-                Format = (Format)format,
+                Format = BrdfIntegrationLutFormat,
                 SampleDescription = new(1, 0),
                 Usage = ResourceUsage.Default,
                 BindFlags = BindFlags.UnorderedAccess,
@@ -82,7 +81,7 @@ namespace TexturesImporter.Processors
 
             EnvMapProcessingShader.ShaderConstants constants = new()
             {
-                CubeMapInSize = lutSize,
+                CubeMapInSize = BrdfIntegrationLutSize,
                 SampleCount = sampleCount,
             };
             if (!EnvMapProcessingShader.SetConstants(ctx, constantBuffer, constants))
@@ -92,25 +91,27 @@ namespace TexturesImporter.Processors
 
             EnvMapProcessingShader.ResetD3d11Context(ctx);
 
-            using var outputUav = EnvMapProcessingShader.CreateTexture2DUav(device, format, 1, 0, 0, output);
+            using var outputUav = EnvMapProcessingShader.CreateTexture2DUav(device, BrdfIntegrationLutFormat, 1, 0, 0, output);
             if (outputUav == null)
             {
                 return false;
             }
 
-            EnvMapProcessingShader.Dispatch(ctx, null, outputUav, constantBuffer, linearSampler, shader, lutSize);
+            EnvMapProcessingShader.Dispatch(ctx, null, outputUav, constantBuffer, linearSampler, shader, BrdfIntegrationLutSize);
 
             EnvMapProcessingShader.ResetD3d11Context(ctx);
 
             return true;
         }
 
-        public bool Download(ScratchImage result, int mipLevels)
+        public bool Download(out ScratchImage result)
         {
             var ctx = device.ImmediateContext;
             Debug.Assert(ctx != null);
 
-            return EnvMapProcessingShader.DownloadTexture2D(ctx, output, outputCpu, 1, (uint)mipLevels, result);
+            result = TexHelper.Instance.Initialize2D((DXGI_FORMAT)BrdfIntegrationLutFormat, (int)BrdfIntegrationLutSize, (int)BrdfIntegrationLutSize, 1, 1, CP_FLAGS.NONE);
+
+            return EnvMapProcessingShader.DownloadTexture2D(ctx, output, outputCpu, 1, 1, result);
         }
     }
 }
