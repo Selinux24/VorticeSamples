@@ -79,7 +79,7 @@ namespace DX12Windows.Content
                 }
             }
 
-            Importer.ImportBaseColorTexture(Path.Combine(outputsFolder, baseColorTextureName), baseColorTexture);
+            Importer.ImportBaseColorTexture(baseColorTexture, outputsFolder, baseColorTextureName);
 
             TextureImporter.ShutDownTextureTools();
 

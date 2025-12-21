@@ -1,4 +1,5 @@
-﻿using PrimalLike.Common;
+﻿using Direct3D12.Content;
+using PrimalLike.Common;
 using PrimalLike.Components;
 using PrimalLike.EngineAPI;
 using System;
@@ -43,6 +44,9 @@ namespace Direct3D12.Light
 
         private uint enabledLightCount = 0; // number of cullable lights
         private uint somethingIsDirty = 0; // flag is set if any of cullable lights where changed.
+
+        private Shaders.AmbientLightParameters ambientLight = new();
+        private uint ambientLightId = uint.MaxValue;
 
         public bool SomethingIsDirty => somethingIsDirty != 0;
 
@@ -89,6 +93,28 @@ namespace Direct3D12.Light
                 nonCullableOwners[(int)index] = id;
 
                 return new(id, info.LightSetKey);
+            }
+            else if (info.LightType == LightTypes.Ambient)
+            {
+                uint[] indices = new uint[AmbientParameters.TextureCount];
+                Texture.GetDescriptorIndices(info.AmbientLight.GetTextureIds(), ref indices);
+                Debug.Assert(!IdDetail.IsValid(ambientLightId) && ambientLight.DiffuseSrvIndex == uint.MaxValue);
+
+                ambientLight.Intensity = info.Intensity;
+                ambientLight.DiffuseSrvIndex = indices[0];
+                ambientLight.SpecularSrvIndex = indices[1];
+                ambientLight.BrdfLutSrvIndex = indices[2];
+
+                LightOwner owner = new()
+                {
+                    EntityId = info.EntityId,
+                    DataIndex = uint.MaxValue,
+                    LightType = info.LightType,
+                    IsEnabled = info.IsEnabled
+                };
+                ambientLightId = owners.Add(owner);
+
+                return new(ambientLightId, info.LightSetKey);
             }
             else
             {
@@ -144,7 +170,12 @@ namespace Direct3D12.Light
             {
                 nonCullableOwners[(int)owner.DataIndex] = uint.MaxValue;
             }
-            else
+            else if (owner.LightType == LightTypes.Ambient)
+            {
+                Debug.Assert(ambientLightId == id);
+                ambientLight = new();
+                ambientLightId = uint.MaxValue;
+            }
             {
                 Debug.Assert(owners[cullableOwners[(int)owner.DataIndex]].DataIndex == owner.DataIndex);
                 cullableOwners[(int)owner.DataIndex] = uint.MaxValue;
@@ -199,7 +230,8 @@ namespace Direct3D12.Light
             owner.IsEnabled = isEnabled;
             owners[id] = owner;
 
-            if (owners[id].LightType == LightTypes.Directional)
+            if (owners[id].LightType == LightTypes.Directional ||
+                owners[id].LightType == LightTypes.Ambient)
             {
                 return;
             }
@@ -249,6 +281,10 @@ namespace Direct3D12.Light
                 var light = nonCullableLights[(int)index];
                 light.Intensity = intensity;
                 nonCullableLights[(int)index] = light;
+            }
+            else if (owner.LightType == LightTypes.Ambient)
+            {
+                ambientLight.Intensity = intensity;
             }
             else
             {
@@ -312,20 +348,14 @@ namespace Direct3D12.Light
             var sphere = boundingSpheres[(int)index];
 
             light.Range = range;
-#if USE_BOUNDING_SPHERES
             cInfo.CosPenumbra = -1f;
-#endif
             sphere.Radius = range;
             MakeDirty(index);
 
             if (owner.LightType == LightTypes.Spot)
             {
                 CalculateConeBoundingSphere(light, ref sphere);
-#if USE_BOUNDING_SPHERES
                 cInfo.CosPenumbra = light.CosPenumbra;
-#else
-                cInfo.ConeRadius = CalculateConeRadius(range, light.CosPenumbra);
-#endif
             }
 
             cullingInfo[(int)index] = cInfo;
@@ -367,11 +397,7 @@ namespace Direct3D12.Light
 
             light.CosPenumbra = MathF.Cos(penumbra * 0.5f);
             CalculateConeBoundingSphere(light, ref sphere);
-#if USE_BOUNDING_SPHERES
             cInfo.CosPenumbra = light.CosPenumbra;
-#else
-            cInfo.ConeRadius = CalculateConeRadius(Range(id), light.CosPenumbra);
-#endif
 
             cullableLights[(int)index] = light;
             cullingInfo[(int)index] = cInfo;
@@ -454,6 +480,17 @@ namespace Direct3D12.Light
         public uint EntityId(uint id)
         {
             return owners[id].EntityId;
+        }
+
+        public Shaders.AmbientLightParameters AmbientLight()
+        {
+            if (IdDetail.IsValid(ambientLightId) && owners[ambientLightId].IsEnabled)
+            {
+                Debug.Assert(owners[ambientLightId].LightType == LightTypes.Ambient);
+                return ambientLight;
+            }
+
+            return new();
         }
 
         // Return the number of enabled directional lights
@@ -599,14 +636,6 @@ namespace Direct3D12.Light
                 sphere.Radius = coneSin * parameters.Range;
             }
         }
-#if !USE_BOUNDING_SPHERES
-        private static float CalculateConeRadius(float range, float cosPenumbra)
-        {
-            float sinPenumbra = MathF.Sqrt(1f - cosPenumbra * cosPenumbra);
-
-            return sinPenumbra * range;
-        }
-#endif
 
         private void UpdateTransform(uint index)
         {
@@ -635,12 +664,6 @@ namespace Direct3D12.Light
             Debug.Assert(info.LightType != LightTypes.Directional && index < cullableLights.Count);
 
             var parameters = cullableLights[(int)index];
-#if !USE_BOUNDING_SPHERES
-
-            parameters.Type = (uint)info.LightType;
-            Debug.Assert(parameters.Type < (uint)LightTypes.Count);
-#endif
-
             parameters.Color = info.Color;
             parameters.Intensity = info.Intensity;
 
@@ -671,18 +694,11 @@ namespace Direct3D12.Light
             var sphere = boundingSpheres[(int)index];
 
             cInfo.Range = sphere.Radius = parameters.Range;
-#if USE_BOUNDING_SPHERES
             cInfo.CosPenumbra = -1f;
-#else
-            cInfo.Type = parameters.Type;
-#endif
+
             if (info.LightType == LightTypes.Spot)
             {
-#if USE_BOUNDING_SPHERES
                 cInfo.CosPenumbra = parameters.CosPenumbra;
-#else
-                cInfo.ConeRadius = CalculateConeRadius(parameters.Range, parameters.CosPenumbra);
-#endif
             }
 
             cullingInfo[(int)index] = cInfo;

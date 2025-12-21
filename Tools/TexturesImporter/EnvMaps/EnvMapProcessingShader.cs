@@ -10,7 +10,7 @@ namespace TexturesImporter.EnvMaps
 {
     static class EnvMapProcessingShader
     {
-        const string ShaderFileName = "./EnvMapProcessing.hlsl";
+        const string ShaderFileName = "./EnvMaps/EnvMapProcessing.hlsl";
         const string ShaderProfile = "cs_5_0";
         const string ShaderCubeMapEntryPoint = "EquirectangularToCubeMapCS";
         const string ShaderPrefilterDiffuseEntryPoint = "PrefilterDiffuseEnvMapCS";

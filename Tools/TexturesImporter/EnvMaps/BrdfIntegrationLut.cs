@@ -81,7 +81,7 @@ namespace TexturesImporter.EnvMaps
 
             EnvMapProcessingShader.ShaderConstants constants = new()
             {
-                CubeMapInSize = BrdfIntegrationLutSize,
+                CubeMapOutSize = BrdfIntegrationLutSize,
                 SampleCount = sampleCount,
             };
             if (!EnvMapProcessingShader.SetConstants(ctx, constantBuffer, constants))

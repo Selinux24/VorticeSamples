@@ -5,75 +5,119 @@ namespace DX12Windows.Assets
 {
     static class Importer
     {
-        public static void ImportAmbientOcclusionTexture(string importPath, string outputPath)
+        public static void ImportAmbientOcclusionTexture(string texturePath, string importFolder, string importFile)
         {
+            string importPath = Path.Combine(importFolder, importFile);
             if (!File.Exists(importPath))
             {
-                TextureData ambientOcclusionData = new();
-                ambientOcclusionData.ImportSettings.Compress = true;
-                ambientOcclusionData.ImportSettings.PreferBc7 = true;
-                ambientOcclusionData.ImportSettings.AlphaThreshold = 0.5f;
-                ambientOcclusionData.ImportSettings.Sources = outputPath;
+                TextureData data = new();
+                data.ImportSettings.Compress = true;
+                data.ImportSettings.PreferBc7 = true;
+                data.ImportSettings.AlphaThreshold = 0.5f;
+                data.ImportSettings.Sources = texturePath;
 
-                TextureImporter.Import(ref ambientOcclusionData);
-                ambientOcclusionData.SaveTexture(importPath);
+                TextureImporter.Import(ref data);
+                data.SaveTexture(importPath);
             }
         }
-        public static void ImportBaseColorTexture(string importPath, string outputPath)
+        public static void ImportBaseColorTexture(string texturePath, string importFolder, string importFile)
         {
+            string importPath = Path.Combine(importFolder, importFile);
             if (!File.Exists(importPath))
             {
-                TextureData baseColorData = new();
-                baseColorData.ImportSettings.Compress = true;
-                baseColorData.ImportSettings.PreferBc7 = true;
-                baseColorData.ImportSettings.AlphaThreshold = 0.5f;
-                baseColorData.ImportSettings.Sources = outputPath;
+                TextureData data = new();
+                data.ImportSettings.Compress = true;
+                data.ImportSettings.PreferBc7 = true;
+                data.ImportSettings.AlphaThreshold = 0.5f;
+                data.ImportSettings.Sources = texturePath;
 
-                TextureImporter.Import(ref baseColorData);
-                baseColorData.SaveTexture(importPath);
+                TextureImporter.Import(ref data);
+                data.SaveTexture(importPath);
             }
         }
-        public static void ImportEmissiveTexture(string importPath, string outputPath)
+        public static void ImportEmissiveTexture(string texturePath, string importFolder, string importFile)
         {
+            string importPath = Path.Combine(importFolder, importFile);
             if (!File.Exists(importPath))
             {
-                TextureData emissiveData = new();
-                emissiveData.ImportSettings.Compress = true;
-                emissiveData.ImportSettings.PreferBc7 = true;
-                emissiveData.ImportSettings.AlphaThreshold = 0.5f;
-                emissiveData.ImportSettings.Sources = outputPath;
+                TextureData data = new();
+                data.ImportSettings.Compress = true;
+                data.ImportSettings.PreferBc7 = true;
+                data.ImportSettings.AlphaThreshold = 0.5f;
+                data.ImportSettings.Sources = texturePath;
 
-                TextureImporter.Import(ref emissiveData);
-                emissiveData.SaveTexture(importPath);
+                TextureImporter.Import(ref data);
+                data.SaveTexture(importPath);
             }
         }
-        public static void ImportMetalRoughTexture(string importPath, string outputPath)
+        public static void ImportMetalRoughTexture(string texturePath, string importFolder, string importFile)
         {
+            string importPath = Path.Combine(importFolder, importFile);
             if (!File.Exists(importPath))
             {
-                TextureData metalRoughData = new();
-                metalRoughData.ImportSettings.Compress = true;
-                metalRoughData.ImportSettings.PreferBc7 = true;
-                metalRoughData.ImportSettings.AlphaThreshold = 0.5f;
-                metalRoughData.ImportSettings.OutputFormat = BCFormats.BC5DualChannelGray;
-                metalRoughData.ImportSettings.Sources = outputPath;
+                TextureData data = new();
+                data.ImportSettings.Compress = true;
+                data.ImportSettings.PreferBc7 = true;
+                data.ImportSettings.AlphaThreshold = 0.5f;
+                data.ImportSettings.OutputFormat = BCFormats.BC5DualChannelGray;
+                data.ImportSettings.Sources = texturePath;
 
-                TextureImporter.Import(ref metalRoughData);
-                metalRoughData.SaveTexture(importPath);
+                TextureImporter.Import(ref data);
+                data.SaveTexture(importPath);
             }
         }
-        public static void ImportNormalTexture(string importPath, string outputPath)
+        public static void ImportNormalTexture(string texturePath, string importFolder, string importFile)
         {
+            string importPath = Path.Combine(importFolder, importFile);
             if (!File.Exists(importPath))
             {
-                TextureData normalData = new();
-                normalData.ImportSettings.Compress = true;
-                normalData.ImportSettings.PreferBc7 = true;
-                normalData.ImportSettings.AlphaThreshold = 0.5f;
-                normalData.ImportSettings.Sources = outputPath;
+                TextureData data = new();
+                data.ImportSettings.Compress = true;
+                data.ImportSettings.PreferBc7 = true;
+                data.ImportSettings.AlphaThreshold = 0.5f;
+                data.ImportSettings.Sources = texturePath;
 
-                TextureImporter.Import(ref normalData);
-                normalData.SaveTexture(importPath);
+                TextureImporter.Import(ref data);
+                data.SaveTexture(importPath);
+            }
+        }
+
+        internal static void ImportEnvironmentMapTexture(string texturePath, string importFolder, string brdfLutFile, string diffuseFile, string specularFile)
+        {
+            string brdfLutPath = Path.Combine(importFolder, brdfLutFile);
+            string diffusePath = Path.Combine(importFolder, diffuseFile);
+            string specularPath = Path.Combine(importFolder, specularFile);
+            if (!File.Exists(brdfLutPath) || !File.Exists(diffusePath) || !File.Exists(specularPath))
+            {
+                TextureData data = new()
+                {
+                    ImportSettings = new()
+                    {
+                        Sources = texturePath,
+                        OutputFormat = BCFormats.PickBestFit,
+                        Compress = false,
+                        PreferBc7 = true,
+                        AlphaThreshold = 0.5f,
+                        Dimension = TextureDimensions.TextureCube,
+                        CubemapSize = 1024,
+                        MirrorCubemap = true,
+                        PrefilterCubemap = true
+                    }
+                };
+
+                TextureImporter.Import(ref data);
+                data.SaveTexture(specularPath);
+
+                var spec = data.Copy();
+                TextureImporter.PrefilterIbl(ref spec, IblFilter.Diffuse);
+                spec.SaveTexture(diffusePath);
+
+                TextureData brdf = new()
+                {
+                    ImportSettings = data.ImportSettings
+                };
+                TextureImporter.ComputeBrdfIntegrationLut(ref brdf);
+                brdf.SaveTexture(brdfLutPath);
             }
         }
     }

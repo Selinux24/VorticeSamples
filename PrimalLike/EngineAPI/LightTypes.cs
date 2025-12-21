@@ -6,6 +6,7 @@ namespace PrimalLike.EngineAPI
         Directional,
         Point,
         Spot,
+        Ambient,
 
         Count
     }

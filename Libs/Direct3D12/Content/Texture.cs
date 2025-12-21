@@ -195,7 +195,7 @@ namespace Direct3D12.Content
                 }
                 else
                 {
-                    srvDesc.ViewDimension = ShaderResourceViewDimension.TextureCubeArray;
+                    srvDesc.ViewDimension = ShaderResourceViewDimension.TextureCube;
                     srvDesc.TextureCube.MostDetailedMip = 0;
                     srvDesc.TextureCube.MipLevels = mipLevels;
                     srvDesc.TextureCube.ResourceMinLODClamp = 0.0f;

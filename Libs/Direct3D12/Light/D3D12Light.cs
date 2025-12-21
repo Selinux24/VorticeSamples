@@ -211,6 +211,11 @@ namespace Direct3D12.Light
         {
             return lightBuffers[frameIndex].BoundingSpheres();
         }
+        public static Shaders.AmbientLightParameters AmbientLight(ulong lightSetKey)
+        {
+            Debug.Assert(lightSets.ContainsKey(lightSetKey));
+            return lightSets[lightSetKey].AmbientLight();
+        }
         public static uint NonCullableLightCount(ulong lightSetKey)
         {
             if (lightSetKey == ulong.MaxValue)

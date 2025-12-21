@@ -254,11 +254,16 @@ namespace PrimalLike
 
             time.Update();
 
-            PlatformBase.Run();
-
-            OnShutdown?.Invoke(this, EventArgs.Empty);
-            ContentLoader.UnloadGame();
-            Renderer.Shutdown();
+            try
+            {
+                PlatformBase.Run();
+            }
+            finally
+            {
+                OnShutdown?.Invoke(this, EventArgs.Empty);
+                ContentLoader.UnloadGame();
+                Renderer.Shutdown();
+            }
         }
         /// <summary>
         /// Loads content asynchronously.

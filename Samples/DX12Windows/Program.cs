@@ -43,11 +43,11 @@ namespace DX12Windows
 
             InitializeApp();
 
+            LightGenerator.GenerateLights(opt);
+
             renderItem.Load(assetsFolder, outputsFolder);
 
             CreateWindow();
-
-            LightGenerator.GenerateLights(opt);
 
             renderItemIds = Geometry.GetRenderItemIds();
 

@@ -16,6 +16,7 @@ namespace Direct3D12
     using Direct3D12.Delight;
     using Direct3D12.Fx;
     using Direct3D12.Light;
+    using System.Threading;
 #if DEBUG
     using Vortice.Direct3D12.Debug;
     using Vortice.DXGI.Debug;
@@ -52,7 +53,7 @@ namespace Direct3D12
 
         private static readonly List<IUnknown>[] deferredReleases = new List<IUnknown>[FrameBufferCount];
         private static readonly bool[] deferredReleasesFlags = new bool[FrameBufferCount];
-        private static readonly object deferredReleasesMutex = new();
+        private static readonly Lock deferredReleasesMutex = new();
 
         /// <summary>
         /// Gets the main D3D12 device.
@@ -381,7 +382,8 @@ namespace Direct3D12
                 ViewWidth = surface.GetViewport().Width,
                 ViewHeight = surface.GetViewport().Height,
                 NumDirectionalLights = D3D12Light.NonCullableLightCount(info.LightSetKey),
-                DeltaTime = deltaTime
+                DeltaTime = deltaTime,
+                AmbientLight = D3D12Light.AmbientLight(info.LightSetKey),
             };
 
             ulong globalShaderDataAddress = CBuffer.Write(data);

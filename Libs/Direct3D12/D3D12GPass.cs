@@ -372,7 +372,7 @@ namespace Direct3D12
         public static void DepthPrePass(ID3D12GraphicsCommandList cmdList, ref D3D12FrameInfo d3d12Info)
         {
             PrepareRenderFrame(ref d3d12Info);
-
+            
             uint itemsCount = frameCache.Size();
 
             ID3D12RootSignature currentRootSignature = null;

@@ -18,6 +18,8 @@ namespace Direct3D12.Shaders
         public Vector3 CameraDirection;
         public float ViewHeight;
 
+        public AmbientLightParameters AmbientLight;
+
         public uint NumDirectionalLights;
         public float DeltaTime;
     }

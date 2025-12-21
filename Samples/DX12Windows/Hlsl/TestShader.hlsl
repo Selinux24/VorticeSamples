@@ -5,32 +5,33 @@
 
 struct VertexOut
 {
-    float4 HomogeneousPosition : SV_POSITION;
-    float3 WorldPosition : POSITION;
-    float3 WorldNormal : NORMAL;
-    float4 WorldTangent : TANGENT;
-    float2 UV : TEXTURE;
+    float4 HomogeneousPosition  : SV_POSITION;
+    float3 WorldPosition        : POSITION;
+    float3 WorldNormal          : NORMAL;
+    float4 WorldTangent         : TANGENT;
+    float2 UV                   : TEXTURE;
 };
 
 struct PixelOut
 {
-    float4 Color : SV_TARGET0;
+    float4 Color                : SV_TARGET0;
 };
 
 struct Surface
 {
     float3 BaseColor;
-    float Metallic;
+    float  Metallic;
     float3 Normal;
-    float PerceptualRoughness;
+    float  PerceptualRoughness;
     float3 EmissiveColor;
-    float EmissiveIntensity;
-    float3 V; // View direction
-    float AmbientOcclusion;
+    float  EmissiveIntensity;
+    float3 V;                   // View direction
+    float  AmbientOcclusion;
     float3 DiffuseColor;
-    float a2; // = Pow(PerceptualRoughness, 4)
+    float  a2;                  // = Pow(PerceptualRoughness, 4)
     float3 SpecularColor;
-    float NoV;
+    float  NoV;
+    float  SpecularStrength;
 };
 
 #define ElementsTypePositionOnly                0x00
@@ -66,21 +67,21 @@ struct VertexElement
 
 const static float InvIntervals = 2.f / ((1 << 16) - 1);
 
-ConstantBuffer<GlobalShaderData> GlobalData : register(b0, space0);
-ConstantBuffer<PerObjectData> PerObjectBuffer : register(b1, space0);
-StructuredBuffer<float3> VertexPositions : register(t0, space0);
-StructuredBuffer<VertexElement> Elements : register(t1, space0);
-StructuredBuffer<uint> SrvIndices : register(t2, space0);
-StructuredBuffer<DirectionalLightParameters> DirectionalLights : register(t3, space0);
-StructuredBuffer<LightParameters> CullableLights : register(t4, space0);
-StructuredBuffer<uint2> LightGrid : register(t5, space0);
-StructuredBuffer<uint> LightIndexList : register(t6, space0);
+ConstantBuffer<GlobalShaderData>                GlobalData          : register(b0, space0);
+ConstantBuffer<PerObjectData>                   PerObjectBuffer     : register(b1, space0);
+StructuredBuffer<float3>                        VertexPositions     : register(t0, space0);
+StructuredBuffer<VertexElement>                 Elements            : register(t1, space0);
+StructuredBuffer<uint>                          SrvIndices          : register(t2, space0);
+StructuredBuffer<DirectionalLightParameters>    DirectionalLights   : register(t3, space0);
+StructuredBuffer<LightParameters>               CullableLights      : register(t4, space0);
+StructuredBuffer<uint2>                         LightGrid           : register(t5, space0);
+StructuredBuffer<uint>                          LightIndexList      : register(t6, space0);
 
-SamplerState PointSampler : register(s0, space0);
-SamplerState LinearSampler : register(s1, space0);
-SamplerState AnisotropicSampler : register(s2, space0);
+SamplerState                                    PointSampler        : register(s0, space0);
+SamplerState                                    LinearSampler       : register(s1, space0);
+SamplerState                                    AnisotropicSampler  : register(s2, space0);
 
-VertexOut TestShaderVS(in uint VertexIdx : SV_VertexID)
+VertexOut TestShaderVS(in uint VertexIdx: SV_VertexID)
 {
     VertexOut vsOut;
 
@@ -141,6 +142,21 @@ float4 Sample(uint index, SamplerState sampler, float2 uv)
     return Texture2D(ResourceDescriptorHeap[index]).Sample(sampler, uv);
 }
 
+float4 Sample(uint index, SamplerState sampler, float2 uv, float mip)
+{
+    return Texture2D(ResourceDescriptorHeap[index]).SampleLevel(sampler, uv, mip);
+}
+
+float4 SampleCube(uint index, SamplerState sampler, float3 n)
+{
+    return TextureCube(ResourceDescriptorHeap[index]).Sample(sampler, n);
+}
+
+float4 SampleCube(uint index, SamplerState sampler, float3 n, float mip)
+{
+    return TextureCube(ResourceDescriptorHeap[index]).SampleLevel(sampler, n, mip);
+}
+
 float3 PhongBRDF(float3 N, float3 L, float3 V, float3 diffuseColor, float3 specularColor, float shininess)
 {
     float3 color = diffuseColor;
@@ -166,26 +182,30 @@ float3 CookTorranceBRDF(Surface S, float3 L)
 
     float3 specularBRDF = (D * G) * F;
     float3 rho = 1.f - F;
-    //float3 diffuseBRDF = Diffuse_Lambert() * S.DiffuseColor * rho;
-    float3 diffuseBRDF = Diffuse_Burley(NoV, NoL, VoH, S.PerceptualRoughness * S.PerceptualRoughness) * S.DiffuseColor * rho;
+    float3 diffuseBRDF = Diffuse_Lambert() * S.DiffuseColor * rho;
+    //float3 diffuseBRDF = Diffuse_Burley(NoV, NoL, VoH, S.PerceptualRoughness * S.PerceptualRoughness) * S.DiffuseColor * rho;
 
-    return (diffuseBRDF + specularBRDF) * NoL;
+    // NOTE: See "Practical multiple scattering compensation for microfacet models"
+    //       https://blog.selfshadow.com/publications/turquin/ms_comp_final.pdf
+    //       Eq. (16) with Ess == BrdfLut.x
+    float2 BrdfLut = Sample(GlobalData.AmbientLight.BrdfLutSrvIndex, LinearSampler, float2(NoV, S.PerceptualRoughness), 0).rg;
+    float3 energyCompensation = 1.f + S.SpecularColor * (rcp(BrdfLut.x) - 1.f);
+    specularBRDF *= energyCompensation;
+
+    return (diffuseBRDF + S.SpecularStrength * specularBRDF) * NoL;
 }
 
 float3 CalculateLighting(Surface S, float3 L, float3 lightColor)
 {
-    float3 color = 0;
 #if 0 // PHONG
     const float3 N = S.Normal;
     const float NoL = saturate(dot(N, L));
-    color = PhongBRDF(N, L, S.V, S.BaseColor, 1.f, (1 - S.PerceptualRoughness) * 100.f) * (NoL / PI) * lightColor;
+    return PhongBRDF(N, L, S.V, S.BaseColor, 1.f, (1 - S.PerceptualRoughness) * 100.f) * (NoL / PI) * lightColor;
 #else // PBR
-    color = CookTorranceBRDF(S, L) * lightColor;
-#endif
     // We don't have light-units and therefore we don't know what intensity value of 1 corresponds to.
     // For now, let's multiply by PI to make a scene a bit lighter.
-    color *= PI;
-    return color;
+    return CookTorranceBRDF(S, L) * lightColor * PI;
+#endif
 }
 
 float3 PointLight(Surface S, float3 worldPosition, LightParameters light)
@@ -242,6 +262,40 @@ float3 Spotlight(Surface S, float3 worldPosition, LightParameters light)
     return color;
 }
 
+// [Lagarde et al. 2014, Moving Frostbite to Physically Based Rendering ]
+float3 GetSpecularDominantDir(float3 N, float3 R, float roughness)
+{
+    float smoothness = saturate(1- roughness);
+    float lerpFactor = smoothness * (sqrt(smoothness) + roughness);
+    // The result is not normalized as we fetch in a cubemap
+    return lerp(N, R, lerpFactor);
+}
+
+float3 EvaluateIBL(Surface S)
+{
+    const float NoV = saturate(S.NoV);
+    const float3 F90 = max((1.f - S.PerceptualRoughness), S.SpecularColor);
+    const float3 F = F_Schlick(NoV, S.SpecularColor, F90);
+
+    const float roughness = S.PerceptualRoughness * S.PerceptualRoughness;
+
+    AmbientLightParameters IBL = GlobalData.AmbientLight;
+    float3 diffN = S.Normal;
+    float3 diffuse = SampleCube(IBL.DiffuseSrvIndex, LinearSampler, diffN).rgb * S.DiffuseColor * (1.f - F);
+    float3 specN = GetSpecularDominantDir(S.Normal, reflect(-S.V, S.Normal), roughness);
+    float3 specularIBL = SampleCube(IBL.SpecularSrvIndex, LinearSampler, specN, S.PerceptualRoughness * 5.f).rgb;
+    float2 BrdfLut = Sample(IBL.BrdfLutSrvIndex, LinearSampler, float2(NoV, S.PerceptualRoughness), 0).rg;
+    float3 specular = specularIBL * (S.SpecularStrength * S.SpecularColor * BrdfLut.x + F90 * BrdfLut.y);
+
+    // NOTE: See "Practical multiple scattering compensation for microfacet models"
+    //       https://blog.selfshadow.com/publications/turquin/ms_comp_final.pdf
+    //       Eq. (16) with Ess == BrdfLut.x
+    float3 energyCompensation = 1.f + S.SpecularColor * (rcp(BrdfLut.x) - 1.f);
+    specular *= energyCompensation;
+
+    return  (diffuse + specular) * IBL.Intensity;
+}
+
 Surface GetSurface(VertexOut psIn, float3 V)
 {
     Surface S;
@@ -249,7 +303,7 @@ Surface GetSurface(VertexOut psIn, float3 V)
     S.BaseColor = PerObjectBuffer.BaseColor.rgb;
     S.Metallic = PerObjectBuffer.Metallic;
     S.Normal = normalize(psIn.WorldNormal);
-    S.PerceptualRoughness = max(PerObjectBuffer.Roughness, 0.045f);
+    S.PerceptualRoughness = PerObjectBuffer.Roughness;
     S.EmissiveColor = PerObjectBuffer.Emissive;
     S.EmissiveIntensity = PerObjectBuffer.EmissiveIntensity;
     S.AmbientOcclusion = PerObjectBuffer.AmbientOcclusion;
@@ -261,7 +315,7 @@ Surface GetSurface(VertexOut psIn, float3 V)
     S.EmissiveColor = Sample(SrvIndices[2], LinearSampler, uv).rgb;
     float2 metalRough = Sample(SrvIndices[3], LinearSampler, uv).rg;
     S.Metallic = metalRough.r;
-    S.PerceptualRoughness = max(metalRough.g, 0.045f);
+    S.PerceptualRoughness = metalRough.g;
     S.EmissiveIntensity = 1.f;
     float3 n = Sample(SrvIndices[4], LinearSampler, uv).rgb;
     n = n * 2.f - 1.f;
@@ -271,17 +325,19 @@ Surface GetSurface(VertexOut psIn, float3 V)
     const float3 T = psIn.WorldTangent.xyz;
     const float3 B = cross(N, T) * psIn.WorldTangent.w;
     const float3x3 TBN = float3x3(T, B, N);
-    // Transform from tangent-space to world-space
+    // Transform from tangent-space to world-space.
     S.Normal = normalize(mul(n, TBN));
 
 #endif
 
     S.V = V;
+    S.PerceptualRoughness = max(S.PerceptualRoughness , 0.045f);
     const float roughness = S.PerceptualRoughness * S.PerceptualRoughness;
     S.a2 = roughness * roughness;
     S.NoV = dot(V, S.Normal);
     S.DiffuseColor = S.BaseColor * (1.f - S.Metallic);
     S.SpecularColor = lerp(0.04f, S.BaseColor, S.Metallic); // AKA F0
+    S.SpecularStrength = lerp(1 - min(S.PerceptualRoughness, 0.95f), 1.f, S.Metallic);
 
     return S;
 }
@@ -296,31 +352,23 @@ uint GetGridIndex(float2 posXY, float viewWidth)
 [earlydepthstencil]
 PixelOut TestShaderPS(in VertexOut psIn)
 {
-
     float3 viewDir = normalize(GlobalData.CameraPosition - psIn.WorldPosition);
     Surface S = GetSurface(psIn, viewDir);
 
     float3 color = 0;
-    uint i = 0;
+#if 0
 
+    uint i = 0;
     for (i = 0; i < GlobalData.NumDirectionalLights; ++i)
     {
         DirectionalLightParameters light = DirectionalLights[i];
-
-        float3 lightDirection = light.Direction;
-        //if (abs(lightDirection.z - 1.f) < 0.001f)
-        //{
-        //    lightDirection = GlobalData.CameraDirection;
-        //}
-
-        color += CalculateLighting(S, -lightDirection, light.Color * light.Intensity);
+        color += CalculateLighting(S, -light.Direction, light.Color * light.Intensity);
     }
 
     const uint gridIndex = GetGridIndex(psIn.HomogeneousPosition.xy, GlobalData.ViewWidth);
     uint lightStartIndex = LightGrid[gridIndex].x;
     const uint lightCount = LightGrid[gridIndex].y;
 
-#if USE_BOUNDING_SPHERES
     const uint numPointLights = lightStartIndex + (lightCount >> 16);
     const uint numSpotlights = numPointLights + (lightCount & 0xffff);
 
@@ -337,24 +385,15 @@ PixelOut TestShaderPS(in VertexOut psIn)
         LightParameters light = CullableLights[lightIndex];
         color += Spotlight(S, psIn.WorldPosition, light);
     }
-    
 #else
-    for (i = 0; i < lightCount; ++i)
+
+    if (GlobalData.AmbientLight.Intensity > 0)
     {
-        const uint lightIndex = LightIndexList[lightStartIndex + i];
-        LightParameters light = CullableLights[lightIndex];
-
-        if (light.Type == LIGHT_TYPE_POINT_LIGHT)
-        {
-            color += PointLight(S, psIn.WorldPosition, light);
-        }
-        else if (light.Type == LIGHT_TYPE_SPOTLIGHT)
-        {
-            color += Spotlight(S, psIn.WorldPosition, light);
-        }
+      color += EvaluateIBL(S);
     }
-#endif
 
+#endif
+    
 #if TEXTURED_MTL
     float VoN = S.NoV * 1.3f;
     float VoN2 = VoN * VoN;

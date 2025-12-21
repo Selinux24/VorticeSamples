@@ -3,9 +3,11 @@ using ContentTools;
 using DX12Windows.Assets;
 using DX12Windows.Scripts;
 using DX12Windows.Shaders;
+using PrimalLike;
 using PrimalLike.Common;
 using PrimalLike.Components;
 using PrimalLike.Content;
+using PrimalLike.EngineAPI;
 using PrimalLike.Graphics;
 using System;
 using System.Diagnostics;
@@ -27,6 +29,7 @@ namespace DX12Windows.Content
         private const string emissiveTexture = "../../../../../Assets/Emissive.png";
         private const string metalRoughTexture = "../../../../../Assets/MetalRough.png";
         private const string normalTexture = "../../../../../Assets/Normal.png";
+        private const string envMapTexture = "../../../../../Assets/sunny_rose_garden_4k.hdr";
 
         private const string fanModelName = "fanmodel.model";
         private const string intModelName = "labmodel.model";
@@ -39,6 +42,10 @@ namespace DX12Windows.Content
         private const string emissiveTextureName = "Emissive.texture";
         private const string metalRoughTextureName = "MetalRough.texture";
         private const string normalTextureName = "Normal.texture";
+
+        private const string iblBrdfLutTextureName = "ibl_BrdfLut.texture";
+        private const string iblDiffuseTextureName = "ibl_Diffuse.texture";
+        private const string iblSpecularTextureName = "ibl_Specular.texture";
 
         private uint fanModelId = uint.MaxValue;
         private uint intModelId = uint.MaxValue;
@@ -54,9 +61,15 @@ namespace DX12Windows.Content
 
         private readonly uint[] textureIds = new uint[(int)TestShaders.TextureUsages.Count];
 
+        private uint iblBrdfLutId = uint.MaxValue;
+        private uint iblDiffuseId = uint.MaxValue;
+        private uint iblSpecularId = uint.MaxValue;
+
         private uint defaultMtlId = uint.MaxValue;
         private uint fembotMtlId = uint.MaxValue;
         private readonly uint[] pbrMtlIds = new uint[12];
+
+        private Light iblLight;
 
         public Vector3 InitialCameraPosition { get; } = new(-5.49f, 1.73f, 9.26f);
         public Quaternion InitialCameraRotation { get; } = Quaternion.CreateFromYawPitchRoll(5.61f, 0.19f, 0f);
@@ -93,11 +106,12 @@ namespace DX12Windows.Content
                 }
             }
 
-            Importer.ImportAmbientOcclusionTexture(Path.Combine(outputsFolder, ambientOcclusionTextureName), ambientOcclusionTexture);
-            Importer.ImportBaseColorTexture(Path.Combine(outputsFolder, baseColorTextureName), baseColorTexture);
-            Importer.ImportEmissiveTexture(Path.Combine(outputsFolder, emissiveTextureName), emissiveTexture);
-            Importer.ImportMetalRoughTexture(Path.Combine(outputsFolder, metalRoughTextureName), metalRoughTexture);
-            Importer.ImportNormalTexture(Path.Combine(outputsFolder, normalTextureName), normalTexture);
+            Importer.ImportAmbientOcclusionTexture(ambientOcclusionTexture, outputsFolder, ambientOcclusionTextureName);
+            Importer.ImportBaseColorTexture(baseColorTexture, outputsFolder, baseColorTextureName);
+            Importer.ImportEmissiveTexture(emissiveTexture, outputsFolder, emissiveTextureName);
+            Importer.ImportMetalRoughTexture(metalRoughTexture, outputsFolder, metalRoughTextureName);
+            Importer.ImportNormalTexture(normalTexture, outputsFolder, normalTextureName);
+            Importer.ImportEnvironmentMapTexture(envMapTexture, outputsFolder, iblBrdfLutTextureName, iblDiffuseTextureName, iblSpecularTextureName);
 
             TextureImporter.ShutDownTextureTools();
 
@@ -118,6 +132,10 @@ namespace DX12Windows.Content
                 new(() => { textureIds[(uint)TestShaders.TextureUsages.MetalRough] = ITestRenderItem.LoadTexture(Path.Combine(outputsFolder, metalRoughTextureName)); }),
                 new(() => { textureIds[(uint)TestShaders.TextureUsages.Normal] = ITestRenderItem.LoadTexture(Path.Combine(outputsFolder, normalTextureName)); }),
 
+                new(() => { iblBrdfLutId = ITestRenderItem.LoadTexture(Path.Combine(outputsFolder, iblBrdfLutTextureName)); }),
+                new(() => { iblDiffuseId = ITestRenderItem.LoadTexture(Path.Combine(outputsFolder, iblDiffuseTextureName)); }),
+                new(() => { iblSpecularId = ITestRenderItem.LoadTexture(Path.Combine(outputsFolder, iblSpecularTextureName)); }),
+
                 new(() => { fanModelId = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, fanModelName)); }),
                 new(() => { labModelId = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, intModelName)); }),
                 new(() => { intModelId = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, labModelName)); }),
@@ -136,6 +154,8 @@ namespace DX12Windows.Content
             {
                 t.Join();
             }
+
+            CreateIblLight();
 
             GeometryInfo geometryInfo = new();
 
@@ -167,6 +187,19 @@ namespace DX12Windows.Content
                 float z = x;
                 sphereEntityIds[i] = HelloWorldApp.CreateOneGameEntity(new(x, y, z), Quaternion.Identity, geometryInfo).Id;
             }
+        }
+        void CreateIblLight()
+        {
+            LightInitInfo info = new()
+            {
+                EntityId = 0,
+                LightType = LightTypes.Ambient,
+            };
+            info.AmbientLight.BrdfLutTextureId = iblBrdfLutId;
+            info.AmbientLight.DiffuseTextureId = iblDiffuseId;
+            info.AmbientLight.SpecularTextureId = iblSpecularId;
+
+            iblLight = Application.CreateLight(info);
         }
         private void CreateMaterial()
         {
@@ -247,6 +280,11 @@ namespace DX12Windows.Content
             ITestRenderItem.RemoveModel(fembotModelId);
             ITestRenderItem.RemoveModel(sphereModelId);
 
+            if (iblLight.IsValid)
+            {
+                Application.RemoveLight(iblLight.Id, 0);
+            }
+
             // remove material
             if (IdDetail.IsValid(defaultMtlId))
             {
@@ -273,6 +311,21 @@ namespace DX12Windows.Content
                 {
                     ContentToEngine.DestroyResource(id, AssetTypes.Texture);
                 }
+            }
+
+            if (IdDetail.IsValid(iblBrdfLutId))
+            {
+                ContentToEngine.DestroyResource(iblBrdfLutId, AssetTypes.Texture);
+            }
+
+            if (IdDetail.IsValid(iblDiffuseId))
+            {
+                ContentToEngine.DestroyResource(iblDiffuseId, AssetTypes.Texture);
+            }
+
+            if (IdDetail.IsValid(iblSpecularId))
+            {
+                ContentToEngine.DestroyResource(iblSpecularId, AssetTypes.Texture);
             }
 
             // remove shaders and textures
