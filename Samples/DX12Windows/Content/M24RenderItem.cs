@@ -87,8 +87,7 @@ namespace DX12Windows.Content
         }
         private void CreateRenderItems(string outputsFolder)
         {
-            Thread[] tasks =
-            [
+            Utils.Run(
                 new(() => { textureIds[(uint)TestShaders.TextureUsages.BaseColor] = ITestRenderItem.LoadTexture(Path.Combine(outputsFolder, baseColorTextureName)); }),
 
                 new(() => { model1Id = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, model1Name)); }),
@@ -98,18 +97,7 @@ namespace DX12Windows.Content
                 new(() => { model5Id = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, model5Name)); }),
                 new(() => { model6Id = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, model6Name)); }),
 
-                new(TestShaders.LoadShaders),
-            ];
-
-            foreach (var t in tasks)
-            {
-                t.Start();
-            }
-
-            foreach (var t in tasks)
-            {
-                t.Join();
-            }
+                new(TestShaders.LoadShaders));
 
             GeometryInfo geometryInfo = new();
 

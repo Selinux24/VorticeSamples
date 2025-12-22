@@ -5,15 +5,18 @@
 struct ShaderConstants
 {
     uint GPassMainBufferIndex;
+    uint GPassDepthBufferIndex;
 };
 
-ConstantBuffer<GlobalShaderData> GlobalData : register(b0, space0);
-ConstantBuffer<ShaderConstants> ShaderParams : register(b1, space0);
+ConstantBuffer<GlobalShaderData>    GlobalData          : register(b0, space0);
+ConstantBuffer<ShaderConstants>     ShaderParams        : register(b1, space0);
 
 // TODO: temporary for visualizing light culling frustums grid
 #define TILE_SIZE 32
-StructuredBuffer<Frustum> Frustums : register(t0, space0);
-StructuredBuffer<uint2> LightGridOpaque : register(t1, space0);
+StructuredBuffer<Frustum>           Frustums            : register(t0, space0);
+StructuredBuffer<uint2>             LightGridOpaque     : register(t1, space0);
+SamplerState                        PointSampler        : register(s0, space0);
+SamplerState                        LinearSampler       : register(s1, space0);
 
 uint GetGridIndex(float2 posXY, float viewWidth)
 {
@@ -34,18 +37,17 @@ float4 Heatmap(StructuredBuffer<uint2> buffer, float2 posXY, float blend)
     numLights = numPointLights + numSpotlights;
 #endif
 
-    const float3 mapTex[] =
-    {
-        float3(0, 0, 0),
-            float3(0, 0, 1),
-            float3(0, 1, 1),
-            float3(0, 1, 0),
-            float3(1, 1, 0),
-            float3(1, 0, 0),
+    const float3 mapTex[] = {
+            float3(0,0,0),
+            float3(0,0,1),
+            float3(0,1,1),
+            float3(0,1,0),
+            float3(1,1,0),
+            float3(1,0,0),
     };
     const uint mapTexLen = 5;
     const uint maxHeat = 40;
-    float l = saturate((float) numLights / maxHeat) * mapTexLen;
+    float l = saturate((float)numLights / maxHeat) * mapTexLen;
     float3 a = mapTex[floor(l)];
     float3 b = mapTex[ceil(l)];
     float3 heatmap = lerp(a, b, l - floor(l));
@@ -101,10 +103,25 @@ float4 PostProcessPS(in noperspective float4 Position : SV_Position,
     return float4((float3)c, 1.f);
 #elif 0 // LIGHT GRID OPAQUE
     return Heatmap(LightGridOpaque, Position.xy, 0.75f);
-#elif 1 // SCENE
+#elif 0 // SCENE
 
     Texture2D gpassMain = ResourceDescriptorHeap[ShaderParams.GPassMainBufferIndex];
     return float4(gpassMain[Position.xy].xyz, 1.f);
+#elif 1 //
 
+    Texture2D gpassDepth = ResourceDescriptorHeap[ShaderParams.GPassDepthBufferIndex];
+    float depth = gpassDepth[Position.xy].r;
+
+    if(depth > 0.f)
+    {
+        Texture2D gpassMain = ResourceDescriptorHeap[ShaderParams.GPassMainBufferIndex];
+        return float4(gpassMain[Position.xy].xyz, 1.f);
+    }
+    else
+    {
+        float3 direction = UnprojectUV(UV, depth, GlobalData.InvViewProjection).xyz;
+        return TextureCube(ResourceDescriptorHeap[GlobalData.AmbientLight.SpecularSrvIndex])
+                    .SampleLevel(LinearSampler, direction, 0.1f) * GlobalData.AmbientLight.Intensity;
+    }
 #endif
 }

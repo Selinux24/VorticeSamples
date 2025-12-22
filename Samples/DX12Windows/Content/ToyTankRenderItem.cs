@@ -53,14 +53,9 @@ namespace DX12Windows.Content
         }
         private void CreateRenderItems(string outputsFolder)
         {
-            var _1 = new Thread(() => { modelId = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, modelName)); });
-            var _2 = new Thread(TestShaders.LoadShaders);
-
-            _1.Start();
-            _2.Start();
-
-            _1.Join();
-            _2.Join();
+            Utils.Run(
+                new(() => { modelId = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, modelName)); }),
+                new(TestShaders.LoadShaders));
 
             // NOTE: we need shaders to be ready before creating materials
             CreateMaterial();

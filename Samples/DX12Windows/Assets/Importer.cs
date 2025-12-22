@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using PrimalLike.Content;
+using System.IO;
 using TexturesImporter;
 
 namespace DX12Windows.Assets
@@ -10,13 +11,13 @@ namespace DX12Windows.Assets
             string importPath = Path.Combine(importFolder, importFile);
             if (!File.Exists(importPath))
             {
-                TextureData data = new();
+                using var data = new TextureData();
                 data.ImportSettings.Compress = true;
                 data.ImportSettings.PreferBc7 = true;
                 data.ImportSettings.AlphaThreshold = 0.5f;
                 data.ImportSettings.Sources = texturePath;
 
-                TextureImporter.Import(ref data);
+                TextureImporter.Import(data);
                 data.SaveTexture(importPath);
             }
         }
@@ -25,13 +26,13 @@ namespace DX12Windows.Assets
             string importPath = Path.Combine(importFolder, importFile);
             if (!File.Exists(importPath))
             {
-                TextureData data = new();
+                using var data = new TextureData();
                 data.ImportSettings.Compress = true;
                 data.ImportSettings.PreferBc7 = true;
                 data.ImportSettings.AlphaThreshold = 0.5f;
                 data.ImportSettings.Sources = texturePath;
 
-                TextureImporter.Import(ref data);
+                TextureImporter.Import(data);
                 data.SaveTexture(importPath);
             }
         }
@@ -40,13 +41,13 @@ namespace DX12Windows.Assets
             string importPath = Path.Combine(importFolder, importFile);
             if (!File.Exists(importPath))
             {
-                TextureData data = new();
+                using var data = new TextureData();
                 data.ImportSettings.Compress = true;
                 data.ImportSettings.PreferBc7 = true;
                 data.ImportSettings.AlphaThreshold = 0.5f;
                 data.ImportSettings.Sources = texturePath;
 
-                TextureImporter.Import(ref data);
+                TextureImporter.Import(data);
                 data.SaveTexture(importPath);
             }
         }
@@ -55,14 +56,14 @@ namespace DX12Windows.Assets
             string importPath = Path.Combine(importFolder, importFile);
             if (!File.Exists(importPath))
             {
-                TextureData data = new();
+                using var data = new TextureData();
                 data.ImportSettings.Compress = true;
                 data.ImportSettings.PreferBc7 = true;
                 data.ImportSettings.AlphaThreshold = 0.5f;
                 data.ImportSettings.OutputFormat = BCFormats.BC5DualChannelGray;
                 data.ImportSettings.Sources = texturePath;
 
-                TextureImporter.Import(ref data);
+                TextureImporter.Import(data);
                 data.SaveTexture(importPath);
             }
         }
@@ -71,13 +72,13 @@ namespace DX12Windows.Assets
             string importPath = Path.Combine(importFolder, importFile);
             if (!File.Exists(importPath))
             {
-                TextureData data = new();
+                using var data = new TextureData();
                 data.ImportSettings.Compress = true;
                 data.ImportSettings.PreferBc7 = true;
                 data.ImportSettings.AlphaThreshold = 0.5f;
                 data.ImportSettings.Sources = texturePath;
 
-                TextureImporter.Import(ref data);
+                TextureImporter.Import(data);
                 data.SaveTexture(importPath);
             }
         }
@@ -89,7 +90,7 @@ namespace DX12Windows.Assets
             string specularPath = Path.Combine(importFolder, specularFile);
             if (!File.Exists(brdfLutPath) || !File.Exists(diffusePath) || !File.Exists(specularPath))
             {
-                TextureData data = new()
+                using var data = new TextureData()
                 {
                     ImportSettings = new()
                     {
@@ -105,19 +106,26 @@ namespace DX12Windows.Assets
                     }
                 };
 
-                TextureImporter.Import(ref data);
-                data.SaveTexture(specularPath);
-
-                var spec = data.Copy();
-                TextureImporter.PrefilterIbl(ref spec, IblFilter.Diffuse);
-                spec.SaveTexture(diffusePath);
-
-                TextureData brdf = new()
+                TextureImporter.Import(data);
+                if (data.Info.ImportError != ImportErrors.Succeeded)
                 {
-                    ImportSettings = data.ImportSettings
-                };
-                TextureImporter.ComputeBrdfIntegrationLut(ref brdf);
-                brdf.SaveTexture(brdfLutPath);
+                    return;
+                }
+
+                if (data.ImportSettings.PrefilterCubemap && data.Info.Flags.HasFlag(TextureFlags.IsCubeMap))
+                {
+                    using var brdf = new TextureData(data.ImportSettings);
+                    TextureImporter.ComputeBrdfIntegrationLut(brdf);
+                    brdf.SaveTexture(brdfLutPath);
+
+                    using var diff = data.Copy();
+                    TextureImporter.PrefilterIbl(diff, IblFilter.Diffuse);
+                    diff.SaveTexture(diffusePath);
+
+                    TextureImporter.PrefilterIbl(data, IblFilter.Specular);
+                }
+
+                data.SaveTexture(specularPath);
             }
         }
     }

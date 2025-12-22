@@ -14,8 +14,8 @@ namespace TexturesImporter.EnvMaps
         private readonly ID3D11Device device;
         private readonly uint sampleCount;
         private readonly uint arraySize;
-        private readonly uint cubeMapSize;
         private readonly Format format;
+        private readonly uint cubeMapSize;
 
         private readonly ID3D11Texture2D cubemapsIn;
         private readonly ID3D11Texture2D cubemapsOut;
@@ -32,6 +32,7 @@ namespace TexturesImporter.EnvMaps
             this.format = (Format)format;
 
             TexMetadata metaData = cubemaps.GetMetadata();
+            cubeMapSize = (uint)metaData.Width;
 
             // Upload source cubemaps and create output resources
             Texture2DDescription desc = new()
@@ -113,22 +114,14 @@ namespace TexturesImporter.EnvMaps
 
             for (uint i = 0; i < arraySize / 6; i++)
             {
-                using var cubemapInSrv = EnvMapProcessingShader.CreateCubemapSrv(device, format, cubemapsIn, i * 6, RoughnessMipLevels);
-                if (cubemapInSrv == null)
-                {
-                    return false;
-                }
+                uint firsArraySlice = i * 6;
+
+                using var cubemapInSrv = EnvMapProcessingShader.CreateCubemapSrv(device, format, cubemapsIn, firsArraySlice, RoughnessMipLevels);
 
                 // NOTE: Start from mip level 1, because mip 0 is identical to the source and we can copy it
                 // instead of filtering it.
                 for (uint mip = 1; mip < RoughnessMipLevels; mip++)
                 {
-                    using var cubemapOutUav = EnvMapProcessingShader.CreateTexture2DUav(device, format, 6, i * 6, mip, cubemapsOut);
-                    if (cubemapOutUav == null)
-                    {
-                        return false;
-                    }
-
                     uint outSize = (uint)MathF.Max(1, PrefilteredSpecularCubemapSize >> (int)mip);
                     float roughness = mip * (1f / RoughnessMipLevels);
 
@@ -143,6 +136,8 @@ namespace TexturesImporter.EnvMaps
                     {
                         return false;
                     }
+
+                    using var cubemapOutUav = EnvMapProcessingShader.CreateTexture2DUav(device, format, 6, firsArraySlice, mip, cubemapsOut);
 
                     EnvMapProcessingShader.Dispatch(ctx, cubemapInSrv, cubemapOutUav, constantBuffer, linearSampler, shaderPrefilter, outSize);
                 }

@@ -138,9 +138,9 @@ namespace Direct3D12
             private static readonly StaticSamplerDescription staticPoint = new(
                 new SamplerDescription(
                     Filter.MinMagMipPoint,
-                    TextureAddressMode.Wrap,
-                    TextureAddressMode.Wrap,
-                    TextureAddressMode.Wrap,
+                    TextureAddressMode.Clamp,
+                    TextureAddressMode.Clamp,
+                    TextureAddressMode.Clamp,
                     0f,
                     1,
                     ComparisonFunction.Always,
@@ -150,9 +150,9 @@ namespace Direct3D12
             private static readonly StaticSamplerDescription staticLinear = new(
                 new SamplerDescription(
                     Filter.MinMagMipLinear,
-                    TextureAddressMode.Wrap,
-                    TextureAddressMode.Wrap,
-                    TextureAddressMode.Wrap,
+                    TextureAddressMode.Clamp,
+                    TextureAddressMode.Clamp,
+                    TextureAddressMode.Clamp,
                     0f,
                     1,
                     ComparisonFunction.Always,
@@ -162,9 +162,9 @@ namespace Direct3D12
             private static readonly StaticSamplerDescription staticAnisotropic = new(
                 new SamplerDescription(
                     Filter.Anisotropic,
-                    TextureAddressMode.Wrap,
-                    TextureAddressMode.Wrap,
-                    TextureAddressMode.Wrap,
+                    TextureAddressMode.Clamp,
+                    TextureAddressMode.Clamp,
+                    TextureAddressMode.Clamp,
                     0f,
                     1,
                     ComparisonFunction.Always,

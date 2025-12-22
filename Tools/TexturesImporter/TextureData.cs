@@ -9,7 +9,7 @@ using Utilities;
 
 namespace TexturesImporter
 {
-    public struct TextureData()
+    public class TextureData() : IDisposable
     {
         public const uint MaxMips = 14; // we support up to 8k textures.
         public IntPtr SubresourceData = 0;
@@ -19,11 +19,34 @@ namespace TexturesImporter
         public TextureInfo Info = new();
         public TextureImportSettings ImportSettings = new();
 
+        public TextureData(TextureImportSettings settings) : this()
+        {
+            ImportSettings = settings;
+        }
+
+        ~TextureData()
+        {
+            Dispose(false);
+        }
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+        private void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                Marshal.FreeCoTaskMem(SubresourceData);
+                Marshal.FreeCoTaskMem(Icon);
+            }
+        }
+
         /// <summary>
         /// Saves the texture to a file
         /// </summary>
         /// <param name="outputPath">Output path</param>
-        public readonly void SaveTexture(string outputPath)
+        public void SaveTexture(string outputPath)
         {
             if (SubresourceData == IntPtr.Zero || SubresourceSize == 0)
             {
@@ -35,7 +58,7 @@ namespace TexturesImporter
             byte[] data = PackForEngine();
             File.WriteAllBytes(outputPath, data);
         }
-        private readonly byte[] PackForEngine()
+        private byte[] PackForEngine()
         {
             using var stream = new MemoryStream();
             using var writer = new BinaryWriter(stream);
@@ -68,7 +91,7 @@ namespace TexturesImporter
 
             return data;
         }
-        private readonly List<List<List<Slice>>> GetSlices()
+        private List<List<List<Slice>>> GetSlices()
         {
             Debug.Assert(Info.MipLevels > 0);
             Debug.Assert(SubresourceData != IntPtr.Zero && SubresourceSize > 0);
@@ -133,9 +156,9 @@ namespace TexturesImporter
             return slices;
         }
 
-        public readonly TextureData Copy()
+        public TextureData Copy()
         {
-            TextureData data = new();
+            var data = new TextureData();
 
             if (SubresourceData != IntPtr.Zero && SubresourceSize > 0)
             {

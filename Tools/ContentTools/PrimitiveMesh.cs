@@ -13,6 +13,10 @@ namespace ContentTools
 
     public static class PrimitiveMesh
     {
+        const int AxisX = 0;
+        const int AxisY = 1;
+        const int AxisZ = 2;
+
         private static readonly PrimitiveMeshCreator[] Creators =
         [
             CreatePlane,
@@ -28,7 +32,7 @@ namespace ContentTools
             var lod = new LODGroup { Name = "plane", Meshes = [CreatePlane(info)] };
             scene.LODGroups.Add(lod);
         }
-        private static Mesh CreatePlane(PrimitiveInitInfo info, int horizontalIndex = 0, int verticalIndex = 2, bool flipWinding = false, Vector3 offset = default, Vector2 uRange = default, Vector2 vRange = default)
+        private static Mesh CreatePlane(PrimitiveInitInfo info, int horizontalIndex = AxisX, int verticalIndex = AxisZ, bool flipWinding = false, Vector3 offset = default, Vector2 uRange = default, Vector2 vRange = default)
         {
             Debug.Assert(horizontalIndex < 3 && verticalIndex < 3);
             Debug.Assert(horizontalIndex != verticalIndex);
@@ -111,8 +115,105 @@ namespace ContentTools
             return mesh;
         }
 
+        private static Vector3 GetFaceVertex(uint face, float x, float y)
+        {
+            Vector3[] faceVertex =
+            [
+                new (-1f,  -y,   x), // X- Right
+                new ( 1f,  -y,  -x), // X+ Left
+                new (  x,  1f,   y), // Y+ Bottom
+                new (  x, -1f,  -y), // Y- Top
+                new (  x,  -y,  1f), // Z+ Front
+                new ( -x,  -y, -1f), // Z- Back
+            ];
+
+            return faceVertex[face];
+        }
+
         private static void CreateCube(Model scene, PrimitiveInitInfo info)
         {
+            var lod = new LODGroup { Name = "cube", Meshes = [CreateCube(info)] };
+            scene.LODGroups.Add(lod);
+        }
+        private static Mesh CreateCube(PrimitiveInitInfo info)
+        {
+            uint[] segments = info.Segments;
+            int[][] axes = [[AxisZ, AxisY], [AxisX, AxisZ], [AxisX, AxisY]];
+            float[] uRange = [0f, 0.5f, 0.25f, 0.25f, 0.25f, 0.75f];
+            float[] vRange = [0.375f, 0.375f, 0.125f, 0.625f, 0.375f, 0.375f];
+            List<Vector3> positions = [];
+            List<uint> rawIndices = [];
+            List<Vector2> uvs = [];
+
+            for (uint face = 0; face < 6; face++)
+            {
+                uint axesIndex = face >> 1;
+                var axis = axes[axesIndex];
+                uint xCount = Math.Clamp(segments[axis[0]], 1, 10);
+                uint yCount = Math.Clamp(segments[axis[1]], 1, 10);
+                float xStep = 1f / xCount;
+                float yStep = 1f / yCount;
+                float uStep = 0.25f / xCount;
+                float vStep = 0.25f / yCount;
+
+                uint rawIndexOffset = (uint)positions.Count;
+
+                for (uint y = 0; y <= yCount; y++)
+                {
+                    for (uint x = 0; x <= xCount; x++)
+                    {
+                        var pos = new Vector2(2f * x * xStep - 1f, 2f * y * yStep - 1f);
+                        var position = GetFaceVertex(face, pos.X, pos.Y);
+                        positions.Add(new(position.X * info.Size.X, position.Y * info.Size.Y, position.Z * info.Size.Z));
+#if true
+                        var uv = new Vector2(uRange[face], 1f - vRange[face]);
+                        uv.X += x * uStep;
+                        uv.Y -= y * vStep;
+#else
+                        var uv = new Vector2( 0f, 1f )                        ;
+                        uv.X += x % 2;
+                        uv.Y -= y % 2;
+#endif
+                        uvs.Add(uv);
+                    }
+                }
+
+                uint rowLength = xCount + 1; // number of vertices in a row
+                for (uint y = 0; y < yCount; y++)
+                {
+                    for (uint x = 0; x < xCount; x++)
+                    {
+                        uint[] index =
+                        [
+                            rawIndexOffset + x + y * rowLength,
+                            rawIndexOffset + x + (y + 1) * rowLength,
+                            rawIndexOffset + (x + 1) + y * rowLength,
+                            rawIndexOffset + (x + 1) + (y + 1) * rowLength
+                        ];
+
+                        rawIndices.Add(index[0]);
+                        rawIndices.Add(index[1]);
+                        rawIndices.Add(index[2]);
+
+                        rawIndices.Add(index[2]);
+                        rawIndices.Add(index[1]);
+                        rawIndices.Add(index[3]);
+                    }
+                }
+            }
+
+            List<Vector2> uvSet = [];
+            for (int i = 0; i < rawIndices.Count; i++)
+            {
+                uvSet.Add(uvs[(int)rawIndices[i]]);
+            }
+
+            return new()
+            {
+                Positions = [.. positions],
+                RawIndices = [.. rawIndices],
+                UVSets = [[.. uvSet]]
+            };
         }
 
         private static void CreateUvSphere(Model scene, PrimitiveInitInfo info)
@@ -122,8 +223,8 @@ namespace ContentTools
         }
         private static Mesh CreateUvSphere(PrimitiveInitInfo info)
         {
-            uint phiCount = Math.Clamp(info.Segments[0], 3, 64);
-            uint thetaCount = Math.Clamp(info.Segments[1], 2, 64);
+            uint phiCount = Math.Clamp(info.Segments[AxisX], 3, 64);
+            uint thetaCount = Math.Clamp(info.Segments[AxisY], 2, 64);
             float thetaStep = MathF.PI / thetaCount;
             float phiStep = 2 * MathF.PI / phiCount;
             uint numIndices = 2 * 3 * phiCount + 2 * 3 * phiCount * (thetaCount - 2);

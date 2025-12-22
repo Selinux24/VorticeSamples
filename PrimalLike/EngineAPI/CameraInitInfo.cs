@@ -30,8 +30,8 @@ namespace PrimalLike.EngineAPI
             Up = new Vector3(0f, 1f, 0f);
             FieldOfView = 0.25f;
             AspectRatio = 16f / 10f;
-            NearZ = 0.01f;
-            FarZ = 1000f;
+            NearZ = 0.1f;
+            FarZ = 100f;
         }
     }
 

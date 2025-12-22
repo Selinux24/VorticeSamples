@@ -124,8 +124,7 @@ namespace DX12Windows.Content
             //       https://ko-fi.com/gameengineseries/shop
             //       Use the editor to import the scene and put the 3 models in this location.
             //       You can replace them with any model that's available to you.
-            Thread[] tasks =
-            [
+            Utils.Run(
                 new(() => { textureIds[(uint)TestShaders.TextureUsages.AmbientOcclusion] = ITestRenderItem.LoadTexture(Path.Combine(outputsFolder, ambientOcclusionTextureName)); }),
                 new(() => { textureIds[(uint)TestShaders.TextureUsages.BaseColor] = ITestRenderItem.LoadTexture(Path.Combine(outputsFolder, baseColorTextureName)); }),
                 new(() => { textureIds[(uint)TestShaders.TextureUsages.Emissive] = ITestRenderItem.LoadTexture(Path.Combine(outputsFolder, emissiveTextureName)); }),
@@ -142,18 +141,7 @@ namespace DX12Windows.Content
                 new(() => { fembotModelId = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, fembotModelName)); }),
                 new(() => { sphereModelId = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, sphereModelName)); }),
 
-                new(TestShaders.LoadShaders),
-            ];
-
-            foreach (var t in tasks)
-            {
-                t.Start();
-            }
-
-            foreach (var t in tasks)
-            {
-                t.Join();
-            }
+                new(TestShaders.LoadShaders));
 
             CreateIblLight();
 

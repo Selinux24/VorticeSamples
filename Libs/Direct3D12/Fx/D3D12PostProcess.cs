@@ -11,7 +11,7 @@ namespace Direct3D12.Fx
         public enum PostProcessRootParameters : uint
         {
             GlobalShaderData,
-            MainBuffer,
+            RootConstants,
             // TODO: temporary for visualizing light culling. Remove later.
             Frustums,
             LightGridOpaque,
@@ -44,11 +44,17 @@ namespace Direct3D12.Fx
             // Create FX root signature
             var parameters = new RootParameter1[(uint)PostProcessRootParameters.Count];
             parameters[(uint)PostProcessRootParameters.GlobalShaderData] = D3D12Helpers.AsCbv(ShaderVisibility.Pixel, 0);
-            parameters[(uint)PostProcessRootParameters.MainBuffer] = D3D12Helpers.AsConstants(1, ShaderVisibility.Pixel, 1);
+            parameters[(uint)PostProcessRootParameters.RootConstants] = D3D12Helpers.AsConstants(2, ShaderVisibility.Pixel, 1);
             parameters[(uint)PostProcessRootParameters.Frustums] = D3D12Helpers.AsSrv(ShaderVisibility.Pixel, 0);
             parameters[(uint)PostProcessRootParameters.LightGridOpaque] = D3D12Helpers.AsSrv(ShaderVisibility.Pixel, 1);
 
-            var rootSignature = new D3D12RootSignatureDesc(parameters);
+            StaticSamplerDescription[] samplers =
+            [
+                D3D12Helpers.StaticSampler(D3D12Helpers.SampleStatesCollection.StaticPoint, 0, 0, ShaderVisibility.Pixel),
+                D3D12Helpers.StaticSampler(D3D12Helpers.SampleStatesCollection.StaticLinear, 1, 0, ShaderVisibility.Pixel),
+            ];
+
+            var rootSignature = new D3D12RootSignatureDesc(parameters, D3D12RootSignatureDesc.DefaultFlags, samplers);
             rootSignature.Flags &= ~RootSignatureFlags.DenyPixelShaderRootAccess;
             fxRootSig = rootSignature.Create();
             Debug.Assert(fxRootSig != null);
@@ -88,7 +94,8 @@ namespace Direct3D12.Fx
             cmdList.SetPipelineState(fxPso);
 
             cmdList.SetGraphicsRootConstantBufferView((uint)PostProcessRootParameters.GlobalShaderData, d3d12Info.GlobalShaderData);
-            cmdList.SetGraphicsRoot32BitConstant((uint)PostProcessRootParameters.MainBuffer, D3D12GPass.MainBuffer.GetSrv().Index, 0);
+            cmdList.SetGraphicsRoot32BitConstant((uint)PostProcessRootParameters.RootConstants, D3D12GPass.MainBuffer.GetSrv().Index, 0);
+            cmdList.SetGraphicsRoot32BitConstant((uint)PostProcessRootParameters.RootConstants, D3D12GPass.DepthBuffer.GetSrv().Index, 1);
             cmdList.SetGraphicsRootShaderResourceView((uint)PostProcessRootParameters.Frustums, D3D12LightCulling.Frustums(lightCullingId, frameIndex));
             cmdList.SetGraphicsRootShaderResourceView((uint)PostProcessRootParameters.LightGridOpaque, D3D12LightCulling.LightGridOpaque(lightCullingId, frameIndex));
             cmdList.IASetPrimitiveTopology(PrimitiveTopology.TriangleList);

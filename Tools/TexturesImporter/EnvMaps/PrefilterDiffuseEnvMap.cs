@@ -124,17 +124,10 @@ namespace TexturesImporter.EnvMaps
 
             for (uint i = 0; i < arraySize / 6; i++)
             {
-                using var cubemapInSrv = EnvMapProcessingShader.CreateCubemapSrv(device, format, cubemapsIn, i * 6);
-                if (cubemapInSrv == null)
-                {
-                    return false;
-                }
+                uint firstArraySlice = i * 6;
 
-                using var cubemapOutUav = EnvMapProcessingShader.CreateTexture2DUav(device, format, 6, i * 6, 0, cubemapsOut);
-                if (cubemapOutUav == null)
-                {
-                    return false;
-                }
+                using var cubemapInSrv = EnvMapProcessingShader.CreateCubemapSrv(device, format, cubemapsIn, firstArraySlice);
+                using var cubemapOutUav = EnvMapProcessingShader.CreateTexture2DUav(device, format, 6, firstArraySlice, 0, cubemapsOut);
 
                 EnvMapProcessingShader.Dispatch(ctx, cubemapInSrv, cubemapOutUav, constantBuffer, linearSampler, shaderPrefilter, PrefilteredDiffuseCubemapSize);
             }

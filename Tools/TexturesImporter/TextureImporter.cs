@@ -125,7 +125,7 @@ namespace TexturesImporter
             return image;
         }
 
-        public static void Import(ref TextureData data)
+        public static void Import(TextureData data)
         {
             var settings = data.ImportSettings;
             Debug.Assert(settings.Sources != null && settings.SourceCount > 0);
@@ -141,7 +141,7 @@ namespace TexturesImporter
 
             for (uint i = 0; i < settings.SourceCount; i++)
             {
-                var scratchFile = LoadFromFile(ref data, files[i]);
+                var scratchFile = LoadFromFile(data, files[i]);
                 if (data.Info.ImportError != 0)
                 {
                     return;
@@ -192,7 +192,7 @@ namespace TexturesImporter
                 }
             }
 
-            using var scratch = InitializeFromImages(ref data, [.. images]);
+            using var scratch = InitializeFromImages(data, [.. images]);
             for (int i = 0; i < scratchImages.Count; i++)
             {
                 scratchImages[i].Dispose();
@@ -203,15 +203,15 @@ namespace TexturesImporter
 
             if (settings.Compress && !(scratch.GetMetadata().IsCubemap() && settings.PrefilterCubemap))
             {
-                using var bcScratch = CompressImage(ref data, scratch);
+                using var bcScratch = CompressImage(data, scratch);
                 if (data.Info.ImportError != 0) return;
 
                 // Decompress the first image to be used for the icon.
 #if DEBUG || DEBUG_EDITOR
                 SaveDbgFile(bcScratch, data.ImportSettings.Sources, "texture");
 #endif
-                CopyIcon(bcScratch, ref data);
-                CopySubresources(bcScratch, ref data);
+                CopyIcon(bcScratch, data);
+                CopySubresources(bcScratch, data);
                 TextureInfoFromMetadata(bcScratch.GetMetadata(), ref data.Info);
             }
             else
@@ -219,7 +219,7 @@ namespace TexturesImporter
 #if DEBUG || DEBUG_EDITOR
                 SaveDbgFile(scratch, data.ImportSettings.Sources, "texture");
 #endif
-                CopySubresources(scratch, ref data);
+                CopySubresources(scratch, data);
                 TextureInfoFromMetadata(scratch.GetMetadata(), ref data.Info);
             }
         }
@@ -267,7 +267,7 @@ namespace TexturesImporter
                 return null;
             }
         }
-        private static ScratchImage LoadFromFile(ref TextureData data, string fileName)
+        private static ScratchImage LoadFromFile(TextureData data, string fileName)
         {
             Debug.Assert(File.Exists(fileName));
             if (!File.Exists(fileName))
@@ -329,7 +329,7 @@ namespace TexturesImporter
 
             return scratch;
         }
-        private static ScratchImage InitializeFromImages(ref TextureData data, Image[] images)
+        private static ScratchImage InitializeFromImages(TextureData data, Image[] images)
         {
             var settings = data.ImportSettings;
 
@@ -416,7 +416,7 @@ namespace TexturesImporter
 
             return mipScratch;
         }
-        private static void CopyIcon(ScratchImage bcScratch, ref TextureData data)
+        private static void CopyIcon(ScratchImage bcScratch, TextureData data)
         {
             Debug.Assert(bcScratch.GetImageCount() > 0);
             using var scratch = bcScratch.Decompress(0, DXGI_FORMAT.UNKNOWN);
@@ -434,7 +434,7 @@ namespace TexturesImporter
             BlobStreamWriter blob = new(data.Icon, (int)size);
             blob.WriteImageAsset(image);
         }
-        private static ScratchImage CompressImage(ref TextureData data, ScratchImage scratch)
+        private static ScratchImage CompressImage(TextureData data, ScratchImage scratch)
         {
             Debug.Assert(data.ImportSettings.Compress && scratch.GetImageCount() > 0);
 
@@ -445,7 +445,7 @@ namespace TexturesImporter
                 return null;
             }
 
-            var outputFormat = DetermineOutputFormat(ref data, scratch, image);
+            var outputFormat = DetermineOutputFormat(data, scratch, image);
 
             ScratchImage bcScratch = null;
             if (!(DeviceManager.CanUseGpu(outputFormat) && DeviceManager.RunOnGPU((device) =>
@@ -465,7 +465,7 @@ namespace TexturesImporter
 
             return bcScratch;
         }
-        private static DXGI_FORMAT DetermineOutputFormat(ref TextureData data, ScratchImage scratch, Image image)
+        private static DXGI_FORMAT DetermineOutputFormat(TextureData data, ScratchImage scratch, Image image)
         {
             Debug.Assert(data.ImportSettings.Compress);
             var imageFormat = image.Format;
@@ -533,7 +533,7 @@ namespace TexturesImporter
                 return (DXGI_FORMAT)data.ImportSettings.OutputFormat;
             }
         }
-        private static void CopySubresources(ScratchImage scratch, ref TextureData data)
+        private static void CopySubresources(ScratchImage scratch, TextureData data)
         {
             Debug.Assert(scratch.GetMetadata().MipLevels > 0 && scratch.GetMetadata().MipLevels <= TextureData.MaxMips);
 
@@ -567,12 +567,12 @@ namespace TexturesImporter
             return mipLevels;
         }
 
-        public static void Decompress(ref TextureData data)
+        public static void Decompress(TextureData data)
         {
             Debug.Assert(Helper.IsCompressed((DXGI_FORMAT)data.Info.Format));
 
             Debug.Assert(data.ImportSettings.Compress);
-            var images = SubresourceDataToImageAssets(ref data);
+            var images = SubresourceDataToImageAssets(data);
 
             var metadata = MetadataFromTextureInfo(data.Info);
             using var tmp = Helper.InitializeTemporary([.. images], metadata);
@@ -585,7 +585,7 @@ namespace TexturesImporter
             using var scratch = tmp.Decompress(0, DXGI_FORMAT.UNKNOWN);
             if (scratch != null)
             {
-                CopySubresources(scratch, ref data);
+                CopySubresources(scratch, data);
                 TextureInfoFromMetadata(scratch.GetMetadata(), ref data.Info);
             }
             else
@@ -593,7 +593,7 @@ namespace TexturesImporter
                 data.Info.ImportError = ImportErrors.Decompress;
             }
         }
-        private static Image[] SubresourceDataToImageAssets(ref TextureData data)
+        private static Image[] SubresourceDataToImageAssets(TextureData data)
         {
             Debug.Assert(data.SubresourceData != IntPtr.Zero && data.SubresourceSize > 0);
             Debug.Assert(data.Info.MipLevels > 0 && data.Info.MipLevels <= TextureData.MaxMips);
@@ -627,13 +627,13 @@ namespace TexturesImporter
             return images;
         }
 
-        public static void PrefilterIbl(ref TextureData data, IblFilter filterType)
+        public static void PrefilterIbl(TextureData data, IblFilter filterType)
         {
             Debug.Assert(data.ImportSettings.PrefilterCubemap);
             ref var info = ref data.Info;
             DXGI_FORMAT format = (DXGI_FORMAT)info.Format;
             Debug.Assert(!Helper.IsCompressed(format));
-            var images = SubresourceDataToImageAssets(ref data);
+            var images = SubresourceDataToImageAssets(data);
             Debug.Assert(images.Length > 0 && !Helper.IsCompressed(images[0].Format));
             Debug.Assert((info.Flags & TextureFlags.IsCubeMap) != 0);
             Debug.Assert(info.Width == info.Height);
@@ -672,17 +672,17 @@ namespace TexturesImporter
             {
                 if (data.ImportSettings.Compress)
                 {
-                    using var compressed = CompressImage(ref data, filtered);
+                    using var compressed = CompressImage(data, filtered);
                     if (data.Info.ImportError != ImportErrors.Succeeded) return;
 
                     // Decompress the first image to be used for the icon.
                     Debug.Assert(compressed.GetImageCount() > 0);
-                    CopyIcon(compressed, ref data);
+                    CopyIcon(compressed, data);
 
 #if DEBUG || DEBUG_EDITOR
                     SaveDbgFile(compressed, data.ImportSettings.Sources, filterType == IblFilter.Diffuse ? "diffuse" : "specular");
 #endif
-                    CopySubresources(compressed, ref data);
+                    CopySubresources(compressed, data);
                     TextureInfoFromMetadata(compressed.GetMetadata(), ref data.Info);
                 }
                 else
@@ -690,13 +690,13 @@ namespace TexturesImporter
 #if DEBUG || DEBUG_EDITOR
                     SaveDbgFile(filtered, data.ImportSettings.Sources, filterType == IblFilter.Diffuse ? "diffuse" : "specular");
 #endif
-                    CopySubresources(filtered, ref data);
+                    CopySubresources(filtered, data);
                     TextureInfoFromMetadata(filtered.GetMetadata(), ref data.Info);
                 }
             }
         }
 
-        public static void ComputeBrdfIntegrationLut(ref TextureData data)
+        public static void ComputeBrdfIntegrationLut(TextureData data)
         {
             ScratchImage result = null;
             if (!DeviceManager.RunOnGPU((device) =>
@@ -714,7 +714,7 @@ namespace TexturesImporter
 #if DEBUG || DEBUG_EDITOR
                 SaveDbgFile(result, data.ImportSettings.Sources, "brdf");
 #endif
-                CopySubresources(result, ref data);
+                CopySubresources(result, data);
                 TextureInfoFromMetadata(result.GetMetadata(), ref data.Info);
             }
         }

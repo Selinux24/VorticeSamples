@@ -2,7 +2,6 @@
 using System;
 using System.Diagnostics;
 using System.Numerics;
-using System.Threading;
 using Utilities;
 using Vortice.Direct3D11;
 
@@ -47,25 +46,13 @@ namespace TexturesImporter.EnvMaps
                     dstImages[j] = workingScratch.GetImage(j);
                 }
 
-                Thread[] tasks =
-                [
+                Utils.Run(
                     new(() => { SampleCubeFace(envMapImage, dstImages[0], 0, mirrorCubemap); }),
                     new(() => { SampleCubeFace(envMapImage, dstImages[1], 1, mirrorCubemap); }),
                     new(() => { SampleCubeFace(envMapImage, dstImages[2], 2, mirrorCubemap); }),
                     new(() => { SampleCubeFace(envMapImage, dstImages[3], 3, mirrorCubemap); }),
                     new(() => { SampleCubeFace(envMapImage, dstImages[4], 4, mirrorCubemap); }),
-                    new(() => { SampleCubeFace(envMapImage, dstImages[5], 5, mirrorCubemap); }),
-                ];
-
-                foreach (var t in tasks)
-                {
-                    t.Start();
-                }
-
-                foreach (var t in tasks)
-                {
-                    t.Join();
-                }
+                    new(() => { SampleCubeFace(envMapImage, dstImages[5], 5, mirrorCubemap); }));
             }
 
             if (envMaps[0].Format != DXGI_FORMAT.R32G32B32A32_FLOAT)

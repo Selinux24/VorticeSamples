@@ -10,7 +10,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Numerics;
-using System.Threading;
 using TexturesImporter;
 
 namespace DX12Windows.Content
@@ -70,25 +69,13 @@ namespace DX12Windows.Content
         }
         private void CreateRenderItems(string outputsFolder)
         {
-            Thread[] tasks =
-            [
+            Utils.Run(
                 new(() => { textureIds[(uint)TestShaders.TextureUsages.BaseColor] = ITestRenderItem.LoadTexture(Path.Combine(outputsFolder, baseColorTextureName)); }),
 
                 new(() => { model1Id = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, model1Name)); }),
                 new(() => { model2Id = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, model2Name)); }),
 
-                new(TestShaders.LoadShaders),
-            ];
-
-            foreach (var t in tasks)
-            {
-                t.Start();
-            }
-
-            foreach (var t in tasks)
-            {
-                t.Join();
-            }
+                new(TestShaders.LoadShaders));
 
             GeometryInfo geometryInfo = new();
 

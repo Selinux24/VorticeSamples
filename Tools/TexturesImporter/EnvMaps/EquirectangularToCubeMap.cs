@@ -96,15 +96,10 @@ namespace TexturesImporter.EnvMaps
 
             for (uint i = 0; i < envMaps.Length; i++)
             {
-                using var cubemapUav = EnvMapProcessingShader.CreateTexture2DUav(device, format, 6, i * 6, 0, cubemaps);
-                if (cubemapUav == null)
-                {
-                    return false;
-                }
+                uint firstArraySlice = i * 6;
 
                 var src = envMaps[i];
 
-                // Upload source image to GPU
                 Texture2DDescription desc = new()
                 {
                     Width = (uint)src.Width,
@@ -126,11 +121,10 @@ namespace TexturesImporter.EnvMaps
                 };
 
                 using var envMap = device.CreateTexture2D(desc, data);
-                if (envMap == null) return false;
-
                 using var envMapSrv = device.CreateShaderResourceView(envMap);
-                if (envMapSrv == null) return false;
+                using var cubemapUav = EnvMapProcessingShader.CreateTexture2DUav(device, format, 6, firstArraySlice, 0, cubemaps);
 
+                // Upload source image to GPU
                 EnvMapProcessingShader.Dispatch(ctx, envMapSrv, cubemapUav, constantBuffer, linearSampler, shaderCubeMap, cubemapSize);
             }
 

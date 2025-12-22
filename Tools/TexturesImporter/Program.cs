@@ -88,11 +88,8 @@ namespace TexturesImporter
 
         private static void ImportInternal(TextureImportSettings settings)
         {
-            TextureData textureData = new()
-            {
-                ImportSettings = settings
-            };
-            TextureImporter.Import(ref textureData);
+            using var textureData = new TextureData(settings);
+            TextureImporter.Import(textureData);
             Console.WriteLine($"{textureData.Info.ImportError} => {Path.GetFileName(textureData.ImportSettings.Sources)}");
 
             if (textureData.Info.ImportError != ImportErrors.Succeeded)
@@ -106,17 +103,14 @@ namespace TexturesImporter
 
             if (textureData.ImportSettings.PrefilterCubemap && textureData.Info.Flags.HasFlag(TextureFlags.IsCubeMap))
             {
-                var diff = textureData.Copy();
-                Prefilter(ref diff, IblFilter.Diffuse);
+                using var diffuseData = textureData.Copy();
+                Prefilter(diffuseData, IblFilter.Diffuse);
 
-                var spec = textureData.Copy();
-                Prefilter(ref spec, IblFilter.Specular);
+                using var specularData = textureData.Copy();
+                Prefilter(specularData, IblFilter.Specular);
 
-                TextureData brdf = new()
-                {
-                    ImportSettings = settings
-                };
-                BrdfIntegrationLut(ref brdf);
+                using var brdf = new TextureData(settings);
+                BrdfIntegrationLut(brdf);
             }
         }
         private static string GetTexturePath(string textureName)
@@ -125,9 +119,9 @@ namespace TexturesImporter
             return Path.Combine(outputFolder, Path.ChangeExtension(fileName, outputTextureExt));
         }
 
-        private static void Prefilter(ref TextureData textureData, IblFilter filter)
+        private static void Prefilter(TextureData textureData, IblFilter filter)
         {
-            TextureImporter.PrefilterIbl(ref textureData, filter);
+            TextureImporter.PrefilterIbl(textureData, filter);
             if (textureData.Info.ImportError != ImportErrors.Succeeded)
             {
                 Console.WriteLine($"Texture import error: {textureData.Info.ImportError}");
@@ -144,12 +138,12 @@ namespace TexturesImporter
             return Path.Combine(outputFolder, Path.ChangeExtension(fileName, filter == IblFilter.Diffuse ? outputDiffuseExt : outputSpecularExt));
         }
 
-        private static void BrdfIntegrationLut(ref TextureData textureData)
+        private static void BrdfIntegrationLut(TextureData textureData)
         {
             textureData.ImportSettings.Compress = false;
             textureData.ImportSettings.MipLevels = 1;
 
-            TextureImporter.ComputeBrdfIntegrationLut(ref textureData);
+            TextureImporter.ComputeBrdfIntegrationLut(textureData);
             if (textureData.Info.ImportError != ImportErrors.Succeeded)
             {
                 Console.WriteLine($"Texture import error: {textureData.Info.ImportError}");

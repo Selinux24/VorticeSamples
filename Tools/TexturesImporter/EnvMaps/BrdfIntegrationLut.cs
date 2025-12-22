@@ -92,10 +92,6 @@ namespace TexturesImporter.EnvMaps
             EnvMapProcessingShader.ResetD3d11Context(ctx);
 
             using var outputUav = EnvMapProcessingShader.CreateTexture2DUav(device, BrdfIntegrationLutFormat, 1, 0, 0, output);
-            if (outputUav == null)
-            {
-                return false;
-            }
 
             EnvMapProcessingShader.Dispatch(ctx, null, outputUav, constantBuffer, linearSampler, shader, BrdfIntegrationLutSize);
 

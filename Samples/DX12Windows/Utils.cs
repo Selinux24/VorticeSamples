@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading;
 
-namespace TexturesImporter
+namespace DX12Windows
 {
     static class Utils
     {
@@ -9,11 +9,6 @@ namespace TexturesImporter
         {
             Array.ForEach(tasks, (t) => t.Start());
             Array.ForEach(tasks, (t) => t.Join());
-        }
-
-        public static bool Equal(float a, float b, float epsilon = float.Epsilon)
-        {
-            return Math.Abs(a - b) <= epsilon;
         }
     }
 }
