@@ -46,7 +46,7 @@ namespace TexturesImporter
         private const float VectorLengthSqRejectionThreshold = MinAvgLengthThreshold * MinAvgLengthThreshold;
         private const float RejectionRatioThreshold = 0.33f;
 
-        delegate Color Sampler(IntPtr pixel, long offset);
+        delegate Color Sampler(IntPtr ptr);
 
         public static bool IsNormalMap(Image image)
         {
@@ -61,7 +61,7 @@ namespace TexturesImporter
         {
             uint sampleCount = 4096;
             long imageSize = image.SlicePitch;
-            long sampleInterval = Math.Max(imageSize / sampleCount, 4L);
+            int sampleInterval = (int)Math.Max(imageSize / sampleCount, 4L);
             uint minSampleCount = Math.Max((uint)(imageSize / sampleInterval) >> 2, 1U);
             IntPtr pixels = image.Pixels;
 
@@ -69,10 +69,10 @@ namespace TexturesImporter
             uint rejectedSamples = 0;
             Color averageColor = new();
 
-            long offset = sampleInterval;
+            int offset = sampleInterval;
             while (offset < imageSize)
             {
-                Color c = sample(pixels, offset);
+                Color c = sample(pixels + offset);
                 int result = EvaluateColor(c);
                 if (result < 0)
                 {
@@ -120,32 +120,30 @@ namespace TexturesImporter
 
             return (v.Z < 0f || vLengthSq < VectorLengthSqRejectionThreshold) ? -1 : 1;
         }
-        private static Color SamplePixelBgr(IntPtr pixel, long offset)
+        private static Color SamplePixelBgr(IntPtr ptr)
         {
-            BlobStreamReader reader = new(pixel);
-            reader.Skip((int)offset);
+            BlobStreamReader reader = new(ptr);
 
             Color c = new()
             {
-                B = reader.Read<float>(),
-                G = reader.Read<float>(),
-                R = reader.Read<float>(),
-                A = reader.Read<float>(),
+                B = reader.Read<byte>(),
+                G = reader.Read<byte>(),
+                R = reader.Read<byte>(),
+                A = reader.Read<byte>(),
             };
 
             return c * Inv255;
         }
-        private static Color SamplePixelRgb(IntPtr pixel, long offset)
+        private static Color SamplePixelRgb(IntPtr ptr)
         {
-            BlobStreamReader reader = new(pixel);
-            reader.Skip((int)offset);
+            BlobStreamReader reader = new(ptr);
 
             Color c = new()
             {
-                R = reader.Read<float>(),
-                G = reader.Read<float>(),
-                B = reader.Read<float>(),
-                A = reader.Read<float>(),
+                R = reader.Read<byte>(),
+                G = reader.Read<byte>(),
+                B = reader.Read<byte>(),
+                A = reader.Read<byte>(),
             };
 
             return c * Inv255;

@@ -130,6 +130,8 @@ namespace TexturesImporter
             var settings = data.ImportSettings;
             Debug.Assert(settings.Sources != null && settings.SourceCount > 0);
 
+            Console.WriteLine($"Reading {settings.Sources}");
+
             List<ScratchImage> scratchImages = [];
             List<Image> images = [];
 

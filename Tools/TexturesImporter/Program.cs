@@ -1,4 +1,5 @@
-﻿using PrimalLike.Content;
+﻿using DirectXTexNet;
+using PrimalLike.Content;
 using System;
 using System.IO;
 
@@ -99,7 +100,7 @@ namespace TexturesImporter
             }
 
             textureData.SaveTexture(GetTexturePath(textureData.ImportSettings.Sources));
-            Console.WriteLine($"  ASSET - Size: {textureData.Info.Width}x{textureData.Info.Height}, ArraySize: {textureData.Info.ArraySize}, Mips: {textureData.Info.MipLevels}");
+            Console.WriteLine($"  ASSET - Size: {textureData.Info.Width}x{textureData.Info.Height}, ArraySize: {textureData.Info.ArraySize}, Mips: {textureData.Info.MipLevels} - {(DXGI_FORMAT)textureData.Info.Format}");
 
             if (textureData.ImportSettings.PrefilterCubemap && textureData.Info.Flags.HasFlag(TextureFlags.IsCubeMap))
             {
@@ -130,7 +131,7 @@ namespace TexturesImporter
 
             textureData.SaveTexture(GetTextureFilterPath(textureData.ImportSettings.Sources, filter));
             string filterStr = filter == IblFilter.Diffuse ? "FDIFF" : "FSPEC";
-            Console.WriteLine($"  {filterStr} - Size: {textureData.Info.Width}x{textureData.Info.Height}, ArraySize: {textureData.Info.ArraySize}, Mips: {textureData.Info.MipLevels}");
+            Console.WriteLine($"  {filterStr} - Size: {textureData.Info.Width}x{textureData.Info.Height}, ArraySize: {textureData.Info.ArraySize}, Mips: {textureData.Info.MipLevels} - {(DXGI_FORMAT)textureData.Info.Format}");
         }
         private static string GetTextureFilterPath(string textureName, IblFilter filter)
         {
@@ -151,7 +152,7 @@ namespace TexturesImporter
             }
 
             textureData.SaveTexture(GetTextureBrdfIntegrationLutPath(textureData.ImportSettings.Sources));
-            Console.WriteLine($"  BRDFL - Size: {textureData.Info.Width}x{textureData.Info.Height}, ArraySize: {textureData.Info.ArraySize}, Mips: {textureData.Info.MipLevels}");
+            Console.WriteLine($"  BRDFL - Size: {textureData.Info.Width}x{textureData.Info.Height}, ArraySize: {textureData.Info.ArraySize}, Mips: {textureData.Info.MipLevels} - {(DXGI_FORMAT)textureData.Info.Format}");
         }
         private static string GetTextureBrdfIntegrationLutPath(string textureName)
         {
