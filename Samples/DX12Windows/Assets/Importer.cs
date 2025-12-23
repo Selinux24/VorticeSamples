@@ -83,7 +83,7 @@ namespace DX12Windows.Assets
             }
         }
 
-        internal static void ImportEnvironmentMapTexture(string texturePath, string importFolder, string brdfLutFile, string diffuseFile, string specularFile)
+        public static void ImportEnvironmentMapTexture(string texturePath, string importFolder, string brdfLutFile, string diffuseFile, string specularFile)
         {
             string brdfLutPath = Path.Combine(importFolder, brdfLutFile);
             string diffusePath = Path.Combine(importFolder, diffuseFile);
