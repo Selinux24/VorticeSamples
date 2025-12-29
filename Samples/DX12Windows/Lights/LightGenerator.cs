@@ -18,6 +18,8 @@ namespace DX12Windows.Lights
         private static readonly List<Light> lights = [];
         private static readonly List<Light> disabledLights = [];
         private static readonly Random rand = new(37);
+      
+        private static Light iblLight;
 
 #if ANIMATE_LIGHTS
         private static float t = 0;
@@ -209,8 +211,28 @@ namespace DX12Windows.Lights
             lights.Add(light);
         }
 
+        public static void CreateIblLight(uint iblBrdfLutId, uint iblDiffuseId, uint iblSpecularId)
+        {
+            LightInitInfo info = new()
+            {
+                EntityId = 0,
+                LightType = LightTypes.Ambient, 
+                LightSetKey = leftSet,
+            };
+            info.AmbientLight.BrdfLutTextureId = iblBrdfLutId;
+            info.AmbientLight.DiffuseTextureId = iblDiffuseId;
+            info.AmbientLight.SpecularTextureId = iblSpecularId;
+
+            iblLight = Application.CreateLight(info);
+        }
+
         public static void RemoveLights()
         {
+            if (iblLight.IsValid)
+            {
+                Application.RemoveLight(iblLight.Id, iblLight.LightSetKey);
+            }
+
             foreach (var light in lights)
             {
                 uint id = light.EntityId;

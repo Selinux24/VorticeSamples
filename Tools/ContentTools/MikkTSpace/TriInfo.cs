@@ -4,8 +4,8 @@ namespace ContentTools.MikkTSpace
 {
     struct TriInfo()
     {
-        public int[] FaceNeighbors = new int[3];
-        public Group[] AssignedGroup = new Group[3];
+        public readonly int[] FaceNeighbors = new int[3];
+        public readonly Group[] AssignedGroup = new Group[3];
 
         // normalized first order face derivatives
         public Vector3 Os;
@@ -17,6 +17,11 @@ namespace ContentTools.MikkTSpace
         public int OrgFaceNumber;
         public int Flag;
         public int TSpacesOffs;
-        public int[] VertNum = new int[4];
+        public readonly int[] VertNum = new int[4];
+
+        public readonly override string ToString()
+        {
+            return $"FaceNeighbors={{{FaceNeighbors[0]},{FaceNeighbors[1]},{FaceNeighbors[2]}}}; Os={Os}; Ot={Ot}; MagS={MagS}; MagT={MagT};";
+        }
     }
 }

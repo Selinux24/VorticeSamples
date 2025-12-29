@@ -7,10 +7,6 @@ using System.Numerics;
 
 namespace ContentTools
 {
-    using LODGroup = Geometry.LODGroup;
-    using Mesh = Geometry.Mesh;
-    using Model = Geometry.Model;
-
     public static class PrimitiveMesh
     {
         const int AxisX = 0;
@@ -27,7 +23,7 @@ namespace ContentTools
             CreateCapsule
         ];
 
-        private static void CreatePlane(Model scene, PrimitiveInitInfo info)
+        private static void CreatePlane(Scene scene, PrimitiveInitInfo info)
         {
             var lod = new LODGroup { Name = "plane", Meshes = [CreatePlane(info)] };
             scene.LODGroups.Add(lod);
@@ -130,7 +126,7 @@ namespace ContentTools
             return faceVertex[face];
         }
 
-        private static void CreateCube(Model scene, PrimitiveInitInfo info)
+        private static void CreateCube(Scene scene, PrimitiveInitInfo info)
         {
             var lod = new LODGroup { Name = "cube", Meshes = [CreateCube(info)] };
             scene.LODGroups.Add(lod);
@@ -216,7 +212,7 @@ namespace ContentTools
             };
         }
 
-        private static void CreateUvSphere(Model scene, PrimitiveInitInfo info)
+        private static void CreateUvSphere(Scene scene, PrimitiveInitInfo info)
         {
             var lod = new LODGroup { Name = "uv-sphere", Meshes = [CreateUvSphere(info)] };
             scene.LODGroups.Add(lod);
@@ -349,6 +345,8 @@ namespace ContentTools
             uvs[c] = new Vector2(1f - invPhiCount, invThetaCount);
             rawIndices[c++] = southPoleIndex - 1;
 
+            Debug.Assert(c == numIndices);
+
             Mesh m = new()
             {
                 Name = "uv_sphere",
@@ -360,15 +358,15 @@ namespace ContentTools
             return m;
         }
 
-        private static void CreateIcoSphere(Model scene, PrimitiveInitInfo info)
+        private static void CreateIcoSphere(Scene scene, PrimitiveInitInfo info)
         {
         }
 
-        private static void CreateCylinder(Model scene, PrimitiveInitInfo info)
+        private static void CreateCylinder(Scene scene, PrimitiveInitInfo info)
         {
         }
 
-        private static void CreateCapsule(Model scene, PrimitiveInitInfo info)
+        private static void CreateCapsule(Scene scene, PrimitiveInitInfo info)
         {
         }
 
@@ -377,13 +375,12 @@ namespace ContentTools
             Debug.Assert(settings != null && info != null);
             Debug.Assert(info.Type < PrimitiveMeshType.Count);
 
-            var scene = new Model("PrimitiveMesh");
+            var scene = new Scene("PrimitiveMesh");
             Creators[(int)info.Type](scene, info);
 
-            settings.CalculateNormals = true;
-            Geometry.ProcessModel(scene, settings);
+            Geometry.ProcessScene(scene, settings);
 
-            yield return Geometry.PackData(scene, destinationFolder ?? Path.GetRandomFileName());
+            yield return Assets.Create(scene, destinationFolder ?? Path.GetRandomFileName());
         }
     }
 }

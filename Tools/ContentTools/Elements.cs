@@ -69,7 +69,7 @@ namespace ContentTools
 
         public static int GetStride()
         {
-            return Marshal.SizeOf(typeof(StaticColor));
+            return Marshal.SizeOf<StaticColor>();
         }
         public static void Write(MemoryStream ms, Vertex vertex)
         {
@@ -98,7 +98,7 @@ namespace ContentTools
 
         public static int GetStride()
         {
-            return Marshal.SizeOf(typeof(StaticNormal));
+            return Marshal.SizeOf<StaticNormal>();
         }
         public static void Write(MemoryStream ms, Vertex vertex)
         {
@@ -135,7 +135,7 @@ namespace ContentTools
 
         public static int GetStride()
         {
-            return Marshal.SizeOf(typeof(StaticNormalTexture));
+            return Marshal.SizeOf<StaticNormalTexture>();
         }
         public static void Write(MemoryStream ms, Vertex vertex)
         {
@@ -174,7 +174,7 @@ namespace ContentTools
 
         public static int GetStride()
         {
-            return Marshal.SizeOf(typeof(Skeletal));
+            return Marshal.SizeOf<Skeletal>();
         }
         public static void Write(MemoryStream ms, Vertex vertex)
         {
@@ -219,7 +219,7 @@ namespace ContentTools
 
         public static int GetStride()
         {
-            return Marshal.SizeOf(typeof(SkeletalColor));
+            return Marshal.SizeOf<SkeletalColor>();
         }
         public static void Write(MemoryStream ms, Vertex vertex)
         {
@@ -264,7 +264,7 @@ namespace ContentTools
 
         public static int GetStride()
         {
-            return Marshal.SizeOf(typeof(SkeletalNormal));
+            return Marshal.SizeOf<SkeletalNormal>();
         }
         public static void Write(MemoryStream ms, Vertex vertex)
         {
@@ -315,7 +315,7 @@ namespace ContentTools
 
         public static int GetStride()
         {
-            return Marshal.SizeOf(typeof(SkeletalNormalColor));
+            return Marshal.SizeOf<SkeletalNormalColor>();
         }
         public static void Write(MemoryStream ms, Vertex vertex)
         {
@@ -368,7 +368,7 @@ namespace ContentTools
 
         public static int GetStride()
         {
-            return Marshal.SizeOf(typeof(SkeletalNormalTexture));
+            return Marshal.SizeOf<SkeletalNormalTexture>();
         }
         public static void Write(MemoryStream ms, Vertex vertex)
         {
@@ -429,7 +429,7 @@ namespace ContentTools
 
         public static int GetStride()
         {
-            return Marshal.SizeOf(typeof(SkeletalNormalTextureColor));
+            return Marshal.SizeOf<SkeletalNormalTextureColor>();
         }
         public static void Write(MemoryStream ms, Vertex vertex)
         {

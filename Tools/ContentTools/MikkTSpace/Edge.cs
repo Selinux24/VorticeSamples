@@ -38,5 +38,10 @@ namespace ContentTools.MikkTSpace
                 }
             }
         }
+
+        public readonly override string ToString()
+        {
+            return $"I0={I0}; I1={I1}; F={F};";
+        }
     }
 }

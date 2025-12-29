@@ -6,5 +6,10 @@ namespace ContentTools.MikkTSpace
     {
         public Vector3 Vert;
         public int Index;
+
+        public readonly override string ToString()
+        {
+            return $"{Vert} {Index}";
+        }
     }
 }

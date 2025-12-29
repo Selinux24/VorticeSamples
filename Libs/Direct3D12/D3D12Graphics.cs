@@ -509,6 +509,13 @@ namespace Direct3D12
 
 #if DEBUG
 
+        static readonly MessageSeverity[] SeverityBreakers =
+        [
+            MessageSeverity.Warning,
+            //MessageSeverity.Error,
+            MessageSeverity.Corruption,
+        ];
+
         private static void InitializeDebugLayer()
         {
             if (D3D12Helpers.DxCall(D3D12.D3D12GetDebugInterface<ID3D12Debug3>(out var debugInterface)))
@@ -543,9 +550,10 @@ namespace Direct3D12
                 iq1.RegisterMessageCallback(DebugCallback);
             }
 
-            infoQueue.SetBreakOnSeverity(MessageSeverity.Corruption, true);
-            infoQueue.SetBreakOnSeverity(MessageSeverity.Warning, true);
-            infoQueue.SetBreakOnSeverity(MessageSeverity.Error, true);
+            foreach (var severity in SeverityBreakers)
+            {
+                infoQueue.SetBreakOnSeverity(severity, true);
+            }
         }
         private static void DebugCallback(MessageCategory category, MessageSeverity severity, MessageId id, string description)
         {
@@ -562,9 +570,10 @@ namespace Direct3D12
                 infoQueue = mainDevice.QueryInterfaceOrNull<ID3D12InfoQueue>();
             }
 
-            infoQueue.SetBreakOnSeverity(MessageSeverity.Corruption, false);
-            infoQueue.SetBreakOnSeverity(MessageSeverity.Warning, false);
-            infoQueue.SetBreakOnSeverity(MessageSeverity.Error, false);
+            foreach (var severity in SeverityBreakers)
+            {
+                infoQueue.SetBreakOnSeverity(severity, false);
+            }
         }
         private static void PrintDebugMessage()
         {

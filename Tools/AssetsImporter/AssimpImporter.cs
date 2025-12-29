@@ -18,9 +18,9 @@ namespace AssetsImporter
 
     public static class AssimpImporter
     {
-        private static readonly object mutex = new();
-        private static AScene aScene;
-        private static GeometryImportSettings importSettings;
+        static readonly object mutex = new();
+        static AScene aScene;
+        static GeometryImportSettings importSettings;
 
         public static IEnumerable<string> Read(string fileName, GeometryImportSettings settings, string destinationFolder, Progression progression = null)
         {
@@ -28,29 +28,32 @@ namespace AssetsImporter
 
             lock (mutex)
             {
-                aScene = ReadFile(
-                    fileName,
+                APostProcessSteps ppSteps =
                     APostProcessSteps.Triangulate |
-                    APostProcessSteps.SortByPrimitiveType |
-                    APostProcessSteps.CalculateTangentSpace |
-                    APostProcessSteps.JoinIdenticalVertices |
-                    APostProcessSteps.OptimizeMeshes |
-                    APostProcessSteps.RemoveRedundantMaterials |
-                    APostProcessSteps.ValidateDataStructure |
-                    APostProcessSteps.GlobalScale);
+                    APostProcessSteps.GlobalScale |
+                    //APostProcessSteps.SortByPrimitiveType |
+                    //APostProcessSteps.CalculateTangentSpace |
+                    //APostProcessSteps.JoinIdenticalVertices |
+                    //APostProcessSteps.OptimizeMeshes |
+                    //APostProcessSteps.RemoveRedundantMaterials |
+                    APostProcessSteps.ValidateDataStructure;
 
-                GetModel(progression, out var model);
+                APropertyConfig configs = new Assimp.Configs.FBXImportMaterialsConfig(true);
 
-                Geometry.ProcessModel(model, settings, progression);
+                aScene = ReadFile(fileName, ppSteps, configs);
+
+                GetScene(progression, out var scene);
+
+                Geometry.ProcessScene(scene, settings, progression);
 
                 // Pack the scene data (for editor)
-                foreach (var lodGroup in model.LODGroups)
+                foreach (var lodGroup in scene.LODGroups)
                 {
-                    yield return Geometry.PackDataByLODGroup(lodGroup, destinationFolder);
+                    yield return Assets.Create(lodGroup, destinationFolder);
                 }
             }
         }
-        private static AScene ReadFile(string filePath, APostProcessSteps ppSteps = APostProcessSteps.None, APropertyConfig[] configs = null)
+        static AScene ReadFile(string filePath, APostProcessSteps ppSteps = APostProcessSteps.None, params APropertyConfig[] configs)
         {
             Console.WriteLine($"Reading {filePath} with Assimp");
 
@@ -66,22 +69,22 @@ namespace AssetsImporter
             return importer.ImportFile(filePath, ppSteps);
         }
 
-        private static bool GetModel(Progression progression, out Geometry.Model model)
+        static bool GetScene(Progression progression, out Scene scene)
         {
             ANode root = aScene?.RootNode;
             if (root == null)
             {
-                model = default;
+                scene = default;
                 return false;
             }
 
-            model = new(root.Name);
+            scene = new(root.Name);
 
             int numNodes = root.ChildCount;
 
             if (importSettings.CoalesceMeshes)
             {
-                Geometry.LODGroup lod = new();
+                LODGroup lod = new();
                 for (int i = 0; i < numNodes; i++)
                 {
                     var node = root.Children[i];
@@ -90,7 +93,7 @@ namespace AssetsImporter
                         continue;
                     }
 
-                    lod.Meshes.AddRange(GetMeshes(model, node, 0, -1f, progression));
+                    lod.Meshes.AddRange(GetMeshes(scene, node, 0, -1f, progression));
                 }
 
                 if (lod.Meshes.Count > 0)
@@ -102,7 +105,7 @@ namespace AssetsImporter
                         lod.Meshes.Clear();
                         lod.Meshes.Add(combinedMesh);
                     }
-                    model.LODGroups.Add(lod);
+                    scene.LODGroups.Add(lod);
                 }
             }
             else
@@ -115,36 +118,36 @@ namespace AssetsImporter
                         continue;
                     }
 
-                    Geometry.LODGroup lod = new();
-                    lod.Meshes.AddRange(GetMeshes(model, node, 0, -1f, progression));
+                    LODGroup lod = new();
+                    lod.Meshes.AddRange(GetMeshes(scene, node, 0, -1f, progression));
                     if (lod.Meshes.Count > 0)
                     {
                         lod.Name = lod.Meshes[0].Name;
-                        model.LODGroups.Add(lod);
+                        scene.LODGroups.Add(lod);
                     }
                 }
             }
 
             return true;
         }
-        private static Geometry.Mesh[] GetMeshes(Geometry.Model model, ANode node, uint lodId, float lodThreshold, Progression progression)
+        static Mesh[] GetMeshes(Scene scene, ANode node, uint lodId, float lodThreshold, Progression progression)
         {
             Debug.Assert(node != null && lodId != uint.MaxValue);
             bool isLodGroup = false;
 
-            List<Geometry.Mesh> meshes = [];
+            List<Mesh> meshes = [];
 
             if (node.HasMeshes)
             {
                 for (int m = 0; m < node.MeshCount; m++)
                 {
-                    var mesh = aScene.Meshes[node.MeshIndices[m]];
-                    meshes.AddRange(GetMesh(mesh, lodId, lodThreshold, progression));
+                    var aMesh = aScene.Meshes[node.MeshIndices[m]];
+                    meshes.AddRange(GetMesh(aMesh, lodId, lodThreshold, progression));
                 }
             }
             else if (importSettings.IsLOD)
             {
-                GetLODGroup(model, node, progression);
+                GetLODGroup(scene, node, progression);
                 isLodGroup = true;
             }
 
@@ -152,23 +155,23 @@ namespace AssetsImporter
             {
                 for (int i = 0; i < node.ChildCount; i++)
                 {
-                    meshes.AddRange(GetMeshes(model, node.Children[i], lodId, lodThreshold, progression));
+                    meshes.AddRange(GetMeshes(scene, node.Children[i], lodId, lodThreshold, progression));
                 }
             }
 
             return [.. meshes];
         }
-        private static Geometry.Mesh[] GetMesh(AMesh mesh, uint lodId, float lodThreshold, Progression progression)
+        static Mesh[] GetMesh(AMesh aMesh, uint lodId, float lodThreshold, Progression progression)
         {
-            List<Geometry.Mesh> meshes = [];
+            List<Mesh> meshes = [];
 
-            Debug.Assert(mesh != null);
+            Debug.Assert(aMesh != null);
 
-            if (GetMeshData(mesh, out var m))
+            if (GetMeshData(aMesh, out var m))
             {
                 m.LodId = lodId;
                 m.LodThreshold = lodThreshold;
-                m.Name = mesh.Name;
+                m.Name = aMesh.Name;
 
                 meshes.Add(m);
                 progression?.Callback(progression.Value, progression.MaxValue + 1);
@@ -176,11 +179,11 @@ namespace AssetsImporter
 
             return [.. meshes];
         }
-        private static void GetLODGroup(Geometry.Model model, ANode node, Progression progression)
+        static void GetLODGroup(Scene scene, ANode node, Progression progression)
         {
             Debug.Assert(node != null);
 
-            Geometry.LODGroup lod = new()
+            LODGroup lod = new()
             {
                 Name = node.Name
             };
@@ -197,15 +200,134 @@ namespace AssetsImporter
                     lodThreshold = importSettings.Thresholds[i - 1];
                 }
 
-                lod.Meshes.AddRange(GetMeshes(model, node.Children[i], (uint)lod.Meshes.Count, lodThreshold, progression));
+                lod.Meshes.AddRange(GetMeshes(scene, node.Children[i], (uint)lod.Meshes.Count, lodThreshold, progression));
             }
 
             if (lod.Meshes.Count > 0)
             {
-                model.LODGroups.Add(lod);
+                scene.LODGroups.Add(lod);
             }
         }
-        private static bool GetMeshData(AMesh aMesh, out Geometry.Mesh m)
+
+        static (Vector3[], uint[]) GetControlPoints(AMesh aMesh)
+        {
+            List<Vector3> controlPoints = [];
+            for (int i = 0; i < aMesh.VertexCount; i++)
+            {
+                if (controlPoints.Any(p => Utils.Vector3NearEqual(aMesh.Vertices[i], p, float.Epsilon))) continue;
+
+                controlPoints.Add(aMesh.Vertices[i]);
+            }
+
+            // Remap indices to control points
+            uint[] indices = [.. aMesh.GetUnsignedIndices()];
+            if (indices.Length == 0)
+            {
+                // Populate indices
+                indices = new uint[aMesh.Vertices.Count];
+                for (uint i = 0; i < aMesh.Vertices.Count; i++)
+                {
+                    indices[i] = i;
+                }
+            }
+
+            uint[] remappedIndices = new uint[indices.Length];
+            for (int i = 0; i < indices.Length; i++)
+            {
+                // For each vertex, find the control point indices
+                var v = aMesh.Vertices[(int)indices[i]];
+                remappedIndices[i] = (uint)controlPoints.FindIndex(c => Utils.Vector3NearEqual(c, v, float.Epsilon));
+            }
+
+            Debug.Assert(controlPoints.Count > 0 && remappedIndices.Length > 0);
+            Debug.Assert(remappedIndices.Max() == controlPoints.Count - 1);
+            Debug.Assert(remappedIndices.Length % 3 == 0);
+
+            return ([.. controlPoints], remappedIndices);
+        }
+        static Vector3[] ExpandNormals(AMesh aMesh)
+        {
+            List<Vector3> res = [];
+
+            int[] indices = [.. aMesh.GetIndices()];
+            for (uint i = 0; i < indices.Length; i += 3)
+            {
+                int i0 = indices[i];
+                int i1 = indices[i + 1];
+                int i2 = indices[i + 2];
+
+                var n0 = aMesh.Normals[i0];
+                var n1 = aMesh.Normals[i1];
+                var n2 = aMesh.Normals[i2];
+
+                res.Add(n0);
+                res.Add(n1);
+                res.Add(n2);
+            }
+
+            return [.. res];
+        }
+        static Vector2[] ExpandUVSets(AMesh aMesh, int channel)
+        {
+            List<Vector2> res = [];
+
+            Vector2[] uvs = [.. aMesh.TextureCoordinateChannels[channel].Select(uv => new Vector2(uv.X, 1f - uv.Y))];
+
+            int[] indices = [.. aMesh.GetIndices()];
+            for (uint i = 0; i < indices.Length; i += 3)
+            {
+                int i0 = indices[i];
+                int i1 = indices[i + 1];
+                int i2 = indices[i + 2];
+
+                var t0 = uvs[i0];
+                var t1 = uvs[i1];
+                var t2 = uvs[i2];
+
+                res.Add(t0);
+                res.Add(t1);
+                res.Add(t2);
+            }
+
+            return [.. res];
+        }
+        static Vector4[] ExpandTangents(AMesh aMesh)
+        {
+            List<Vector4> res = [];
+
+            var tangents = aMesh.Tangents
+                .Select((t, i) =>
+                {
+                    var tn = Vector3.Normalize(t);
+                    var nn = Vector3.Normalize(aMesh.Normals[i]);
+                    var bn = Vector3.Normalize(aMesh.BiTangents[i]);
+
+                    // Calculate handedness per vertex: w = sign( dot( cross(normal, tangent), bitangent ) )
+                    float handedness = Vector3.Dot(Vector3.Cross(nn, tn), bn) < 0f ? 1f : -1f;
+                    return new Vector4(tn, handedness);
+                })
+                .ToArray();
+
+            int[] indices = [.. aMesh.GetIndices()];
+            for (uint i = 0; i < indices.Length; i += 3)
+            {
+                int i0 = indices[i];
+                int i1 = indices[i + 1];
+                int i2 = indices[i + 2];
+
+                var n0 = tangents[i0];
+                var n1 = tangents[i1];
+                var n2 = tangents[i2];
+
+                res.Add(n0);
+                res.Add(n1);
+                res.Add(n2);
+            }
+
+            return [.. res];
+        }
+
+        static bool GetMeshData(AMesh aMesh, out Mesh m)
         {
             Debug.Assert(aMesh != null);
 
@@ -222,31 +344,13 @@ namespace AssetsImporter
             List<Vector2[]> uvSets = [];
             List<int> materialIndices = [];
 
-            Vector3[] vertices = [.. aMesh.Vertices];
-            uint[] indices = [.. aMesh.GetUnsignedIndices()];
-            if (indices.Length == 0)
-            {
-                Debug.Assert(vertices.Length % 3 == 0);
-
-                // Populate indices
-                indices = new uint[vertices.Length];
-                for (uint i = 0; i < vertices.Length; i++)
-                {
-                    indices[i] = i;
-                }
-            }
-            Debug.Assert(indices.Max() == vertices.Length - 1);
+            var (vertices, indices) = GetControlPoints(aMesh);
 
             uint[] rawIndices = new uint[indices.Length];
-            for (int i = 0; i < indices.Length; i++)
-            {
-                rawIndices[i] = uint.MaxValue;
-            }
+            Array.Fill(rawIndices, uint.MaxValue);
+
             uint[] vertexRef = new uint[vertices.Length];
-            for (int i = 0; i < vertices.Length; i++)
-            {
-                vertexRef[i] = uint.MaxValue;
-            }
+            Array.Fill(vertexRef, uint.MaxValue);
 
             for (uint i = 0; i < indices.LongLength; i++)
             {
@@ -266,19 +370,15 @@ namespace AssetsImporter
                     positions.Add(v);
                 }
             }
-            Debug.Assert(vertices.Length > 0 && indices.Length > 0);
-            Debug.Assert(indices.Length % 3 == 0);
-            Debug.Assert(indices.Max() == positions.Count - 1);
+            Debug.Assert(rawIndices.Length % 3 == 0);
 
             materialIndices.Add(aMesh.MaterialIndex);
 
-            bool importNormals = !importSettings.CalculateNormals;
-
-            if (importNormals)
+            if (!importSettings.CalculateNormals)
             {
                 if (aMesh.HasNormals)
                 {
-                    normals.AddRange(aMesh.Normals);
+                    normals.AddRange(ExpandNormals(aMesh));
                 }
                 else
                 {
@@ -286,22 +386,11 @@ namespace AssetsImporter
                 }
             }
 
-            bool importTangents = !importSettings.CalculateTangents;
-
-            if (importTangents)
+            if (!importSettings.CalculateTangents)
             {
                 if (aMesh.HasTangentBasis)
                 {
-                    tangents.AddRange(aMesh.Tangents.Select((t, i) =>
-                    {
-                        var tn = Vector3.Normalize(t);
-                        var nn = Vector3.Normalize(aMesh.Normals[i]);
-                        var bn = Vector3.Normalize(aMesh.BiTangents[i]);
-
-                        // Calculate handedness per vertex: w = sign( dot( cross(normal, tangent), bitangent ) )
-                        float handedness = Vector3.Dot(Vector3.Cross(nn, tn), bn) < 0f ? 1f : -1f;
-                        return new Vector4(tn, handedness);
-                    }));
+                    tangents.AddRange(ExpandTangents(aMesh));
                 }
                 else
                 {
@@ -309,13 +398,12 @@ namespace AssetsImporter
                 }
             }
 
-            for (uint i = 0; i < aMesh.TextureCoordinateChannelCount; i++)
+            for (int i = 0; i < aMesh.TextureCoordinateChannelCount; i++)
             {
                 // Assuming FBX UVs always have their origin at the bottom-left, the V-axis 
                 // should be flipped, since DirectX uses the upper-left corner as the origin.
                 // TODO: May be assimp does this yet?
-                Vector2[] uvs = [.. aMesh.TextureCoordinateChannels[i].Select(uv => new Vector2(uv.X, 1f - uv.Y))];
-                uvSets.Add(uvs);
+                uvSets.Add(ExpandUVSets(aMesh, i));
             }
 
             m = new()

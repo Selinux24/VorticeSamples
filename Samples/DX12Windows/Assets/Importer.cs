@@ -1,11 +1,37 @@
-﻿using PrimalLike.Content;
+﻿using AssetsImporter;
+using PrimalLike.Content;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using TexturesImporter;
 
 namespace DX12Windows.Assets
 {
     static class Importer
     {
+        public static void ImportModels(Func<IEnumerable<string>> assetGen, params string[] modelNames)
+        {
+            if (!modelNames.Any(f => !File.Exists(f)))
+            {
+                return;
+            }
+
+            var assets = assetGen().ToArray();
+
+            Debug.Assert(assets.Length == modelNames.Length);
+            for (int i = 0; i < assets.Length; i++)
+            {
+                if (string.IsNullOrEmpty(assets[i]))
+                {
+                    continue;
+                }
+
+                AssimpImporter.PackForEngine(assets[i], modelNames[i]);
+            }
+        }
+
         public static void ImportAmbientOcclusionTexture(string texturePath, string importFolder, string importFile)
         {
             string importPath = Path.Combine(importFolder, importFile);
@@ -83,11 +109,8 @@ namespace DX12Windows.Assets
             }
         }
 
-        public static void ImportEnvironmentMapTexture(string texturePath, string importFolder, string brdfLutFile, string diffuseFile, string specularFile)
+        public static void ImportEnvironmentMapTexture(string texturePath, string brdfLutPath, string diffusePath, string specularPath)
         {
-            string brdfLutPath = Path.Combine(importFolder, brdfLutFile);
-            string diffusePath = Path.Combine(importFolder, diffuseFile);
-            string specularPath = Path.Combine(importFolder, specularFile);
             if (!File.Exists(brdfLutPath) || !File.Exists(diffusePath) || !File.Exists(specularPath))
             {
                 using var data = new TextureData()

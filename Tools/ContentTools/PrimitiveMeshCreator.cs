@@ -1,1 +1,1 @@
-﻿global using PrimitiveMeshCreator = System.Action<ContentTools.Geometry.Model, ContentTools.PrimitiveInitInfo>;
+﻿global using PrimitiveMeshCreator = System.Action<ContentTools.Scene, ContentTools.PrimitiveInitInfo>;

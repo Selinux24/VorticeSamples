@@ -207,11 +207,11 @@ namespace DX12Windows
 
         static void AppShutdown(object sender, EventArgs e)
         {
+            LightGenerator.RemoveLights();
+
             renderItem.DestroyRenderItems();
 
             Application.RemoveRenderComponent(renderComponent);
-
-            LightGenerator.RemoveLights();
 
             Input.UnBind("move");
         }

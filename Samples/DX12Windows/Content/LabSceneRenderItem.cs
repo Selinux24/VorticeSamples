@@ -1,20 +1,17 @@
 ﻿using AssetsImporter;
 using ContentTools;
 using DX12Windows.Assets;
+using DX12Windows.Lights;
 using DX12Windows.Scripts;
 using DX12Windows.Shaders;
-using PrimalLike;
 using PrimalLike.Common;
 using PrimalLike.Components;
 using PrimalLike.Content;
-using PrimalLike.EngineAPI;
 using PrimalLike.Graphics;
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Numerics;
-using System.Threading;
 using TexturesImporter;
 
 namespace DX12Windows.Content
@@ -31,21 +28,21 @@ namespace DX12Windows.Content
         private const string normalTexture = "../../../../../Assets/Normal.png";
         private const string envMapTexture = "../../../../../Assets/sunny_rose_garden_4k.hdr";
 
-        private const string fanModelName = "fanmodel.model";
-        private const string intModelName = "labmodel.model";
-        private const string labModelName = "intmodel.model";
-        private const string fembotModelName = "fembotmodel.model";
-        private const string sphereModelName = "sphere.model";
+        private const string fanModelName = "fan_model.model";
+        private const string intModelName = "int_model.model";
+        private const string labModelName = "lab_model.model";
+        private const string fembotModelName = "fembot_model.model";
+        private const string sphereModelName = "sphere_model.model";
 
-        private const string ambientOcclusionTextureName = "AmbientOcclusion.texture";
-        private const string baseColorTextureName = "BaseColor.texture";
-        private const string emissiveTextureName = "Emissive.texture";
-        private const string metalRoughTextureName = "MetalRough.texture";
-        private const string normalTextureName = "Normal.texture";
+        private const string ambientOcclusionTextureName = "ambient_occlusion.texture";
+        private const string baseColorTextureName = "base_color.texture";
+        private const string emissiveTextureName = "emissive.texture";
+        private const string metalRoughTextureName = "metal_rough.texture";
+        private const string normalTextureName = "normal.texture";
 
-        private const string iblBrdfLutTextureName = "ibl_BrdfLut.texture";
-        private const string iblDiffuseTextureName = "ibl_Diffuse.texture";
-        private const string iblSpecularTextureName = "ibl_Specular.texture";
+        private const string iblBrdfLutTextureName = "ibl/brdf_lut.texture";
+        private const string iblDiffuseTextureName = "ibl/set4/diffuse.texture";
+        private const string iblSpecularTextureName = "ibl/set4/specular.texture";
 
         private uint fanModelId = uint.MaxValue;
         private uint intModelId = uint.MaxValue;
@@ -69,49 +66,37 @@ namespace DX12Windows.Content
         private uint fembotMtlId = uint.MaxValue;
         private readonly uint[] pbrMtlIds = new uint[12];
 
-        private Light iblLight;
-
         public Vector3 InitialCameraPosition { get; } = new(-5.49f, 1.73f, 9.26f);
         public Quaternion InitialCameraRotation { get; } = Quaternion.CreateFromYawPitchRoll(5.61f, 0.19f, 0f);
 
         public void Load(string assetsFolder, string outputsFolder)
         {
-            string[] modelNames =
-            [
-                Path.Combine(outputsFolder, fanModelName),
-                Path.Combine(outputsFolder, intModelName),
-                Path.Combine(outputsFolder, labModelName),
-                Path.Combine(outputsFolder, fembotModelName),
-                Path.Combine(outputsFolder, sphereModelName),
-            ];
-
-            if (modelNames.Any(f => !File.Exists(f)))
-            {
-                string[] assets =
+            Importer.ImportModels(
+                () => AssimpImporter.Read(modelPrimalLab, new(), assetsFolder),
                 [
-                    .. AssimpImporter.Read(modelPrimalLab, new(), assetsFolder),
-                    .. AssimpImporter.Read(modelFembot, new(), assetsFolder),
-                    .. PrimitiveMesh.CreatePrimitiveMesh(new(), new() { Type = PrimitiveMeshType.UvSphere, Segments = [48, 48], Size = new Vector3(0.5f) }, assetsFolder),
-                ];
+                    Path.Combine(outputsFolder, fanModelName),
+                    Path.Combine(outputsFolder, intModelName),
+                    Path.Combine(outputsFolder, labModelName),
+                ]);
 
-                Debug.Assert(assets.Length == modelNames.Length);
-                for (int i = 0; i < assets.Length; i++)
-                {
-                    if (string.IsNullOrEmpty(assets[i]))
-                    {
-                        continue;
-                    }
+            Importer.ImportModels(
+                () => AssimpImporter.Read(modelFembot, new(), assetsFolder),
+                Path.Combine(outputsFolder, fembotModelName));
 
-                    AssimpImporter.PackForEngine(assets[i], modelNames[i]);
-                }
-            }
+            Importer.ImportModels(
+                () => PrimitiveMesh.CreatePrimitiveMesh(new() { SmoothingAngle = 0f }, new() { Type = PrimitiveMeshType.UvSphere, Segments = [48, 48], Size = new Vector3(0.5f) }, assetsFolder),
+                Path.Combine(outputsFolder, sphereModelName));
 
             Importer.ImportAmbientOcclusionTexture(ambientOcclusionTexture, outputsFolder, ambientOcclusionTextureName);
             Importer.ImportBaseColorTexture(baseColorTexture, outputsFolder, baseColorTextureName);
             Importer.ImportEmissiveTexture(emissiveTexture, outputsFolder, emissiveTextureName);
             Importer.ImportMetalRoughTexture(metalRoughTexture, outputsFolder, metalRoughTextureName);
             Importer.ImportNormalTexture(normalTexture, outputsFolder, normalTextureName);
-            Importer.ImportEnvironmentMapTexture(envMapTexture, outputsFolder, iblBrdfLutTextureName, iblDiffuseTextureName, iblSpecularTextureName);
+
+            string brdfLutPath = Path.Combine(outputsFolder, iblBrdfLutTextureName);
+            string diffusePath = Path.Combine(outputsFolder, iblDiffuseTextureName);
+            string specularPath = Path.Combine(outputsFolder, iblSpecularTextureName);
+            Importer.ImportEnvironmentMapTexture(envMapTexture, brdfLutPath, diffusePath, specularPath);
 
             TextureImporter.ShutDownTextureTools();
 
@@ -136,14 +121,14 @@ namespace DX12Windows.Content
                 new(() => { iblSpecularId = ITestRenderItem.LoadTexture(Path.Combine(outputsFolder, iblSpecularTextureName)); }),
 
                 new(() => { fanModelId = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, fanModelName)); }),
-                new(() => { labModelId = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, intModelName)); }),
-                new(() => { intModelId = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, labModelName)); }),
+                new(() => { labModelId = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, labModelName)); }),
+                new(() => { intModelId = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, intModelName)); }),
                 new(() => { fembotModelId = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, fembotModelName)); }),
                 new(() => { sphereModelId = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, sphereModelName)); }),
 
                 new(TestShaders.LoadShaders));
 
-            CreateIblLight();
+            LightGenerator.CreateIblLight(iblBrdfLutId, iblDiffuseId, iblSpecularId);
 
             GeometryInfo geometryInfo = new();
 
@@ -163,7 +148,7 @@ namespace DX12Windows.Content
 
             geometryInfo.GeometryContentId = fembotModelId;
             geometryInfo.MaterialIds = [fembotMtlId, fembotMtlId];
-            fembotEntityId = HelloWorldApp.CreateOneGameEntity<RotatorScript>(new(-6f, 0f, 10f), Quaternion.CreateFromYawPitchRoll(MathF.PI, 0f, 0f), geometryInfo).Id;
+            fembotEntityId = HelloWorldApp.CreateOneGameEntity(new(-6f, 0f, 10f), Quaternion.CreateFromYawPitchRoll(MathF.PI, 0f, 0f), geometryInfo).Id;
 
             Array.Fill(sphereEntityIds, uint.MaxValue);
             geometryInfo.GeometryContentId = sphereModelId;
@@ -175,19 +160,6 @@ namespace DX12Windows.Content
                 float z = x;
                 sphereEntityIds[i] = HelloWorldApp.CreateOneGameEntity(new(x, y, z), Quaternion.Identity, geometryInfo).Id;
             }
-        }
-        void CreateIblLight()
-        {
-            LightInitInfo info = new()
-            {
-                EntityId = 0,
-                LightType = LightTypes.Ambient,
-            };
-            info.AmbientLight.BrdfLutTextureId = iblBrdfLutId;
-            info.AmbientLight.DiffuseTextureId = iblDiffuseId;
-            info.AmbientLight.SpecularTextureId = iblSpecularId;
-
-            iblLight = Application.CreateLight(info);
         }
         private void CreateMaterial()
         {
@@ -267,11 +239,6 @@ namespace DX12Windows.Content
             ITestRenderItem.RemoveModel(intModelId);
             ITestRenderItem.RemoveModel(fembotModelId);
             ITestRenderItem.RemoveModel(sphereModelId);
-
-            if (iblLight.IsValid)
-            {
-                Application.RemoveLight(iblLight.Id, 0);
-            }
 
             // remove material
             if (IdDetail.IsValid(defaultMtlId))

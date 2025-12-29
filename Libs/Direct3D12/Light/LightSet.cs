@@ -176,6 +176,7 @@ namespace Direct3D12.Light
                 ambientLight = new();
                 ambientLightId = uint.MaxValue;
             }
+            else
             {
                 Debug.Assert(owners[cullableOwners[(int)owner.DataIndex]].DataIndex == owner.DataIndex);
                 cullableOwners[(int)owner.DataIndex] = uint.MaxValue;

@@ -4,7 +4,7 @@ using System.Numerics;
 
 namespace ContentTools.MikkTSpace
 {
-    abstract class MikkTSpaceGenerator(object mesh)
+    public abstract class MikkTSpaceGenerator<T>(T mesh) where T : class
     {
         const int MARK_DEGENERATE = 1;
         const int QUAD_ONE_DEGEN_TRI = 2;
@@ -15,9 +15,9 @@ namespace ContentTools.MikkTSpace
 
         const int MAX_CELLS = 2048;
 
-        readonly object context = mesh;
+        readonly T context = mesh;
 
-        protected T GetMesh<T>() where T : class => context as T;
+        protected T GetMesh() => context;
 
         public abstract int GetNumFaces();
         public abstract int GetNumVerticesOfFace(int faceIndex);
@@ -40,6 +40,13 @@ namespace ContentTools.MikkTSpace
         {
             IndexToData(index, out int iF, out int iI);
             return GetTexCoord(iF, iI);
+        }
+
+        static uint Randomize(uint seed)
+        {
+            uint t = seed & 31u;
+            t = (seed << (int)t) | (seed >> (int)(32u - t));
+            return seed + t + 3;
         }
 
         /// <summary>
@@ -67,9 +74,9 @@ namespace ContentTools.MikkTSpace
             // allocate memory for an index list
             int[] piTriListIn = new int[iNrTrianglesIn * 3];
             TriInfo[] pTriInfos = new TriInfo[iNrTrianglesIn];
-            for (int t = 0; t < iNrTrianglesIn; t++)
+            for (int i = 0; i < iNrTrianglesIn; i++)
             {
-                pTriInfos[t] = new();
+                pTriInfos[i] = new();
             }
 
             // make an initial triangle --> face index list
@@ -94,7 +101,7 @@ namespace ContentTools.MikkTSpace
                 if (p0 == p1 || p0 == p2 || p1 == p2)  // degenerate
                 {
                     pTriInfos[t].Flag |= MARK_DEGENERATE;
-                    ++iDegenTriangles;
+                    iDegenTriangles++;
                 }
             }
             iNrTrianglesIn = iTotTris - iDegenTriangles;
@@ -105,7 +112,6 @@ namespace ContentTools.MikkTSpace
             // pTriInfos[] and piTriListIn[] without changing order and
             // put the degenerate triangles last.
             DegenPrologue(pTriInfos, piTriListIn, iNrTrianglesIn, iTotTris);
-
 
             // evaluate triangle level attributes and neighbor list
             //printf("gen neighbors list begin\n");
@@ -119,14 +125,12 @@ namespace ContentTools.MikkTSpace
             Group[] groups = new Group[iNrMaxGroups];
             for (int g = 0; g < iNrMaxGroups; g++)
             {
-                groups[g] = new Group(piGroupTrianglesBuffer);
+                groups[g] = new(piGroupTrianglesBuffer);
             }
 
             //printf("gen 4rule groups begin\n");
             int iNrActiveGroups = Build4RuleGroups(pTriInfos, groups, piTriListIn, iNrTrianglesIn);
             //printf("gen 4rule groups end\n");
-
-            //
 
             TSpace[] sTspace = new TSpace[iNrTSPaces];
             for (int t = 0; t < iNrTSPaces; t++)
@@ -172,31 +176,11 @@ namespace ContentTools.MikkTSpace
                 // vary between left/right hand coordinate systems at the vertices.
                 // All healthy triangles on the other hand are built to always be either or.
 
-                /*// force the coordinate system orientation to be uniform for every face.
-                // (this is already the case for good triangles but not for
-                // degenerate ones and those with bGroupWithAnything==true)
-                bool bOrient = psTspace[index].bOrient;
-                if (psTspace[index].iCounter == 0)	// tspace was not derived from a group
-                {
-                    // look for a space created in GenerateTSpaces() by iCounter>0
-                    bool bNotFound = true;
-                    int i=1;
-                    while (i<verts && bNotFound)
-                    {
-                        if (psTspace[index+i].iCounter > 0) bNotFound=false;
-                        else ++i;
-                    }
-                    if (!bNotFound) bOrient = psTspace[index+i].bOrient;
-                }*/
-
                 // set data
                 for (int i = 0; i < verts; i++)
                 {
-                    var pTSpace = sTspace[index];
-                    var tang = pTSpace.Os;
-                    SetTSpaceBasic(tang, pTSpace.Orient == true ? 1.0f : -1.0f, f, i);
-
-                    ++index;
+                    var ts = sTspace[index++];
+                    SetTSpaceBasic(ts.Os, ts.Sign, f, i);
                 }
             }
 
@@ -216,7 +200,9 @@ namespace ContentTools.MikkTSpace
 
                 if (verts == 3)
                 {
-                    triInfos[iDstTriIndex].VertNum = [0, 1, 2];
+                    triInfos[iDstTriIndex].VertNum[0] = 0;
+                    triInfos[iDstTriIndex].VertNum[1] = 1;
+                    triInfos[iDstTriIndex].VertNum[2] = 2;
                     triList[(iDstTriIndex * 3) + 0] = MakeIndex(f, 0);
                     triList[(iDstTriIndex * 3) + 1] = MakeIndex(f, 1);
                     triList[(iDstTriIndex * 3) + 2] = MakeIndex(f, 2);
@@ -263,13 +249,17 @@ namespace ContentTools.MikkTSpace
 
                     if (bQuadDiagIs_02)
                     {
-                        triInfos[iDstTriIndex].VertNum = [0, 1, 2];
+                        triInfos[iDstTriIndex].VertNum[0] = 0;
+                        triInfos[iDstTriIndex].VertNum[1] = 1;
+                        triInfos[iDstTriIndex].VertNum[2] = 2;
                         triList[(iDstTriIndex * 3) + 0] = i0;
                         triList[(iDstTriIndex * 3) + 1] = i1;
                         triList[(iDstTriIndex * 3) + 2] = i2;
                         iDstTriIndex++; // next
 
-                        triInfos[iDstTriIndex].VertNum = [0, 2, 3];
+                        triInfos[iDstTriIndex].VertNum[0] = 0;
+                        triInfos[iDstTriIndex].VertNum[1] = 2;
+                        triInfos[iDstTriIndex].VertNum[2] = 3;
                         triList[(iDstTriIndex * 3) + 0] = i0;
                         triList[(iDstTriIndex * 3) + 1] = i2;
                         triList[(iDstTriIndex * 3) + 2] = i3;
@@ -277,13 +267,17 @@ namespace ContentTools.MikkTSpace
                     }
                     else
                     {
-                        triInfos[iDstTriIndex].VertNum = [0, 1, 3];
+                        triInfos[iDstTriIndex].VertNum[0] = 0;
+                        triInfos[iDstTriIndex].VertNum[1] = 1;
+                        triInfos[iDstTriIndex].VertNum[2] = 3;
                         triList[(iDstTriIndex * 3) + 0] = i0;
                         triList[(iDstTriIndex * 3) + 1] = i1;
                         triList[(iDstTriIndex * 3) + 2] = i3;
                         iDstTriIndex++; // next
 
-                        triInfos[iDstTriIndex].VertNum = [1, 2, 3];
+                        triInfos[iDstTriIndex].VertNum[0] = 1;
+                        triInfos[iDstTriIndex].VertNum[1] = 2;
+                        triInfos[iDstTriIndex].VertNum[2] = 3;
                         triList[(iDstTriIndex * 3) + 0] = i1;
                         triList[(iDstTriIndex * 3) + 1] = i2;
                         triList[(iDstTriIndex * 3) + 2] = i3;
@@ -338,14 +332,8 @@ namespace ContentTools.MikkTSpace
                 fMax = vMax.Z;
             }
 
-            // make allocations
-            int[] piHashCount = new int[MAX_CELLS];
-            for (int c = 0; c < MAX_CELLS; c++)
-            {
-                piHashCount[c] = 0;
-            }
-
             // count amount of elements in each cell unit
+            int[] piHashCount = new int[MAX_CELLS];
             for (int i = 0; i < (nTriangles * 3); i++)
             {
                 int index = triList[i];
@@ -356,12 +344,6 @@ namespace ContentTools.MikkTSpace
             }
 
             // evaluate start index of each cell.
-            int[] piHashCount2 = new int[MAX_CELLS];
-            for (int c = 0; c < MAX_CELLS; c++)
-            {
-                piHashCount2[c] = 0;
-            }
-
             int[] piHashOffsets = new int[MAX_CELLS];
             piHashOffsets[0] = 0;
             for (int k = 1; k < MAX_CELLS; k++)
@@ -371,6 +353,7 @@ namespace ContentTools.MikkTSpace
 
             // insert vertices
             int[] piHashTable = new int[nTriangles * 3];
+            int[] piHashCount2 = new int[MAX_CELLS];
             for (int i = 0; i < (nTriangles * 3); i++)
             {
                 int index = triList[i];
@@ -379,8 +362,7 @@ namespace ContentTools.MikkTSpace
                 int iCell = FindGridCell(fMin, fMax, fVal);
 
                 Debug.Assert(piHashCount2[iCell] < piHashCount[iCell]);
-                int tIndex = piHashOffsets[iCell];
-                piHashTable[tIndex + piHashCount2[iCell]] = i;    // vertex i has been inserted.
+                piHashTable[piHashOffsets[iCell] + piHashCount2[iCell]] = i;    // vertex i has been inserted.
                 piHashCount2[iCell]++;
             }
 
@@ -404,13 +386,12 @@ namespace ContentTools.MikkTSpace
             for (int k = 0; k < MAX_CELLS; k++)
             {
                 // extract table of cell k and amount of entries in it
-                int tIndex = piHashTable[piHashOffsets[k]];
                 int iEntries = piHashCount[k];
                 if (iEntries < 2) continue;
 
                 for (int e = 0; e < iEntries; e++)
                 {
-                    int i = piHashTable[tIndex + e];
+                    int i = piHashTable[piHashOffsets[k] + e];
                     var vP = GetPosition(triList[i]);
                     pTmpVert[e] = new()
                     {
@@ -647,7 +628,7 @@ namespace ContentTools.MikkTSpace
         }
         void InitTriInfo(TriInfo[] triInfos, int[] triList, int nTriangles)
         {
-            // pTriInfos[f].iFlag is cleared in GenerateInitialVerticesIndexList() which is called before this function.
+            // triInfos[f].Flag is cleared in GenerateInitialVerticesIndexList() which is called before this function.
 
             // generate neighbor info list
             for (int f = 0; f < nTriangles; f++)
@@ -692,30 +673,28 @@ namespace ContentTools.MikkTSpace
                 var d2 = Vector3.Subtract(v3, v1);
 
                 float fSignedAreaSTx2 = t21x * t31y - t21y * t31x;
-                //assert(fSignedAreaSTx2!=0);
-                var vOs = Vector3.Add(Vector3.Multiply(t31y, d1), Vector3.Multiply(t21y, d2));   // eq 18
+                var vOs = Vector3.Subtract(Vector3.Multiply(t31y, d1), Vector3.Multiply(t21y, d2)); // eq 18
                 var vOt = Vector3.Add(Vector3.Multiply(-t31x, d1), Vector3.Multiply(t21x, d2)); // eq 19
 
                 triInfos[f].Flag |= fSignedAreaSTx2 > 0 ? ORIENT_PRESERVING : 0;
 
-                if (NotZero(fSignedAreaSTx2))
+                if (!Utils.NotZero(fSignedAreaSTx2)) continue;
+
+                float fAbsArea = MathF.Abs(fSignedAreaSTx2);
+                float fLenOs = vOs.Length();
+                float fLenOt = vOt.Length();
+                float fS = (triInfos[f].Flag & ORIENT_PRESERVING) == 0 ? -1f : 1f;
+                if (Utils.NotZero(fLenOs)) triInfos[f].Os = Vector3.Multiply(fS / fLenOs, vOs);
+                if (Utils.NotZero(fLenOt)) triInfos[f].Ot = Vector3.Multiply(fS / fLenOt, vOt);
+
+                // evaluate magnitudes prior to normalization of vOs and vOt
+                triInfos[f].MagS = fLenOs / fAbsArea;
+                triInfos[f].MagT = fLenOt / fAbsArea;
+
+                // if this is a good triangle
+                if (Utils.NotZero(triInfos[f].MagS) && Utils.NotZero(triInfos[f].MagT))
                 {
-                    float fAbsArea = MathF.Abs(fSignedAreaSTx2);
-                    float fLenOs = vOs.Length();
-                    float fLenOt = vOt.Length();
-                    float fS = (triInfos[f].Flag & ORIENT_PRESERVING) == 0 ? (-1.0f) : 1.0f;
-                    if (NotZero(fLenOs)) triInfos[f].Os = Vector3.Multiply(fS / fLenOs, vOs);
-                    if (NotZero(fLenOt)) triInfos[f].Ot = Vector3.Multiply(fS / fLenOt, vOt);
-
-                    // evaluate magnitudes prior to normalization of vOs and vOt
-                    triInfos[f].MagS = fLenOs / fAbsArea;
-                    triInfos[f].MagT = fLenOt / fAbsArea;
-
-                    // if this is a good triangle
-                    if (NotZero(triInfos[f].MagS) && NotZero(triInfos[f].MagT))
-                    {
-                        triInfos[f].Flag &= ~GROUP_WITH_ANY;
-                    }
+                    triInfos[f].Flag &= ~GROUP_WITH_ANY;
                 }
             }
 
@@ -725,72 +704,71 @@ namespace ContentTools.MikkTSpace
             {
                 int iFO_a = triInfos[t + 0].OrgFaceNumber;
                 int iFO_b = triInfos[t + 1].OrgFaceNumber;
-                if (iFO_a == iFO_b) // this is a quad
-                {
-                    bool bIsDeg_a = (triInfos[t + 0].Flag & MARK_DEGENERATE) != 0;
-                    bool bIsDeg_b = (triInfos[t + 1].Flag & MARK_DEGENERATE) != 0;
-
-                    // bad triangles should already have been removed by
-                    // DegenPrologue(), but just in case check bIsDeg_a and bIsDeg_a are false
-                    if ((bIsDeg_a || bIsDeg_b) == false)
-                    {
-                        bool bOrientA = (triInfos[t + 0].Flag & ORIENT_PRESERVING) != 0;
-                        bool bOrientB = (triInfos[t + 1].Flag & ORIENT_PRESERVING) != 0;
-
-                        // if this happens the quad has extremely bad mapping!!
-                        if (bOrientA != bOrientB)
-                        {
-                            //printf("found quad with bad mapping\n");
-                            bool bChooseOrientFirstTri = false;
-                            if ((triInfos[t + 1].Flag & GROUP_WITH_ANY) != 0)
-                            {
-                                bChooseOrientFirstTri = true;
-                            }
-                            else if (CalcTexArea(triList, (t + 0) * 3) >= CalcTexArea(triList, (t + 1) * 3))
-                            {
-                                bChooseOrientFirstTri = true;
-                            }
-
-                            // force match
-                            int t0 = bChooseOrientFirstTri ? t : (t + 1);
-                            int t1 = bChooseOrientFirstTri ? (t + 1) : t;
-                            triInfos[t1].Flag &= ~ORIENT_PRESERVING;    // clear first
-                            triInfos[t1].Flag |= triInfos[t0].Flag & ORIENT_PRESERVING;   // copy bit
-                        }
-                    }
-                    t += 2;
-                }
-                else
+                if (iFO_a != iFO_b)
                 {
                     t++;
+                    continue;
                 }
+
+                // this is a quad
+                bool bIsDegA = (triInfos[t + 0].Flag & MARK_DEGENERATE) != 0;
+                bool bIsDegB = (triInfos[t + 1].Flag & MARK_DEGENERATE) != 0;
+
+                // bad triangles should already have been removed by
+                // DegenPrologue(), but just in case check bIsDeg_a and bIsDeg_a are false
+                if ((bIsDegA || bIsDegB) == false)
+                {
+                    bool bOrientA = (triInfos[t + 0].Flag & ORIENT_PRESERVING) != 0;
+                    bool bOrientB = (triInfos[t + 1].Flag & ORIENT_PRESERVING) != 0;
+
+                    // if this happens the quad has extremely bad mapping!!
+                    if (bOrientA != bOrientB)
+                    {
+                        //printf("found quad with bad mapping\n");
+                        bool bChooseOrientFirstTri = false;
+                        if ((triInfos[t + 1].Flag & GROUP_WITH_ANY) != 0)
+                        {
+                            bChooseOrientFirstTri = true;
+                        }
+                        else if (CalcTexArea(triList, (t + 0) * 3) >= CalcTexArea(triList, (t + 1) * 3))
+                        {
+                            bChooseOrientFirstTri = true;
+                        }
+
+                        // force match
+                        int t0 = bChooseOrientFirstTri ? t : (t + 1);
+                        int t1 = bChooseOrientFirstTri ? (t + 1) : t;
+                        triInfos[t1].Flag &= ~ORIENT_PRESERVING;    // clear first
+                        triInfos[t1].Flag |= triInfos[t0].Flag & ORIENT_PRESERVING;   // copy bit
+                    }
+                }
+                t += 2;
             }
 
             // match up edge pairs
-            {
-                Edge[] pEdges = new Edge[nTriangles * 3];
-                BuildNeighborsFast(triInfos, pEdges, triList, nTriangles);
-            }
+            BuildNeighborsFast(triInfos, triList, nTriangles);
         }
-        static void BuildNeighborsFast(TriInfo[] triInfos, Edge[] edges, int[] triList, int nTriangles)
+        static void BuildNeighborsFast(TriInfo[] triInfos, int[] triList, int nTriangles)
         {
-            uint uSeed = INTERNAL_RND_SORT_SEED;                // could replace with a random seed?
+            uint uSeed = INTERNAL_RND_SORT_SEED; // could replace with a random seed?
 
             // build array of edges
+            Edge[] edges = new Edge[nTriangles * 3];
             for (int f = 0; f < nTriangles; f++)
             {
+                int t = f * 3;
                 for (int i = 0; i < 3; i++)
                 {
-                    int i0 = triList[(f * 3) + i];
-                    int i1 = triList[(f * 3) + (i < 2 ? (i + 1) : 0)];
-                    edges[(f * 3) + i].I0 = i0 < i1 ? i0 : i1;          // put minimum index in i0
-                    edges[(f * 3) + i].I1 = !(i0 < i1) ? i0 : i1;        // put maximum index in i1
-                    edges[(f * 3) + i].F = f;                            // record face number
+                    int i0 = triList[t + i];
+                    int i1 = triList[t + (i < 2 ? (i + 1) : 0)];
+                    edges[t + i].I0 = i0 < i1 ? i0 : i1;           // put minimum index in i0
+                    edges[t + i].I1 = !(i0 < i1) ? i0 : i1;        // put maximum index in i1
+                    edges[t + i].F = f;                            // record face number
                 }
             }
 
             // sort over all edges by i0, this is the pricy one.
-            QuickSortEdges(edges, 0, nTriangles * 3 - 1, 0, uSeed);    // sort channel 0 which is i0
+            QuickSortEdges(edges, 0, nTriangles * 3 - 1, 0, uSeed); // sort channel 0 which is i0
 
             // sub sort over i1, should be fast.
             // could replace this with a 64 bit int sort over (i0,i1)
@@ -803,9 +781,8 @@ namespace ContentTools.MikkTSpace
                 {
                     int iL = iCurStartIndex;
                     int iR = i - 1;
-                    //const int iElems = i-iL;
                     iCurStartIndex = i;
-                    QuickSortEdges(edges, iL, iR, 1, uSeed);   // sort channel 1 which is i1
+                    QuickSortEdges(edges, iL, iR, 1, uSeed); // sort channel 1 which is i1
                 }
             }
 
@@ -819,9 +796,8 @@ namespace ContentTools.MikkTSpace
                 {
                     int iL = iCurStartIndex;
                     int iR = i - 1;
-                    //const int iElems = i-iL;
                     iCurStartIndex = i;
-                    QuickSortEdges(edges, iL, iR, 2, uSeed);   // sort channel 2 which is f
+                    QuickSortEdges(edges, iL, iR, 2, uSeed); // sort channel 2 which is f
                 }
             }
 
@@ -834,14 +810,11 @@ namespace ContentTools.MikkTSpace
                 GetEdge(i0, i1, triList, f * 3, out int i0A, out int i1A, out int edgeNumA); // resolve index ordering and edge_num
 
                 bool unassignedA = triInfos[f].FaceNeighbors[edgeNumA] == -1;
-                if (!unassignedA)
-                {
-                    continue;
-                }
+                if (!unassignedA) continue;
 
                 // get true index ordering
                 bool found = false;
-                int edgeNumB = 0;   // 0,1 or 2
+                int edgeNumB = 0; // 0,1 or 2
                 int j = i + 1;
                 while (j < iEntries && i0 == edges[j].I0 && i1 == edges[j].I1 && !found)
                 {
@@ -873,7 +846,6 @@ namespace ContentTools.MikkTSpace
         static void QuickSortEdges(Edge[] sortBuffer, int iLeft, int iRight, int channel, uint uSeed)
         {
             // early out
-            Edge sTmp;
             int iElems = iRight - iLeft + 1;
             if (iElems < 2)
             {
@@ -883,17 +855,13 @@ namespace ContentTools.MikkTSpace
             {
                 if (sortBuffer[iLeft][channel] > sortBuffer[iRight][channel])
                 {
-                    sTmp = sortBuffer[iLeft];
-                    sortBuffer[iLeft] = sortBuffer[iRight];
-                    sortBuffer[iRight] = sTmp;
+                    (sortBuffer[iRight], sortBuffer[iLeft]) = (sortBuffer[iLeft], sortBuffer[iRight]);
                 }
                 return;
             }
 
             // Random
-            int t = (int)uSeed & 31;
-            t = ((int)uSeed << t) | ((int)uSeed >> (32 - t));
-            uSeed = uSeed + (uint)t + 3;
+            uSeed = Randomize(uSeed);
             // Random end
 
             int iL = iLeft;
@@ -917,9 +885,7 @@ namespace ContentTools.MikkTSpace
 
                 if (iL <= iR)
                 {
-                    sTmp = sortBuffer[iL];
-                    sortBuffer[iL] = sortBuffer[iR];
-                    sortBuffer[iR] = sTmp;
+                    (sortBuffer[iR], sortBuffer[iL]) = (sortBuffer[iL], sortBuffer[iR]);
                     iL++;
                     iR--;
                 }
@@ -1093,8 +1059,8 @@ namespace ContentTools.MikkTSpace
                     // project
                     var vOs = Vector3.Subtract(triInfos[f].Os, Vector3.Multiply(Vector3.Dot(n, triInfos[f].Os), n));
                     var vOt = Vector3.Subtract(triInfos[f].Ot, Vector3.Multiply(Vector3.Dot(n, triInfos[f].Ot), n));
-                    if (NotZero(vOs)) vOs = Vector3.Normalize(vOs);
-                    if (NotZero(vOt)) vOt = Vector3.Normalize(vOt);
+                    if (Utils.NotZero(vOs)) vOs = Vector3.Normalize(vOs);
+                    if (Utils.NotZero(vOt)) vOt = Vector3.Normalize(vOt);
 
                     // original face number
                     int iOF_1 = triInfos[f].OrgFaceNumber;
@@ -1108,8 +1074,8 @@ namespace ContentTools.MikkTSpace
                         // project
                         var vOs2 = Vector3.Subtract(triInfos[t].Os, Vector3.Multiply(Vector3.Dot(n, triInfos[t].Os), n));
                         var vOt2 = Vector3.Subtract(triInfos[t].Ot, Vector3.Multiply(Vector3.Dot(n, triInfos[t].Ot), n));
-                        if (NotZero(vOs2)) vOs2 = Vector3.Normalize(vOs2);
-                        if (NotZero(vOt2)) vOt2 = Vector3.Normalize(vOt2);
+                        if (Utils.NotZero(vOs2)) vOs2 = Vector3.Normalize(vOs2);
+                        if (Utils.NotZero(vOt2)) vOt2 = Vector3.Normalize(vOt2);
 
                         bool bAny = ((triInfos[f].Flag | triInfos[t].Flag) & GROUP_WITH_ANY) != 0;
                         // make sure triangles which belong to the same quad are joined.
@@ -1222,8 +1188,8 @@ namespace ContentTools.MikkTSpace
                 Vector3 n = GetNormal(index);
                 Vector3 vOs = Vector3.Subtract(triInfos[f].Os, Vector3.Multiply(Vector3.Dot(n, triInfos[f].Os), n));
                 Vector3 vOt = Vector3.Subtract(triInfos[f].Ot, Vector3.Multiply(Vector3.Dot(n, triInfos[f].Ot), n));
-                if (NotZero(vOs)) vOs = Vector3.Normalize(vOs);
-                if (NotZero(vOt)) vOt = Vector3.Normalize(vOt);
+                if (Utils.NotZero(vOs)) vOs = Vector3.Normalize(vOs);
+                if (Utils.NotZero(vOt)) vOt = Vector3.Normalize(vOt);
 
                 int i2 = triList[(3 * f) + (i < 2 ? (i + 1) : 0)];
                 int i1 = triList[(3 * f) + i];
@@ -1236,8 +1202,8 @@ namespace ContentTools.MikkTSpace
                 var v2 = Vector3.Subtract(p2, p1);
 
                 // project
-                v1 = Vector3.Subtract(v1, Vector3.Multiply(Vector3.Dot(n, v1), n)); if (NotZero(v1)) v1 = Vector3.Normalize(v1);
-                v2 = Vector3.Subtract(v2, Vector3.Multiply(Vector3.Dot(n, v2), n)); if (NotZero(v2)) v2 = Vector3.Normalize(v2);
+                v1 = Vector3.Subtract(v1, Vector3.Multiply(Vector3.Dot(n, v1), n)); if (Utils.NotZero(v1)) v1 = Vector3.Normalize(v1);
+                v2 = Vector3.Subtract(v2, Vector3.Multiply(Vector3.Dot(n, v2), n)); if (Utils.NotZero(v2)) v2 = Vector3.Normalize(v2);
 
                 // weight contribution by the angle
                 // between the two edge vectors
@@ -1255,8 +1221,8 @@ namespace ContentTools.MikkTSpace
             }
 
             // normalize
-            if (NotZero(res.Os)) res.Os = Vector3.Normalize(res.Os);
-            if (NotZero(res.Ot)) res.Ot = Vector3.Normalize(res.Ot);
+            if (Utils.NotZero(res.Os)) res.Os = Vector3.Normalize(res.Os);
+            if (Utils.NotZero(res.Ot)) res.Ot = Vector3.Normalize(res.Ot);
             if (fAngleSum > 0)
             {
                 res.MagS /= fAngleSum;
@@ -1285,8 +1251,8 @@ namespace ContentTools.MikkTSpace
                 ts_res.MagT = 0.5f * (pTS0.MagT + pTS1.MagT);
                 ts_res.Os = Vector3.Add(pTS0.Os, pTS1.Os);
                 ts_res.Ot = Vector3.Add(pTS0.Ot, pTS1.Ot);
-                if (NotZero(ts_res.Os)) ts_res.Os = Vector3.Normalize(ts_res.Os);
-                if (NotZero(ts_res.Ot)) ts_res.Ot = Vector3.Normalize(ts_res.Ot);
+                if (Utils.NotZero(ts_res.Os)) ts_res.Os = Vector3.Normalize(ts_res.Os);
+                if (Utils.NotZero(ts_res.Ot)) ts_res.Ot = Vector3.Normalize(ts_res.Ot);
             }
 
             return ts_res;
@@ -1294,9 +1260,7 @@ namespace ContentTools.MikkTSpace
         static void QuickSort(int[] sortBuffer, int iLeft, int iRight, uint uSeed)
         {
             // Random
-            int t = (int)(uSeed & 31);
-            t = ((int)uSeed << t) | ((int)uSeed >> (32 - t));
-            uSeed = uSeed + (uint)t + 3;
+            uSeed = Randomize(uSeed);
             // Random end
 
             int iL = iLeft;
@@ -1347,7 +1311,7 @@ namespace ContentTools.MikkTSpace
             while (i < pg1.NFaces && bStillSame)
             {
                 bStillSame = pg1.TriMembers[i] == pg2.TriMembers[i];
-                if (bStillSame) ++i;
+                if (bStillSame) i++;
             }
 
             return bStillSame;
@@ -1362,10 +1326,7 @@ namespace ContentTools.MikkTSpace
                 // degenerate triangles on a quad with one good triangle are skipped
                 // here but processed in the next loop
                 bool bSkip = (triInfos[t].Flag & QUAD_ONE_DEGEN_TRI) != 0;
-                if (bSkip)
-                {
-                    continue;
-                }
+                if (bSkip) continue;
 
                 for (int i = 0; i < 3; i++)
                 {
@@ -1407,10 +1368,7 @@ namespace ContentTools.MikkTSpace
             {
                 // this triangle belongs to a quad where the
                 // other triangle is degenerate
-                if ((triInfos[t].Flag & QUAD_ONE_DEGEN_TRI) == 0)
-                {
-                    continue;
-                }
+                if ((triInfos[t].Flag & QUAD_ONE_DEGEN_TRI) == 0) continue;
 
                 var pV = triInfos[t].VertNum;
                 int iFlag = (1 << pV[0]) | (1 << pV[1]) | (1 << pV[2]);
@@ -1441,7 +1399,6 @@ namespace ContentTools.MikkTSpace
                 Debug.Assert(!bNotFound);
             }
         }
-
 
         float CalcTexArea(int[] triList, int idx)
         {
@@ -1488,7 +1445,6 @@ namespace ContentTools.MikkTSpace
 
         static int FindGridCell(float fMin, float fMax, float fVal)
         {
-
             float fIndex = MAX_CELLS * ((fVal - fMin) / (fMax - fMin));
             int iIndex = (int)fIndex;
             return iIndex < MAX_CELLS ? (iIndex >= 0 ? iIndex : 0) : (MAX_CELLS - 1);
@@ -1502,17 +1458,6 @@ namespace ContentTools.MikkTSpace
         {
             Debug.Assert(vert >= 0 && vert < 4 && face >= 0);
             return (face << 2) | (vert & 0x3);
-        }
-
-        static bool NotZero(float fX)
-        {
-            // could possibly use FLT_EPSILON instead
-            return MathF.Abs(fX) > float.Epsilon;
-        }
-        static bool NotZero(Vector3 v)
-        {
-            // might change this to an epsilon based test
-            return NotZero(v.X) || NotZero(v.Y) || NotZero(v.Z);
         }
     }
 }
