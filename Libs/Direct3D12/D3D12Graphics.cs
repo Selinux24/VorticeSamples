@@ -512,7 +512,7 @@ namespace Direct3D12
         static readonly MessageSeverity[] SeverityBreakers =
         [
             MessageSeverity.Warning,
-            //MessageSeverity.Error,
+            MessageSeverity.Error,
             MessageSeverity.Corruption,
         ];
 

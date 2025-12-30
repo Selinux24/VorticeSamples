@@ -26,12 +26,18 @@ namespace DX12Windows
         private static readonly List<HelloWorldComponent> surfaces = [];
         private static bool resized = false;
 
-        static void Main()
+        static void Main(string[] args)
         {
+            char? scene = null;
+            if (args.Length > 0 && args[0].Length > 0)
+            {
+                scene = args[0][0];
+            }
+
             int opt = -1;
             while (opt == -1)
             {
-                opt = ChooseScene();
+                opt = ChooseScene(scene);
             }
 
             if (opt == 0)
@@ -57,37 +63,41 @@ namespace DX12Windows
 
             app.Run();
         }
-        static int ChooseScene()
+        static int ChooseScene(char? key = null)
         {
-            Console.Clear();
-            Console.WriteLine("Choose the scene: ");
-            Console.WriteLine("1. LabScene");
-            Console.WriteLine("2. ToyTank");
-            Console.WriteLine("3. Humvee");
-            Console.WriteLine("4. M-24");
-            Console.WriteLine("5. Exit");
-            var key = Console.ReadKey(true);
-            if (key.KeyChar == '1')
+            if (!key.HasValue)
+            {
+                Console.Clear();
+                Console.WriteLine("Choose the scene: ");
+                Console.WriteLine("1. LabScene");
+                Console.WriteLine("2. ToyTank");
+                Console.WriteLine("3. Humvee");
+                Console.WriteLine("4. M-24");
+                Console.WriteLine("5. Exit");
+                key = Console.ReadKey(true).KeyChar;
+            }
+
+            if (key == '1')
             {
                 renderItem = new LabSceneRenderItem();
                 return 1;
             }
-            else if (key.KeyChar == '2')
+            else if (key == '2')
             {
                 renderItem = new ToyTankRenderItem();
                 return 2;
             }
-            else if (key.KeyChar == '3')
+            else if (key == '3')
             {
                 renderItem = new HumveeRenderItem();
                 return 3;
             }
-            else if (key.KeyChar == '4')
+            else if (key == '4')
             {
                 renderItem = new M24RenderItem();
                 return 4;
             }
-            else if (key.KeyChar == '5')
+            else if (key == '5')
             {
                 return 0;
             }

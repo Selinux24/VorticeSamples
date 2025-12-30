@@ -11,6 +11,6 @@ namespace ContentTools.MikkTSpace
         public int Counter;   // this is to average back into quads.
         public bool Orient;
 
-        public readonly float Sign => Orient ? 1.0f : -1.0f;
+        public readonly float Sign => Orient ? 1f : -1f;
     }
 }

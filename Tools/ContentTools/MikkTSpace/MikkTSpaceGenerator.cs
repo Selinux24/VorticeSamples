@@ -25,7 +25,38 @@ namespace ContentTools.MikkTSpace
         public abstract Vector3 GetNormal(int faceIndex, int vertIndex);
         public abstract Vector2 GetTexCoord(int faceIndex, int vertIndex);
         public abstract void SetTSpaceBasic(Vector3 tangent, float sign, int faceIndex, int vertIndex);
+        int CountTriangles(int iNrFaces)
+        {
+            int iNrTrianglesIn = 0;
 
+            for (int f = 0; f < iNrFaces; f++)
+            {
+                int verts = GetNumVerticesOfFace(f);
+                if (verts == 3) iNrTrianglesIn++;
+                else if (verts == 4) iNrTrianglesIn += 2;
+            }
+
+            return iNrTrianglesIn;
+        }
+        (Vector3 Min, Vector3 Max) GenerateBoundingBox(int nTriangles, int[] triList)
+        {
+            var vMin = GetPosition(0);
+            var vMax = vMin;
+            for (int i = 1; i < (nTriangles * 3); i++)
+            {
+                int index = triList[i];
+
+                var vP = GetPosition(index);
+                if (vMin.X > vP.X) vMin.X = vP.X;
+                else if (vMax.X < vP.X) vMax.X = vP.X;
+                if (vMin.Y > vP.Y) vMin.Y = vP.Y;
+                else if (vMax.Y < vP.Y) vMax.Y = vP.Y;
+                if (vMin.Z > vP.Z) vMin.Z = vP.Z;
+                else if (vMax.Z < vP.Z) vMax.Z = vP.Z;
+            }
+
+            return (vMin, vMax);
+        }
         Vector3 GetPosition(int index)
         {
             IndexToData(index, out int iF, out int iI);
@@ -59,32 +90,15 @@ namespace ContentTools.MikkTSpace
             float fThresCos = MathF.Cos(angularThreshold * MathF.PI / 180.0f);
 
             // count triangles on supported faces
-            int iNrTrianglesIn = 0;
-            for (int f = 0; f < iNrFaces; f++)
-            {
-                int verts = GetNumVerticesOfFace(f);
-                if (verts == 3) iNrTrianglesIn++;
-                else if (verts == 4) iNrTrianglesIn += 2;
-            }
-            if (iNrTrianglesIn <= 0)
-            {
-                return false;
-            }
-
-            // allocate memory for an index list
-            int[] piTriListIn = new int[iNrTrianglesIn * 3];
-            TriInfo[] pTriInfos = new TriInfo[iNrTrianglesIn];
-            for (int i = 0; i < iNrTrianglesIn; i++)
-            {
-                pTriInfos[i] = new();
-            }
+            int iNrTrianglesIn = CountTriangles(iNrFaces);
+            if (iNrTrianglesIn <= 0) return false;
 
             // make an initial triangle --> face index list
-            int iNrTSPaces = GenerateInitialVerticesIndexList(pTriInfos, piTriListIn, iNrTrianglesIn);
+            int iNrTSPaces = GenerateInitialVerticesIndexList(iNrTrianglesIn, out var pTriInfos, out var piTriListIn);
 
             // make a welded index list of identical positions and attributes (pos, norm, texc)
             //printf("gen welded index list begin\n");
-            GenerateSharedVerticesIndexList(piTriListIn, iNrTrianglesIn);
+            GenerateSharedVerticesIndexList(iNrTrianglesIn, piTriListIn);
             //printf("gen welded index list end\n");
 
             // Mark all degenerate triangles
@@ -135,17 +149,13 @@ namespace ContentTools.MikkTSpace
             TSpace[] sTspace = new TSpace[iNrTSPaces];
             for (int t = 0; t < iNrTSPaces; t++)
             {
-                sTspace[t] = new TSpace();
-
-                sTspace[t].Os.X = 1.0f;
-                sTspace[t].Os.Y = 0.0f;
-                sTspace[t].Os.Z = 0.0f;
-                sTspace[t].MagS = 1.0f;
-
-                sTspace[t].Ot.X = 0.0f;
-                sTspace[t].Ot.Y = 1.0f;
-                sTspace[t].Ot.Z = 0.0f;
-                sTspace[t].MagT = 1.0f;
+                sTspace[t] = new TSpace
+                {
+                    Os = new(1f, 0f, 0f),
+                    MagS = 1.0f,
+                    Ot = new(0f, 1f, 0f),
+                    MagT = 1.0f
+                };
             }
 
             // make tspaces, each group is split up into subgroups if necessary
@@ -186,8 +196,17 @@ namespace ContentTools.MikkTSpace
 
             return true;
         }
-        int GenerateInitialVerticesIndexList(TriInfo[] triInfos, int[] triList, int nTriangles)
+        int GenerateInitialVerticesIndexList(int nTriangles, out TriInfo[] triInfos, out int[] triList)
         {
+            // allocate memory for an index list
+            triList = new int[nTriangles * 3];
+            triInfos = new TriInfo[nTriangles];
+
+            for (int i = 0; i < nTriangles; i++)
+            {
+                triInfos[i] = new();
+            }
+
             int iTSpacesOffs = 0;
             int iDstTriIndex = 0;
             for (int f = 0; f < GetNumFaces(); f++)
@@ -289,31 +308,13 @@ namespace ContentTools.MikkTSpace
                 Debug.Assert(iDstTriIndex <= nTriangles);
             }
 
-            for (int t = 0; t < nTriangles; t++)
-            {
-                triInfos[t].Flag = 0;
-            }
-
             // return total amount of tspaces
             return iTSpacesOffs;
         }
-        void GenerateSharedVerticesIndexList(int[] triList, int nTriangles)
+        void GenerateSharedVerticesIndexList(int nTriangles, int[] triList)
         {
             // Generate bounding box
-            var vMin = GetPosition(0);
-            var vMax = vMin;
-            for (int i = 1; i < (nTriangles * 3); i++)
-            {
-                int index = triList[i];
-
-                var vP = GetPosition(index);
-                if (vMin.X > vP.X) vMin.X = vP.X;
-                else if (vMax.X < vP.X) vMax.X = vP.X;
-                if (vMin.Y > vP.Y) vMin.Y = vP.Y;
-                else if (vMax.Y < vP.Y) vMax.Y = vP.Y;
-                if (vMin.Z > vP.Z) vMin.Z = vP.Z;
-                else if (vMax.Z < vP.Z) vMax.Z = vP.Z;
-            }
+            (var vMin, var vMax) = GenerateBoundingBox(nTriangles, triList);
 
             var vDim = Vector3.Subtract(vMax, vMin);
             int iChannel = 0;
@@ -336,10 +337,9 @@ namespace ContentTools.MikkTSpace
             int[] piHashCount = new int[MAX_CELLS];
             for (int i = 0; i < (nTriangles * 3); i++)
             {
-                int index = triList[i];
-                var vP = GetPosition(index);
-                float fVal = iChannel == 0 ? vP.X : (iChannel == 1 ? vP.Y : vP.Z);
-                int iCell = FindGridCell(fMin, fMax, fVal);
+                var vP = GetPosition(triList[i]);
+                int iCell = FindGridCell(fMin, fMax, vP[iChannel]);
+
                 piHashCount[iCell]++;
             }
 
@@ -356,10 +356,8 @@ namespace ContentTools.MikkTSpace
             int[] piHashCount2 = new int[MAX_CELLS];
             for (int i = 0; i < (nTriangles * 3); i++)
             {
-                int index = triList[i];
-                var vP = GetPosition(index);
-                float fVal = iChannel == 0 ? vP.X : (iChannel == 1 ? vP.Y : vP.Z);
-                int iCell = FindGridCell(fMin, fMax, fVal);
+                var vP = GetPosition(triList[i]);
+                int iCell = FindGridCell(fMin, fMax, vP[iChannel]);
 
                 Debug.Assert(piHashCount2[iCell] < piHashCount[iCell]);
                 piHashTable[piHashOffsets[iCell] + piHashCount2[iCell]] = i;    // vertex i has been inserted.

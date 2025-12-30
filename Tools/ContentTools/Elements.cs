@@ -139,10 +139,12 @@ namespace ContentTools
         }
         public static void Write(MemoryStream ms, Vertex vertex)
         {
+            int sign = PackingHelper.PackTSign(vertex.Normal) | PackingHelper.PackTSign(vertex.Tangent);
+
             ms.WriteByte(vertex.Red);
             ms.WriteByte(vertex.Green);
             ms.WriteByte(vertex.Blue);
-            ms.WriteByte(PackingHelper.PackTSign(vertex.Tangent));
+            ms.WriteByte((byte)sign);
             ms.Write(BitConverter.GetBytes(PackingHelper.PackFloat16(vertex.Normal.X, -1f, 1f)));
             ms.Write(BitConverter.GetBytes(PackingHelper.PackFloat16(vertex.Normal.Y, -1f, 1f)));
             ms.Write(BitConverter.GetBytes(PackingHelper.PackFloat16(vertex.Tangent.X, -1f, 1f)));
@@ -372,10 +374,12 @@ namespace ContentTools
         }
         public static void Write(MemoryStream ms, Vertex vertex)
         {
+            int sign = PackingHelper.PackTSign(vertex.Normal) | PackingHelper.PackTSign(vertex.Tangent);
+
             ms.WriteByte(PackingHelper.PackUnitFloat8(vertex.JointWeights.X));
             ms.WriteByte(PackingHelper.PackUnitFloat8(vertex.JointWeights.Y));
             ms.WriteByte(PackingHelper.PackUnitFloat8(vertex.JointWeights.Z));
-            ms.WriteByte(PackingHelper.PackTSign(vertex.Tangent));
+            ms.WriteByte((byte)sign);
             ms.Write(BitConverter.GetBytes(vertex.JointIndices[0]));
             ms.Write(BitConverter.GetBytes(vertex.JointIndices[1]));
             ms.Write(BitConverter.GetBytes(vertex.JointIndices[2]));
@@ -433,10 +437,12 @@ namespace ContentTools
         }
         public static void Write(MemoryStream ms, Vertex vertex)
         {
+            int sign = PackingHelper.PackTSign(vertex.Normal) | PackingHelper.PackTSign(vertex.Tangent);
+
             ms.WriteByte(PackingHelper.PackUnitFloat8(vertex.JointWeights.X));
             ms.WriteByte(PackingHelper.PackUnitFloat8(vertex.JointWeights.Y));
             ms.WriteByte(PackingHelper.PackUnitFloat8(vertex.JointWeights.Z));
-            ms.WriteByte(PackingHelper.PackTSign(vertex.Tangent));
+            ms.WriteByte((byte)sign);
             ms.Write(BitConverter.GetBytes(vertex.JointIndices[0]));
             ms.Write(BitConverter.GetBytes(vertex.JointIndices[1]));
             ms.Write(BitConverter.GetBytes(vertex.JointIndices[2]));

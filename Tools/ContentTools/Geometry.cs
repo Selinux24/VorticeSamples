@@ -57,7 +57,9 @@ namespace ContentTools
             {
                 var m = GetMesh();
                 uint index = m.Indices[faceIndex * 3 + vertIndex];
-                m.Vertices[(int)index].Tangent = new Vector4(tangent, sign);
+                var v = m.Vertices[(int)index];
+                v.Tangent = new Vector4(tangent, sign);
+                m.Vertices[(int)index] = v;
             }
         }
 
@@ -264,6 +266,7 @@ namespace ContentTools
             }
 
             m.ElementsType = DetermineElementsType(m);
+
             m.PackVertices();
         }
         static void RecalculateNormals(Mesh m)
@@ -283,7 +286,7 @@ namespace ContentTools
 
                 var e0 = v1 - v0;
                 var e1 = v2 - v0;
-                var n = Vector3.Normalize(Vector3.Cross(e0, e1));
+                var n = Vector3.Cross(e0, e1);
 
                 m.Normals[i + 0] = n;
                 m.Normals[i + 1] = n;
@@ -391,7 +394,7 @@ namespace ContentTools
                         uint kRef = refs[(int)k];
                         var uv = m.UVSets[0][kRef];
 
-                        if (Utils.Vector2NearEqual(v.UV, uv))
+                        if (Utils.NearEqual(v.UV, uv))
                         {
                             m.Indices[(int)kRef] = m.Indices[(int)jRef];
                             refs.RemoveAt((int)k);
@@ -445,7 +448,7 @@ namespace ContentTools
                         int kRef = refs[(int)k];
 
                         var t = m.Tangents[kRef];
-                        if (Utils.Vector4NearEqual(tj, t))
+                        if (Utils.NearEqual(tj, t))
                         {
                             m.Indices[kRef] = m.Indices[jRef];
                             refs.RemoveAt((int)k);

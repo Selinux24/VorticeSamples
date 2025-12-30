@@ -15,7 +15,7 @@ namespace ContentTools.MikkTSpace
 
         // determines if the current and the next triangle are a quad.
         public int OrgFaceNumber;
-        public int Flag;
+        public int Flag = 0;
         public int TSpacesOffs;
         public readonly int[] VertNum = new int[4];
 

@@ -18,6 +18,26 @@ namespace AssetsImporter
 
     public static class AssimpImporter
     {
+        #region Classes
+        sealed class Vector3NearEqualityComparer : IEqualityComparer<Vector3>
+        {
+            public static readonly Vector3NearEqualityComparer Instance = new();
+
+            public bool Equals(Vector3 x, Vector3 y) => Utils.NearEqual(x, y, float.Epsilon);
+
+            public int GetHashCode(Vector3 obj)
+            {
+                unchecked
+                {
+                    return HashCode.Combine(
+                        BitConverter.SingleToInt32Bits(obj.X),
+                        BitConverter.SingleToInt32Bits(obj.Y),
+                        BitConverter.SingleToInt32Bits(obj.Z));
+                }
+            }
+        }
+        #endregion
+
         static readonly object mutex = new();
         static AScene aScene;
         static GeometryImportSettings importSettings;
@@ -31,16 +51,9 @@ namespace AssetsImporter
                 APostProcessSteps ppSteps =
                     APostProcessSteps.Triangulate |
                     APostProcessSteps.GlobalScale |
-                    //APostProcessSteps.SortByPrimitiveType |
-                    //APostProcessSteps.CalculateTangentSpace |
-                    //APostProcessSteps.JoinIdenticalVertices |
-                    //APostProcessSteps.OptimizeMeshes |
-                    //APostProcessSteps.RemoveRedundantMaterials |
                     APostProcessSteps.ValidateDataStructure;
 
-                APropertyConfig configs = new Assimp.Configs.FBXImportMaterialsConfig(true);
-
-                aScene = ReadFile(fileName, ppSteps, configs);
+                aScene = ReadFile(fileName, ppSteps);
 
                 GetScene(progression, out var scene);
 
@@ -211,19 +224,62 @@ namespace AssetsImporter
 
         static (Vector3[], uint[]) GetControlPoints(AMesh aMesh)
         {
-            List<Vector3> controlPoints = [];
-            for (int i = 0; i < aMesh.VertexCount; i++)
-            {
-                if (controlPoints.Any(p => Utils.Vector3NearEqual(aMesh.Vertices[i], p, float.Epsilon))) continue;
+            // Build a unique vertex list and a remap (originalVertexIndex -> uniqueVertexIndex) in one pass.
+            // Then remap the mesh index buffer using the precomputed map.
+            Debug.Assert(aMesh != null);
 
-                controlPoints.Add(aMesh.Vertices[i]);
+            int vertexCount = aMesh.VertexCount;
+            if (vertexCount == 0)
+            {
+                return ([], []);
             }
 
-            // Remap indices to control points
+            List<Vector3> uniqueVertices = new(vertexCount);
+
+            // Store mapping for each original vertex index. uint.MaxValue means "unassigned".
+            uint[] vertexToUnique = new uint[vertexCount];
+            Array.Fill(vertexToUnique, uint.MaxValue);
+
+            // HashSet used only to detect "already seen" (near-equality), but we don't use it to retrieve indices.
+            // Instead we keep a dictionary from a stable hash -> candidate unique indices, and validate with NearEqual
+            // to avoid O(n) FindIndex calls and to handle hash collisions safely.
+            Dictionary<int, List<uint>> buckets = new(vertexCount);
+
+            for (int i = 0; i < vertexCount; i++)
+            {
+                Vector3 v = aMesh.Vertices[i];
+                int hash = Vector3NearEqualityComparer.Instance.GetHashCode(v);
+
+                if (!buckets.TryGetValue(hash, out var candidates))
+                {
+                    candidates = [];
+                    buckets.Add(hash, candidates);
+                }
+
+                uint found = uint.MaxValue;
+                for (int c = 0; c < candidates.Count; c++)
+                {
+                    uint uniqueIdx = candidates[c];
+                    if (Utils.NearEqual(uniqueVertices[(int)uniqueIdx], v, float.Epsilon))
+                    {
+                        found = uniqueIdx;
+                        break;
+                    }
+                }
+
+                if (found == uint.MaxValue)
+                {
+                    found = (uint)uniqueVertices.Count;
+                    uniqueVertices.Add(v);
+                    candidates.Add(found);
+                }
+
+                vertexToUnique[i] = found;
+            }
+
             uint[] indices = [.. aMesh.GetUnsignedIndices()];
             if (indices.Length == 0)
             {
-                // Populate indices
                 indices = new uint[aMesh.Vertices.Count];
                 for (uint i = 0; i < aMesh.Vertices.Count; i++)
                 {
@@ -234,64 +290,46 @@ namespace AssetsImporter
             uint[] remappedIndices = new uint[indices.Length];
             for (int i = 0; i < indices.Length; i++)
             {
-                // For each vertex, find the control point indices
-                var v = aMesh.Vertices[(int)indices[i]];
-                remappedIndices[i] = (uint)controlPoints.FindIndex(c => Utils.Vector3NearEqual(c, v, float.Epsilon));
+                uint originalIndex = indices[i];
+                Debug.Assert(originalIndex < (uint)vertexToUnique.Length);
+                remappedIndices[i] = vertexToUnique[originalIndex];
             }
 
-            Debug.Assert(controlPoints.Count > 0 && remappedIndices.Length > 0);
-            Debug.Assert(remappedIndices.Max() == controlPoints.Count - 1);
+            Debug.Assert(uniqueVertices.Count > 0 && remappedIndices.Length > 0);
+            Debug.Assert(remappedIndices.Max() == uniqueVertices.Count - 1);
             Debug.Assert(remappedIndices.Length % 3 == 0);
 
-            return ([.. controlPoints], remappedIndices);
+            return ([.. uniqueVertices], remappedIndices);
         }
-        static Vector3[] ExpandNormals(AMesh aMesh)
+        static Vector3[] ExpandNormals(AMesh aMesh, int[] indices)
         {
             List<Vector3> res = [];
 
-            int[] indices = [.. aMesh.GetIndices()];
             for (uint i = 0; i < indices.Length; i += 3)
             {
-                int i0 = indices[i];
-                int i1 = indices[i + 1];
-                int i2 = indices[i + 2];
-
-                var n0 = aMesh.Normals[i0];
-                var n1 = aMesh.Normals[i1];
-                var n2 = aMesh.Normals[i2];
-
-                res.Add(n0);
-                res.Add(n1);
-                res.Add(n2);
+                res.Add(aMesh.Normals[indices[i + 0]]);
+                res.Add(aMesh.Normals[indices[i + 1]]);
+                res.Add(aMesh.Normals[indices[i + 2]]);
             }
 
             return [.. res];
         }
-        static Vector2[] ExpandUVSets(AMesh aMesh, int channel)
+        static Vector2[] ExpandUVSets(AMesh aMesh, int[] indices, int channel)
         {
             List<Vector2> res = [];
 
             Vector2[] uvs = [.. aMesh.TextureCoordinateChannels[channel].Select(uv => new Vector2(uv.X, 1f - uv.Y))];
 
-            int[] indices = [.. aMesh.GetIndices()];
             for (uint i = 0; i < indices.Length; i += 3)
             {
-                int i0 = indices[i];
-                int i1 = indices[i + 1];
-                int i2 = indices[i + 2];
-
-                var t0 = uvs[i0];
-                var t1 = uvs[i1];
-                var t2 = uvs[i2];
-
-                res.Add(t0);
-                res.Add(t1);
-                res.Add(t2);
+                res.Add(uvs[indices[i + 0]]);
+                res.Add(uvs[indices[i + 1]]);
+                res.Add(uvs[indices[i + 2]]);
             }
 
             return [.. res];
         }
-        static Vector4[] ExpandTangents(AMesh aMesh)
+        static Vector4[] ExpandTangents(AMesh aMesh, int[] indices)
         {
             List<Vector4> res = [];
 
@@ -308,20 +346,12 @@ namespace AssetsImporter
                 })
                 .ToArray();
 
-            int[] indices = [.. aMesh.GetIndices()];
             for (uint i = 0; i < indices.Length; i += 3)
             {
-                int i0 = indices[i];
-                int i1 = indices[i + 1];
-                int i2 = indices[i + 2];
 
-                var n0 = tangents[i0];
-                var n1 = tangents[i1];
-                var n2 = tangents[i2];
-
-                res.Add(n0);
-                res.Add(n1);
-                res.Add(n2);
+                res.Add(tangents[indices[i + 0]]);
+                res.Add(tangents[indices[i + 1]]);
+                res.Add(tangents[indices[i + 2]]);
             }
 
             return [.. res];
@@ -374,11 +404,13 @@ namespace AssetsImporter
 
             materialIndices.Add(aMesh.MaterialIndex);
 
+            int[] idxList = [.. aMesh.GetIndices()];
+
             if (!importSettings.CalculateNormals)
             {
                 if (aMesh.HasNormals)
                 {
-                    normals.AddRange(ExpandNormals(aMesh));
+                    normals.AddRange(ExpandNormals(aMesh, idxList));
                 }
                 else
                 {
@@ -390,7 +422,7 @@ namespace AssetsImporter
             {
                 if (aMesh.HasTangentBasis)
                 {
-                    tangents.AddRange(ExpandTangents(aMesh));
+                    tangents.AddRange(ExpandTangents(aMesh, idxList));
                 }
                 else
                 {
@@ -403,7 +435,7 @@ namespace AssetsImporter
                 // Assuming FBX UVs always have their origin at the bottom-left, the V-axis 
                 // should be flipped, since DirectX uses the upper-left corner as the origin.
                 // TODO: May be assimp does this yet?
-                uvSets.Add(ExpandUVSets(aMesh, i));
+                uvSets.Add(ExpandUVSets(aMesh, idxList, i));
             }
 
             m = new()

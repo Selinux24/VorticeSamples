@@ -75,8 +75,8 @@ namespace DX12Windows.Content
                 () => AssimpImporter.Read(modelPrimalLab, new(), assetsFolder),
                 [
                     Path.Combine(outputsFolder, fanModelName),
-                    Path.Combine(outputsFolder, intModelName),
                     Path.Combine(outputsFolder, labModelName),
+                    Path.Combine(outputsFolder, intModelName),
                 ]);
 
             Importer.ImportModels(
@@ -224,8 +224,8 @@ namespace DX12Windows.Content
 
         public void DestroyRenderItems()
         {
-            HelloWorldApp.RemoveGameEntity(labEntityId);
             HelloWorldApp.RemoveGameEntity(fanEntityId);
+            HelloWorldApp.RemoveGameEntity(labEntityId);
             HelloWorldApp.RemoveGameEntity(intEntityId);
             HelloWorldApp.RemoveGameEntity(fembotEntityId);
 
@@ -234,8 +234,8 @@ namespace DX12Windows.Content
                 HelloWorldApp.RemoveGameEntity(sphereEntityIds[i]);
             }
 
-            ITestRenderItem.RemoveModel(labModelId);
             ITestRenderItem.RemoveModel(fanModelId);
+            ITestRenderItem.RemoveModel(labModelId);
             ITestRenderItem.RemoveModel(intModelId);
             ITestRenderItem.RemoveModel(fembotModelId);
             ITestRenderItem.RemoveModel(sphereModelId);
