@@ -329,12 +329,13 @@ namespace Direct3D12
         {
             VersionedRootSignatureDescription versionedDesc = new(desc);
 
-            string errorMsg = D3D12.D3D12SerializeVersionedRootSignature(versionedDesc, out var signatureBlob);
-            if (!string.IsNullOrEmpty(errorMsg))
+            var deviceConfig = D3D12Graphics.Device.QueryInterface<ID3D12DeviceConfiguration1>();
+
+            if (!DxCall(deviceConfig.SerializeVersionedRootSignature(versionedDesc, out var signatureBlob, out var error)))
             {
                 const string caller = nameof(D3D12.D3D12SerializeVersionedRootSignature);
                 Debug.WriteLine(SEPARATOR_BEGIN, [caller]);
-                Debug.WriteLine(errorMsg);
+                Debug.WriteLine(error.AsString());
                 Debug.WriteLine(SEPARATOR_END, [caller]);
 
                 return null;

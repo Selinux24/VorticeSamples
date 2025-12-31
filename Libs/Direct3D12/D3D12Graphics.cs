@@ -31,9 +31,13 @@ namespace Direct3D12
         /// Gets or sets the number of frame buffers.
         /// </summary>
         public const int FrameBufferCount = 3;
+        private const uint D3d12SdkVersion = 615;
+        private const string D3d12SdkPath = ".\\D3D12\\";
         private const FeatureLevel MinimumFeatureLevel = FeatureLevel.Level_11_0;
         private const string EngineShaderPaths = "Content/engineShaders.bin";
 
+        private static ID3D12SDKConfiguration1 d3d12SdkConfig;
+        private static ID3D12DeviceFactory d3d12DeviceFactory;
         private static DXGIAdapter mainAdapter;
         private static D3D12Device mainDevice;
 #if DEBUG
@@ -115,6 +119,16 @@ namespace Direct3D12
                 Shutdown();
             }
 
+            if (!D3D12Helpers.DxCall(D3D12.D3D12GetInterface(D3D12.D3D12SDKConfigurationClsId, out d3d12SdkConfig)))
+            {
+                return FailedInit();
+            }
+
+            if (!D3D12Helpers.DxCall(d3d12SdkConfig.CreateDeviceFactory(D3d12SdkVersion, D3d12SdkPath, out d3d12DeviceFactory)))
+            {
+                return FailedInit();
+            }
+
             for (int i = 0; i < FrameBufferCount; i++)
             {
                 deferredReleases[i] = [];
@@ -146,7 +160,7 @@ namespace Direct3D12
                 return FailedInit();
             }
 
-            if (!D3D12Helpers.DxCall(D3D12.D3D12CreateDevice(mainAdapter, maxFeatureLevel, out mainDevice)))
+            if (!D3D12Helpers.DxCall(d3d12DeviceFactory.CreateDevice(mainAdapter, maxFeatureLevel, out mainDevice)))
             {
                 return FailedInit();
             }
@@ -247,6 +261,11 @@ namespace Direct3D12
             mainAdapter?.Dispose();
             mainAdapter = null;
 
+            d3d12DeviceFactory?.Dispose();
+            d3d12DeviceFactory = null;
+            d3d12SdkConfig?.Dispose();
+            d3d12SdkConfig = null;
+
 #if DEBUG
             ClearInfoQueueConfiguration();
 
@@ -293,7 +312,7 @@ namespace Direct3D12
         {
             for (uint i = 0; D3D12Helpers.DxCall(dxgiFactory.EnumAdapterByGpuPreference(i, GpuPreference.HighPerformance, out IDXGIAdapter4 adapter)); i++)
             {
-                if (D3D12Helpers.DxCall(D3D12.D3D12CreateDevice<D3D12Device>(adapter, MinimumFeatureLevel, out var tmpDevice)))
+                if (D3D12Helpers.DxCall(d3d12DeviceFactory.CreateDevice<D3D12Device>(adapter, MinimumFeatureLevel, out var tmpDevice)))
                 {
                     tmpDevice.Dispose();
                     return adapter;
@@ -319,7 +338,7 @@ namespace Direct3D12
                 FeatureLevel.Level_12_1
             };
 
-            using var device = D3D12.D3D12CreateDevice<D3D12Device>(adapter, MinimumFeatureLevel);
+            using var device = d3d12DeviceFactory.CreateDevice<D3D12Device>(adapter, MinimumFeatureLevel);
 
             return device.CheckMaxSupportedFeatureLevel(featureLevels);
         }
@@ -518,7 +537,7 @@ namespace Direct3D12
 
         private static void InitializeDebugLayer()
         {
-            if (D3D12Helpers.DxCall(D3D12.D3D12GetDebugInterface<ID3D12Debug3>(out var debugInterface)))
+            if (D3D12Helpers.DxCall(d3d12DeviceFactory.GetConfigurationInterface<ID3D12Debug3>(D3D12.D3D12DebugClsId, out var debugInterface)))
             {
                 debugInterface.EnableDebugLayer();
                 debugInterface.SetEnableGPUBasedValidation(enableGPUBasedValidation);
