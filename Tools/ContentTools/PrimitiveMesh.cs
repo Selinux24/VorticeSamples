@@ -13,7 +13,7 @@ namespace ContentTools
         const int AxisY = 1;
         const int AxisZ = 2;
 
-        private static readonly PrimitiveMeshCreator[] Creators =
+        static readonly PrimitiveMeshCreator[] Creators =
         [
             CreatePlane,
             CreateCube,
@@ -23,12 +23,27 @@ namespace ContentTools
             CreateCapsule
         ];
 
-        private static void CreatePlane(Scene scene, PrimitiveInitInfo info)
+        public static IEnumerable<string> CreatePrimitiveMesh(GeometryImportSettings settings, PrimitiveInitInfo info, string destinationFolder = null)
+        {
+            Debug.Assert(settings != null && info != null);
+            Debug.Assert(info.Type < PrimitiveMeshType.Count);
+
+            Console.WriteLine($"Creating primitive {info.Type}.");
+
+            var scene = new Scene("PrimitiveMesh");
+            Creators[(int)info.Type](scene, info);
+
+            Geometry.ProcessScene(scene, settings);
+
+            yield return Assets.Create(scene, destinationFolder ?? Path.GetRandomFileName());
+        }
+
+        static void CreatePlane(Scene scene, PrimitiveInitInfo info)
         {
             var lod = new LODGroup { Name = "plane", Meshes = [CreatePlane(info)] };
             scene.LODGroups.Add(lod);
         }
-        private static Mesh CreatePlane(PrimitiveInitInfo info, int horizontalIndex = AxisX, int verticalIndex = AxisZ, bool flipWinding = false, Vector3 offset = default, Vector2 uRange = default, Vector2 vRange = default)
+        static Mesh CreatePlane(PrimitiveInitInfo info, int horizontalIndex = AxisX, int verticalIndex = AxisZ, bool flipWinding = false, Vector3 offset = default, Vector2 uRange = default, Vector2 vRange = default)
         {
             Debug.Assert(horizontalIndex < 3 && verticalIndex < 3);
             Debug.Assert(horizontalIndex != verticalIndex);
@@ -111,7 +126,7 @@ namespace ContentTools
             return mesh;
         }
 
-        private static Vector3 GetFaceVertex(uint face, float x, float y)
+        static Vector3 GetFaceVertex(uint face, float x, float y)
         {
             Vector3[] faceVertex =
             [
@@ -126,12 +141,12 @@ namespace ContentTools
             return faceVertex[face];
         }
 
-        private static void CreateCube(Scene scene, PrimitiveInitInfo info)
+        static void CreateCube(Scene scene, PrimitiveInitInfo info)
         {
             var lod = new LODGroup { Name = "cube", Meshes = [CreateCube(info)] };
             scene.LODGroups.Add(lod);
         }
-        private static Mesh CreateCube(PrimitiveInitInfo info)
+        static Mesh CreateCube(PrimitiveInitInfo info)
         {
             uint[] segments = info.Segments;
             int[][] axes = [[AxisZ, AxisY], [AxisX, AxisZ], [AxisX, AxisY]];
@@ -212,12 +227,12 @@ namespace ContentTools
             };
         }
 
-        private static void CreateUvSphere(Scene scene, PrimitiveInitInfo info)
+        static void CreateUvSphere(Scene scene, PrimitiveInitInfo info)
         {
             var lod = new LODGroup { Name = "uv-sphere", Meshes = [CreateUvSphere(info)] };
             scene.LODGroups.Add(lod);
         }
-        private static Mesh CreateUvSphere(PrimitiveInitInfo info)
+        static Mesh CreateUvSphere(PrimitiveInitInfo info)
         {
             uint phiCount = Math.Clamp(info.Segments[AxisX], 3, 64);
             uint thetaCount = Math.Clamp(info.Segments[AxisY], 2, 64);
@@ -358,29 +373,16 @@ namespace ContentTools
             return m;
         }
 
-        private static void CreateIcoSphere(Scene scene, PrimitiveInitInfo info)
+        static void CreateIcoSphere(Scene scene, PrimitiveInitInfo info)
         {
         }
 
-        private static void CreateCylinder(Scene scene, PrimitiveInitInfo info)
+        static void CreateCylinder(Scene scene, PrimitiveInitInfo info)
         {
         }
 
-        private static void CreateCapsule(Scene scene, PrimitiveInitInfo info)
+        static void CreateCapsule(Scene scene, PrimitiveInitInfo info)
         {
-        }
-
-        public static IEnumerable<string> CreatePrimitiveMesh(GeometryImportSettings settings, PrimitiveInitInfo info, string destinationFolder = null)
-        {
-            Debug.Assert(settings != null && info != null);
-            Debug.Assert(info.Type < PrimitiveMeshType.Count);
-
-            var scene = new Scene("PrimitiveMesh");
-            Creators[(int)info.Type](scene, info);
-
-            Geometry.ProcessScene(scene, settings);
-
-            yield return Assets.Create(scene, destinationFolder ?? Path.GetRandomFileName());
         }
     }
 }

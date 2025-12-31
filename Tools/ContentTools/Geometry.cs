@@ -57,6 +57,7 @@ namespace ContentTools
             {
                 var m = GetMesh();
                 uint index = m.Indices[faceIndex * 3 + vertIndex];
+
                 var v = m.Vertices[(int)index];
                 v.Tangent = new Vector4(tangent, sign);
                 m.Vertices[(int)index] = v;
@@ -286,7 +287,7 @@ namespace ContentTools
 
                 var e0 = v1 - v0;
                 var e1 = v2 - v0;
-                var n = Vector3.Cross(e0, e1);
+                var n = Vector3.Normalize(Vector3.Cross(e0, e1));
 
                 m.Normals[i + 0] = n;
                 m.Normals[i + 1] = n;
@@ -321,9 +322,9 @@ namespace ContentTools
                 for (uint j = 0; j < numRefs; j++)
                 {
                     uint jRef = refs[(int)j];
-                    Vertex v = new();
+
                     m.Indices[(int)jRef] = (uint)m.Vertices.Count;
-                    v.Position = m.Positions[m.RawIndices[jRef]];
+                    var p = m.Positions[m.RawIndices[jRef]];
                     var n1 = m.Normals[jRef];
 
                     if (!isHardEdge)
@@ -331,13 +332,11 @@ namespace ContentTools
                         for (uint k = j + 1; k < numRefs; k++)
                         {
                             uint kRef = refs[(int)k];
-                            float cosTheta = 0f; // this value represents the cosine of the angle between normals.
+
                             var n2 = m.Normals[kRef];
 
-                            if (!isSoftEdge)
-                            {
-                                cosTheta = Vector3.Dot(n1, n2) / n1.Length();
-                            }
+                            // this value represents the cosine of the angle between normals.
+                            float cosTheta = isSoftEdge ? 0f : Vector3.Dot(n1, n2) / n1.Length();
 
                             if (isSoftEdge || cosTheta >= cosAlpha)
                             {
@@ -350,9 +349,12 @@ namespace ContentTools
                             }
                         }
                     }
-                    v.Normal = Vector3.Normalize(n1);
 
-                    m.Vertices.Add(v);
+                    m.Vertices.Add(new()
+                    {
+                        Position = p,
+                        Normal = Vector3.Normalize(n1),
+                    });
                 }
             }
             Debug.Assert(m.Indices.Max() < m.Vertices.Count);

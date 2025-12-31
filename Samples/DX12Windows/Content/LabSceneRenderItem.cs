@@ -29,8 +29,8 @@ namespace DX12Windows.Content
         private const string envMapTexture = "../../../../../Assets/sunny_rose_garden_4k.hdr";
 
         private const string fanModelName = "fan_model.model";
-        private const string intModelName = "int_model.model";
         private const string labModelName = "lab_model.model";
+        private const string intModelName = "int_model.model";
         private const string fembotModelName = "fembot_model.model";
         private const string sphereModelName = "sphere_model.model";
 
