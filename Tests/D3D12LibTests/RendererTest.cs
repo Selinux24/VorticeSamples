@@ -27,7 +27,6 @@ namespace D3D12LibTests
         private static readonly EngineShaderInfo[] engineShaderFiles =
         [
             new ((int)EngineShaders.FullScreenTriangleVs, new (Path.Combine(shadersSourceDir, "FullScreenTriangle.hlsl"), "FullScreenTriangleVS", ShaderStage.Vertex)),
-            new ((int)EngineShaders.FillColorPs, new (Path.Combine(shadersSourceDir, "FillColor.hlsl"), "FillColorPS", ShaderStage.Pixel)),
             new ((int)EngineShaders.PostProcessPs, new (Path.Combine(shadersSourceDir, "PostProcess.hlsl"), "PostProcessPS", ShaderStage.Pixel)),
             new ((int)EngineShaders.GridFrustumsCs, new (Path.Combine(shadersSourceDir, "GridFrustums.hlsl"), "ComputeGridFrustumsCS", ShaderStage.Compute), ["-D", "TILE_SIZE=32"]),
             new ((int)EngineShaders.LightCullingCs, new (Path.Combine(shadersSourceDir, "CullLights.hlsl"), "CullLightsCS", ShaderStage.Compute), ["-D", "TILE_SIZE=32"]),

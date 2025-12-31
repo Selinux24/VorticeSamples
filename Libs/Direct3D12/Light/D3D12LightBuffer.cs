@@ -176,6 +176,7 @@ namespace Direct3D12.Light
 
                         Debug.Assert(i * Marshal.SizeOf<Shaders.LightParameters>() < neededLightBufferSize);
                         Debug.Assert(i * Marshal.SizeOf<Shaders.LightCullingLightInfo>() < neededCullingBufferSize);
+                        Debug.Assert(i * Marshal.SizeOf<Shaders.Sphere>() < neededSpheresBufferSize);
 
                         var cullableLight = set.CullableLights(i);
                         var cullingInfo = set.CullingInfo(i);

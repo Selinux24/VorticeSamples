@@ -28,10 +28,9 @@ namespace Direct3D12
             RootSignatureFlags.DenyPixelShaderRootAccess |
             RootSignatureFlags.DenyAmplificationShaderRootAccess |
             RootSignatureFlags.DenyMeshShaderRootAccess |
-            RootSignatureFlags.ConstantBufferViewShaderResourceViewUnorderedAccessViewHeapDirectlyIndexed |
-            RootSignatureFlags.SamplerHeapDirectlyIndexed;
+            RootSignatureFlags.ConstantBufferViewShaderResourceViewUnorderedAccessViewHeapDirectlyIndexed;
 
-        private readonly RootSignatureDescription1 desc = new(flags, parameters, staticSamplers);
+        readonly RootSignatureDescription1 desc = new(flags, parameters, staticSamplers);
 
         public readonly RootParameter1[] Parameters
         {

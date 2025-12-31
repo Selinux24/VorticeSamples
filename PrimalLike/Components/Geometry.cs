@@ -54,7 +54,7 @@ namespace PrimalLike.Components
             ownerIds.Add(IdDetail.Index(id));
             idMapping[(int)IdDetail.Index(id)] = index;
 
-            return new(entity.Id);
+            return new(id);
         }
         public static void Remove(GeometryComponent c)
         {

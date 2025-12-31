@@ -143,7 +143,7 @@ namespace Direct3D12
                     TextureAddressMode.Clamp,
                     0f,
                     1,
-                    ComparisonFunction.Always,
+                    ComparisonFunction.None,
                     new Color4(0f, 0f, 0f, 1f),
                     0f, float.MaxValue),
                 ShaderVisibility.Pixel, 0, 0);
@@ -155,7 +155,7 @@ namespace Direct3D12
                     TextureAddressMode.Clamp,
                     0f,
                     1,
-                    ComparisonFunction.Always,
+                    ComparisonFunction.None,
                     new Color4(0f, 0f, 0f, 1f),
                     0f, float.MaxValue),
                 ShaderVisibility.Pixel, 0, 0);
@@ -166,8 +166,8 @@ namespace Direct3D12
                     TextureAddressMode.Clamp,
                     TextureAddressMode.Clamp,
                     0f,
-                    1,
-                    ComparisonFunction.Always,
+                    16,
+                    ComparisonFunction.None,
                     new Color4(0f, 0f, 0f, 1f),
                     0f, float.MaxValue),
                 ShaderVisibility.Pixel, 0, 0);
