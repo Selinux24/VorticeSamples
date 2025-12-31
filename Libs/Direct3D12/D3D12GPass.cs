@@ -269,7 +269,6 @@ namespace Direct3D12
                         BaseColor = surface.BaseColor,
                         Emissive = surface.Emissive,
                         EmissiveIntensity = surface.EmissiveIntensity,
-                        AmbientOcclusion = surface.AmbientOcclusion,
                         Metallic = surface.Metallic,
                         Roughness = surface.Roughness,
                     };

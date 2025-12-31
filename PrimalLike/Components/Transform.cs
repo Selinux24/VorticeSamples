@@ -22,9 +22,9 @@ namespace PrimalLike.Components
 
         private static void CalculateTransformMatrices(IdType index)
         {
-            Debug.Assert(Rotations.Count >= index);
-            Debug.Assert(Positions.Count >= index);
-            Debug.Assert(Scales.Count >= index);
+            Debug.Assert(Rotations.Count > index);
+            Debug.Assert(Positions.Count > index);
+            Debug.Assert(Scales.Count > index);
 
             var r = Rotations[(int)index];
             var t = Positions[(int)index];

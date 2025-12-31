@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
+using System.Threading;
 using Utilities;
 using Vortice.Direct3D12;
 using D3DPrimitiveTopology = Vortice.Direct3D.PrimitiveTopology;
@@ -16,7 +17,7 @@ namespace Direct3D12.Content
         static readonly List<ID3D12RootSignature> rootSignatures = [];
         static readonly Dictionary<ulong, uint> mtlRsMap = []; // maps a material's type and shader flags to an index in the array of root signatures.
         static readonly FreeList<IntPtr> materials = new();
-        static readonly object materialMutex = new();
+        static readonly Lock materialMutex = new();
 
         public static bool Initialize()
         {

@@ -40,14 +40,14 @@ namespace Direct3D12.Content
             }
         }
         ///<summary>
-        ///NOTE: expects data to contain
-        ///struct {
-        ///    u32 width, height, array_size (or depth), flags, mip_levels, format,
-        ///    struct {
-        ///        u32 row_pitch, slice_pitch,
-        ///        u8 image[mip_level][slice_pitch * depth_per_mip],
-        ///    } images[]
-        ///} texture
+        /// NOTE: expects data to contain
+        /// struct {
+        ///  id::id_type*        texture_ids;
+        ///  material_surface    surface;
+        ///  material_type::type type,
+        ///  u32                 texture_count,
+        ///  id::id_type         shader_ids[shader_type::count],
+        /// } material_init_info
         ///</summary>
         private static D3D12Texture CreateResourceFromTextureData(IntPtr data)
         {

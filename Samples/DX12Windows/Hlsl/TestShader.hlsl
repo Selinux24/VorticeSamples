@@ -39,11 +39,11 @@ struct Surface
 #define ElementsTypeStaticNormalTexture         0x03
 #define ElementsTypeStaticColor                 0x04
 #define ElementsTypeSkeletal                    0x08
-#define ElementsTypeSkeletalColor               ElementsTypeSkeletal | ElementsTypeStaticColor
-#define ElementsTypeSkeletalNormal              ElementsTypeSkeletal | ElementsTypeStaticNormal
-#define ElementsTypeSkeletalNormalColor         ElementsTypeSkeletalNormal | ElementsTypeStaticColor
-#define ElementsTypeSkeletalNormalTexture       ElementsTypeSkeletal | ElementsTypeStaticNormalTexture
-#define ElementsTypeSkeletalNormalTextureColor  ElementsTypeSkeletalNormalTexture | ElementsTypeStaticColor
+#define ElementsTypeSkeletalColor               ElementsTypeSkeletal                | ElementsTypeStaticColor
+#define ElementsTypeSkeletalNormal              ElementsTypeSkeletal                | ElementsTypeStaticNormal
+#define ElementsTypeSkeletalNormalColor         ElementsTypeSkeletalNormal          | ElementsTypeStaticColor
+#define ElementsTypeSkeletalNormalTexture       ElementsTypeSkeletal                | ElementsTypeStaticNormalTexture
+#define ElementsTypeSkeletalNormalTextureColor  ElementsTypeSkeletalNormalTexture   | ElementsTypeStaticColor
 
 struct VertexElement
 {
@@ -274,10 +274,10 @@ float3 GetSpecularDominantDir(float3 N, float3 R, float roughness)
 float3 EvaluateIBL(Surface S)
 {
     const float NoV = saturate(S.NoV);
-    const float3 F90 = max((1.f - S.PerceptualRoughness), S.SpecularColor);
-    const float3 F = F_Schlick(NoV, S.SpecularColor, F90);
-
     const float roughness = S.PerceptualRoughness * S.PerceptualRoughness;
+    const float3 F0 = S.SpecularColor;
+    const float3 F90 = max(1.f - S.PerceptualRoughness, F0);
+    const float3 F = F_Schlick(NoV, F0, F90);
 
     AmbientLightParameters IBL = GlobalData.AmbientLight;
     float3 diffN = S.Normal;
@@ -285,12 +285,12 @@ float3 EvaluateIBL(Surface S)
     float3 specN = GetSpecularDominantDir(S.Normal, reflect(-S.V, S.Normal), roughness);
     float3 specularIBL = SampleCube(IBL.SpecularSrvIndex, LinearSampler, specN, S.PerceptualRoughness * 5.f).rgb;
     float2 BrdfLut = Sample(IBL.BrdfLutSrvIndex, LinearSampler, float2(NoV, S.PerceptualRoughness), 0).rg;
-    float3 specular = specularIBL * (S.SpecularStrength * S.SpecularColor * BrdfLut.x + F90 * BrdfLut.y);
+    float3 specular = specularIBL * (S.SpecularStrength * F0 * BrdfLut.x + F90 * BrdfLut.y);
 
     // NOTE: See "Practical multiple scattering compensation for microfacet models"
     //       https://blog.selfshadow.com/publications/turquin/ms_comp_final.pdf
     //       Eq. (16) with Ess == BrdfLut.x
-    float3 energyCompensation = 1.f + S.SpecularColor * (rcp(BrdfLut.x) - 1.f);
+    float3 energyCompensation = 1.f + F0 * (rcp(BrdfLut.x) - 1.f);
     specular *= energyCompensation;
 
     return  (diffuse + specular) * IBL.Intensity;
@@ -306,7 +306,7 @@ Surface GetSurface(VertexOut psIn, float3 V)
     S.PerceptualRoughness = PerObjectBuffer.Roughness;
     S.EmissiveColor = PerObjectBuffer.Emissive;
     S.EmissiveIntensity = PerObjectBuffer.EmissiveIntensity;
-    S.AmbientOcclusion = PerObjectBuffer.AmbientOcclusion;
+    S.AmbientOcclusion = 1.f;
 
 #if TEXTURED_MTL
     float2 uv = psIn.UV;

@@ -13,7 +13,6 @@ namespace Direct3D12.Shaders
         public Vector4 BaseColor;
         public Vector3 Emissive;
         public float EmissiveIntensity;
-        public float AmbientOcclusion;
         public float Metallic;
         public float Roughness;
     }
