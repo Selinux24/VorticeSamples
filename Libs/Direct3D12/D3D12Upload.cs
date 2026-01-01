@@ -17,11 +17,10 @@ namespace Direct3D12
 
             public void WaitAndReset()
             {
-                Debug.Assert(uploadFence != null && fenceEvent != null);
+                Debug.Assert(uploadFence != null);
                 if (uploadFence.CompletedValue < FenceValue)
                 {
-                    D3D12Helpers.DxCall(uploadFence.SetEventOnCompletion(FenceValue, fenceEvent));
-                    fenceEvent.WaitOne();
+                    D3D12Helpers.DxCall(uploadFence.SetEventOnCompletion(FenceValue));
                 }
 
                 UploadBuffer?.Dispose();
@@ -111,7 +110,6 @@ namespace Direct3D12
         private static ID3D12CommandQueue uploadCmdQueue = null;
         private static ID3D12Fence1 uploadFence = null;
         private static ulong uploadFenceValue = 0;
-        private static AutoResetEvent fenceEvent = null;
         private static readonly object frameMutex = new();
         private static readonly object queueMutex = new();
 
@@ -162,13 +160,6 @@ namespace Direct3D12
             }
             D3D12Helpers.NameD3D12Object(uploadFence, "Upload Fence");
 
-            fenceEvent = new AutoResetEvent(false);
-            Debug.Assert(fenceEvent != null);
-            if (fenceEvent == null)
-            {
-                return InitFailed();
-            }
-
             return true;
         }
         public static void Shutdown()
@@ -176,12 +167,6 @@ namespace Direct3D12
             for (int i = 0; i < UploadFrameCount; i++)
             {
                 uploadFrames[i].Release();
-            }
-
-            if (fenceEvent != null)
-            {
-                fenceEvent.Dispose();
-                fenceEvent = null;
             }
 
             uploadCmdQueue.Dispose();

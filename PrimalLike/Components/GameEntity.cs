@@ -85,6 +85,56 @@ namespace PrimalLike.Components
                 freeIds.Enqueue(id);
             }
         }
+        public static bool UpdateComponent(EntityId id, EntityInfo info, ComponentTypes type)
+        {
+            Debug.Assert(IsAlive(id) && type != ComponentTypes.Transform);
+            if (type == ComponentTypes.Transform) return false;
+            Entity entity = new(id);
+            IdType index = IdDetail.Index(id);
+
+            if (type == ComponentTypes.Script)
+            {
+                if (Scripts[(int)index].IsValid())
+                {
+                    Script.Remove(Scripts[(int)index]);
+                    Scripts[(int)index] = new();
+                }
+
+                if (info.Script?.ScriptCreator != null)
+                {
+                    ScriptComponent newScript = Script.Create(info.Script.Value, entity);
+                    Debug.Assert(newScript.IsValid());
+
+                    if (newScript.IsValid())
+                    {
+                        Scripts[(int)index] = newScript;
+                        return true;
+                    }
+                }
+            }
+            else if (type == ComponentTypes.Geometry)
+            {
+                if (Geometries[(int)index].IsValid())
+                {
+                    Geometry.Remove(Geometries[(int)index]);
+                    Geometries[(int)index] = new();
+                }
+
+                if (info.Geometry != null)
+                {
+                    GeometryComponent newGeometry = Geometry.Create(info.Geometry.Value, entity);
+                    Debug.Assert(newGeometry.IsValid());
+
+                    if (newGeometry.IsValid())
+                    {
+                        Geometries[(int)index] = newGeometry;
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
         public static bool IsAlive(EntityId id)
         {
             Debug.Assert(IdDetail.IsValid(id), "The entity id is not valid.");

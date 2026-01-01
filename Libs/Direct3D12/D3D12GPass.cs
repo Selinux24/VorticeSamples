@@ -77,13 +77,11 @@ namespace Direct3D12
                 ulong itemsCount = (ulong)D3D12RenderItemIds.Length;
                 ulong newBufferSize = itemsCount * (ulong)StructSize;
                 ulong oldBufferSize = (ulong)buffer.Length;
-                if (newBufferSize > oldBufferSize)
-                {
-                    Array.Resize(ref buffer, (int)newBufferSize);
-                }
 
                 if (newBufferSize != oldBufferSize)
                 {
+                    Array.Resize(ref buffer, (int)newBufferSize);
+
                     EntityIds = new uint[itemsCount];
                     SubmeshGpuIds = new uint[itemsCount];
                     MaterialIds = new uint[itemsCount];
@@ -230,7 +228,7 @@ namespace Direct3D12
                 D3D12TextureInitInfo info = new()
                 {
                     Desc = ResourceDescription.Texture2D(DepthBufferFormat, width, height, 1, 1, flags: ResourceFlags.AllowDepthStencil),
-                    InitialState = ResourceStates.DepthRead | ResourceStates.PixelShaderResource | ResourceStates.NonPixelShaderResource,
+                    InitialState = ResourceStates.DepthRead | ResourceStates.NonPixelShaderResource,
                     ClearValue = new(DepthBufferFormat, 0f, 0),
                 };
 
@@ -371,7 +369,7 @@ namespace Direct3D12
         public static void DepthPrePass(ID3D12GraphicsCommandList cmdList, ref D3D12FrameInfo d3d12Info)
         {
             PrepareRenderFrame(ref d3d12Info);
-            
+
             uint itemsCount = frameCache.Size();
 
             ID3D12RootSignature currentRootSignature = null;
@@ -452,7 +450,7 @@ namespace Direct3D12
 
             barriers.AddTransitionBarrier(
                 gpassDepthBuffer.GetResource(),
-                ResourceStates.DepthRead | ResourceStates.PixelShaderResource | ResourceStates.NonPixelShaderResource,
+                ResourceStates.DepthRead | ResourceStates.NonPixelShaderResource,
                 ResourceStates.DepthWrite);
         }
         public static void AddTransitionsForGPass(D3D12ResourceBarrier barriers)
@@ -466,7 +464,7 @@ namespace Direct3D12
             barriers.AddTransitionBarrier(
                 gpassDepthBuffer.GetResource(),
                 ResourceStates.DepthWrite,
-                ResourceStates.DepthRead | ResourceStates.PixelShaderResource | ResourceStates.NonPixelShaderResource);
+                ResourceStates.DepthRead | ResourceStates.NonPixelShaderResource);
         }
         public static void AddTransitionsForPostProcess(D3D12ResourceBarrier barriers)
         {

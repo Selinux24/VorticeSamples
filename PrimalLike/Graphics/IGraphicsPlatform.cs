@@ -17,6 +17,14 @@ namespace PrimalLike.Graphics
         /// </summary>
         void Shutdown();
         /// <summary>
+        /// Sets a renderer option.
+        /// </summary>
+        void SetOption<T>(RendererOption option, T parameter);
+        /// <summary>
+        /// Gets a renderer option vale.
+        /// </summary>
+        T GetOption<T>(RendererOption option);
+        /// <summary>
         /// Gets the engine shaders path.
         /// </summary>
         string GetEngineShaderPath();

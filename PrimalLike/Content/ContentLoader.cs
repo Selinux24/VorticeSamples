@@ -1,6 +1,5 @@
 ﻿using PrimalLike.Components;
 using PrimalLike.EngineAPI;
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -11,17 +10,12 @@ namespace PrimalLike.Content
 {
     static class ContentLoader
     {
-        enum ComponentType
-        {
-            Transform,
-            Script,
-        }
-
         delegate bool ComponentReader(BinaryReader reader, ref EntityInfo info);
         static readonly ComponentReader[] componentReaders =
         [
             ReadTransform,
             ReadScript,
+            ReadGeometry,
         ];
 
         static readonly List<Entity> entities = [];
@@ -95,7 +89,7 @@ namespace PrimalLike.Content
         {
             int componentSize = reader.ReadInt32();
             long position = reader.BaseStream.Position;
-            
+
             string scriptName = Encoding.UTF8.GetString(reader.ReadBytes(componentSize));
 
             ScriptInfo script = new()
@@ -108,6 +102,10 @@ namespace PrimalLike.Content
             info.Script = script;
 
             return true;
+        }
+        private static bool ReadGeometry(BinaryReader reader, ref EntityInfo info)
+        {
+            return false;
         }
 
         public static bool LoadEngineShaders(string path, out byte[] shaders)

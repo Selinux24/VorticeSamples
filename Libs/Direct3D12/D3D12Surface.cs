@@ -27,8 +27,6 @@ namespace Direct3D12
         private readonly RenderTargetData[] renderTargetData = new RenderTargetData[BufferCount];
         private readonly Window window;
         private uint currentBbIndex = 0;
-        private readonly uint allowTearing = 0;
-        private PresentFlags presentFlags = 0;
         private Viewport viewport;
         private RectI scissorRect;
         private uint lightCullingId = uint.MaxValue;
@@ -119,6 +117,10 @@ namespace Direct3D12
 
             return format;
         }
+        private static SwapChainFlags GetFlags()
+        {
+            return D3D12Graphics.AllowTearing() ? SwapChainFlags.AllowTearing : SwapChainFlags.None;
+        }
 
         /// <summary>
         /// Creates a swap chain.
@@ -133,17 +135,12 @@ namespace Direct3D12
 
             uint frameBufferCount = BufferCount;
 
-            if (factory.CheckFeatureSupport(Vortice.DXGI.Feature.PresentAllowTearing, allowTearing) && allowTearing != 0)
-            {
-                presentFlags = PresentFlags.AllowTearing;
-            }
-
             SwapChainDescription1 desc = new()
             {
                 AlphaMode = AlphaMode.Unspecified,
                 BufferCount = frameBufferCount,
                 BufferUsage = Usage.RenderTargetOutput,
-                Flags = allowTearing != 0 ? SwapChainFlags.AllowTearing : 0,
+                Flags = GetFlags(),
                 Format = ToNonSrgb(DefaultBackBufferFormat),
                 Height = window.Height,
                 Width = window.Width,
@@ -205,7 +202,16 @@ namespace Direct3D12
         public void Present()
         {
             Debug.Assert(swapChain != null);
-            swapChain.Present(0, presentFlags);
+
+            uint syncInterval = 0u;
+            var presentFlags = PresentFlags.AllowTearing;
+            if (D3D12Graphics.VSyncEnabled())
+            {
+                syncInterval = 1u;
+                presentFlags = PresentFlags.None;
+            }
+
+            swapChain.Present(syncInterval, presentFlags);
             currentBbIndex = swapChain.CurrentBackBufferIndex;
         }
         /// <summary>
@@ -221,7 +227,7 @@ namespace Direct3D12
                 renderTargetData[i].Resource = null;
             }
 
-            SwapChainFlags flags = allowTearing != 0 ? SwapChainFlags.AllowTearing : 0;
+            SwapChainFlags flags = GetFlags();
             swapChain.ResizeBuffers(BufferCount, 0, 0, Format.Unknown, flags);
             currentBbIndex = swapChain.CurrentBackBufferIndex;
 

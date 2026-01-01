@@ -22,6 +22,16 @@ namespace Direct3D12
             D3D12Graphics.Shutdown();
         }
         /// <inheritdoc/>
+        public void SetOption<T>(RendererOption option, T parameter)
+        {
+            D3D12Graphics.SetOption(option, parameter);
+        }
+        /// <inheritdoc/>
+        public T GetOption<T>(RendererOption option)
+        {
+            return D3D12Graphics.GetOption<T>(option);
+        }
+        /// <inheritdoc/>
         public string GetEngineShaderPath()
         {
             return D3D12Graphics.GetEngineShaderPath();
@@ -58,11 +68,12 @@ namespace Direct3D12
             D3D12Graphics.RenderSurface(id, info);
         }
 
-
+        /// <inheritdoc/>
         public void CreateLightSet(ulong lightSetKey)
         {
             D3D12Light.CreateLightSet(lightSetKey);
         }
+        /// <inheritdoc/>
         public void RemoveLightSet(ulong lightSetKey)
         {
             D3D12Light.RemoveLightSet(lightSetKey);

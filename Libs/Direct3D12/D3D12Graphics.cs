@@ -27,6 +27,13 @@ namespace Direct3D12
     /// </summary>
     static class D3D12Graphics
     {
+        struct Option()
+        {
+            public bool EnableVsync = true;
+            public bool EnableDxr = false;
+            public uint MSAASamples = 1;
+        }
+
         /// <summary>
         /// Gets or sets the number of frame buffers.
         /// </summary>
@@ -56,8 +63,11 @@ namespace Direct3D12
         private static readonly DescriptorHeap uavDescHeap = new(DescriptorHeapType.ConstantBufferViewShaderResourceViewUnorderedAccessView);
 
         private static readonly List<IUnknown>[] deferredReleases = new List<IUnknown>[FrameBufferCount];
-        private static readonly bool[] deferredReleasesFlags = new bool[FrameBufferCount];
+        private static readonly int[] deferredReleasesFlags = new int[FrameBufferCount];
         private static readonly Lock deferredReleasesMutex = new();
+
+        private static bool tearingIsSupported = false;
+        private static Option options = new();
 
         /// <summary>
         /// Gets the main D3D12 device.
@@ -106,9 +116,20 @@ namespace Direct3D12
         /// <summary>
         /// Sets the deferred releases flag.
         /// </summary>
-        public static void SetDeferredReleasesFlag()
+        public static void SetDeferredReleasesFlag(int frameIdx)
         {
-            deferredReleasesFlags[CurrentFrameIndex] = true;
+            lock (deferredReleasesMutex)
+            {
+                deferredReleasesFlags[frameIdx] = 1;
+            }
+        }
+        public static bool AllowTearing()
+        {
+            return tearingIsSupported;
+        }
+        public static bool VSyncEnabled()
+        {
+            return options.EnableVsync;
         }
 
         /// <inheritdoc/>
@@ -145,6 +166,14 @@ namespace Direct3D12
             {
                 return FailedInit();
             }
+
+            tearingIsSupported = false;
+
+#if true
+            dxgiFactory.CheckFeatureSupport(Vortice.DXGI.Feature.PresentAllowTearing, tearingIsSupported);
+#else
+#pragma message("TEARING SUPPORT HAS BEEN DISABLED IN D3D12CORE::INITIALIZE()!")
+#endif
 
             mainAdapter = DetermineMainAdapter();
             if (mainAdapter == null)
@@ -217,7 +246,7 @@ namespace Direct3D12
             //       their depending resources are released.
             for (int i = 0; i < FrameBufferCount; i++)
             {
-                ProcessDeferredReleases(i);
+                ProcessDeferredReleases(i, true);
             }
 
             // shutdown modules
@@ -251,7 +280,7 @@ namespace Direct3D12
             // NOTE: some types only use deferred release for their resources during
             //       shutdown/reset/clear. To finally release these resources we call
             //       process_deferred_releases once more.
-            ProcessDeferredReleases(0);
+            ProcessDeferredReleases(0, true);
 
             gfxCommand?.Dispose();
             gfxCommand = null;
@@ -342,14 +371,16 @@ namespace Direct3D12
 
             return device.CheckMaxSupportedFeatureLevel(featureLevels);
         }
-        private static void ProcessDeferredReleases(int frameIdx)
+        private static void ProcessDeferredReleases(int frameIdx, bool forceRelease = false)
         {
             lock (deferredReleasesMutex)
             {
-                // NOTE: we clear this flag in the beginning. If we'd clear it at the end
-                //       then it might overwrite some other thread that was trying to set it.
-                //       It's fine if overwriting happens before processing the items.
-                deferredReleasesFlags[frameIdx] = false;
+                // NOTE: The resources could still be in use in previous frames. So we wait
+                //       another round before releasing the resources.
+                //      force_release is used during shutdown, where we don't have to wait.
+                if (!forceRelease && ++deferredReleasesFlags[frameIdx] < FrameBufferCount) return;
+
+                deferredReleasesFlags[frameIdx] = 0;
 
                 rtvDescHeap.ProcessDeferredFree(frameIdx);
                 dsvDescHeap.ProcessDeferredFree(frameIdx);
@@ -371,20 +402,17 @@ namespace Direct3D12
         }
         public static void DeferredRelease(IUnknown resource)
         {
-            if (resource == null)
-            {
-                return;
-            }
+            if (resource == null) return;
 
             int frameIdx = CurrentFrameIndex;
             lock (deferredReleasesMutex)
             {
                 deferredReleases[frameIdx].Add(resource);
-                SetDeferredReleasesFlag();
+                deferredReleasesFlags[frameIdx] = 1;
             }
         }
 
-        private static D3D12FrameInfo GetD3D12FrameInfo(FrameInfo info, D3D12Surface surface, uint frameIdx, float deltaTime)
+        private static D3D12FrameInfo GetD3D12FrameInfo(FrameInfo info, D3D12Surface surface, uint frameIdx)
         {
             var camera = D3D12Camera.Get(info.CameraId);
             camera.Update();
@@ -401,7 +429,7 @@ namespace Direct3D12
                 ViewWidth = surface.GetViewport().Width,
                 ViewHeight = surface.GetViewport().Height,
                 NumDirectionalLights = D3D12Light.NonCullableLightCount(info.LightSetKey),
-                DeltaTime = deltaTime,
+                DeltaTime = info.AverageFrameTime,
                 AmbientLight = D3D12Light.AmbientLight(info.LightSetKey),
             };
 
@@ -416,7 +444,6 @@ namespace Direct3D12
                 SurfaceHeight = surface.Height,
                 LightCullingId = surface.LightCullingId,
                 FrameIndex = frameIdx,
-                DeltaTime = deltaTime
             };
         }
 
@@ -462,13 +489,13 @@ namespace Direct3D12
             // Reset (clear) the global constant buffer for the current frame.
             CBuffer.Clear();
 
-            if (deferredReleasesFlags[frameIdx])
+            if (deferredReleasesFlags[frameIdx] != 0)
             {
                 ProcessDeferredReleases(frameIdx);
             }
 
             var surface = surfaces[id];
-            var d3d12Info = GetD3D12FrameInfo(info, surface, (uint)frameIdx, 16.7f);
+            var d3d12Info = GetD3D12FrameInfo(info, surface, (uint)frameIdx);
 
             D3D12GPass.SetSize(d3d12Info.SurfaceWidth, d3d12Info.SurfaceHeight);
 
@@ -491,9 +518,9 @@ namespace Direct3D12
             D3D12GPass.DepthPrePass(cmdList, ref d3d12Info);
 
             // Geometry and lighting pass
+            D3D12GPass.AddTransitionsForGPass(resourceBarriers);
             D3D12Light.UpdateLightBuffers(ref d3d12Info);
             D3D12LightCulling.CullLights(cmdList, ref d3d12Info, resourceBarriers);
-            D3D12GPass.AddTransitionsForGPass(resourceBarriers);
             resourceBarriers.Apply(cmdList);
             D3D12GPass.SetRenderTargetsForGPass(cmdList);
             D3D12GPass.Render(cmdList, ref d3d12Info);
@@ -525,6 +552,49 @@ namespace Direct3D12
 #endif
         }
 
+        public static void SetOption<T>(RendererOption option, T parameter)
+        {
+            Debug.Assert(parameter != null);
+
+            switch (option)
+            {
+                case RendererOption.VSync:
+                    Debug.Assert(parameter is bool);
+                    options.EnableVsync = (bool)(object)parameter || tearingIsSupported;
+                    break;
+                case RendererOption.RayTracing:
+                    Debug.Assert(parameter is bool);
+                    options.EnableDxr = (bool)(object)parameter;
+                    break;
+                case RendererOption.MSAA:
+                    Debug.Assert(parameter is uint);
+                    uint msaaSamples = (uint)(object)parameter;
+                    if (msaaSamples == 1 || msaaSamples == 2 || msaaSamples == 4 || msaaSamples == 8)
+                    {
+                        options.MSAASamples = msaaSamples;
+                    }
+                    break;
+                default:
+                    break;
+            }
+        }
+        public static T GetOption<T>(RendererOption option)
+        {
+            switch (option)
+            {
+                case RendererOption.VSync:
+                    Debug.Assert(typeof(T) == typeof(bool));
+                    return (T)(object)options.EnableVsync;
+                case RendererOption.RayTracing:
+                    Debug.Assert(typeof(T) == typeof(bool));
+                    return (T)(object)options.EnableDxr;
+                case RendererOption.MSAA:
+                    Debug.Assert(typeof(T) == typeof(uint));
+                    return (T)(object)options.MSAASamples;
+                default:
+                    return default;
+            }
+        }
 
 #if DEBUG
 

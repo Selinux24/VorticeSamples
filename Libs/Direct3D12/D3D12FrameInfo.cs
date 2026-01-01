@@ -11,6 +11,5 @@ namespace Direct3D12
         public uint SurfaceHeight = 0;
         public uint LightCullingId = uint.MaxValue;
         public uint FrameIndex = 0;
-        public float DeltaTime = 16.7f;
     }
 }

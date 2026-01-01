@@ -7,6 +7,7 @@ using PrimalLike.Platform;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace PrimalLike
@@ -24,7 +25,7 @@ namespace PrimalLike
         private static readonly List<RenderComponent> renderSurfaces = [];
 
         private readonly Time time = new();
-        private readonly object tickLock = new();
+        private readonly Lock tickLock = new();
         private readonly string contentFilename;
 
         public event EventHandler OnInitialize;

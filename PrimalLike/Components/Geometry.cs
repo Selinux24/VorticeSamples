@@ -9,8 +9,8 @@ namespace PrimalLike.Components
 {
     public static class Geometry
     {
-        private static readonly List<uint> activeLod = [];
         private static readonly List<IdType> renderItemIds = [];
+        private static readonly List<EntityId> owningEntityIds = [];
         private static readonly List<GeometryId> ownerIds = [];
         private static readonly List<IdType> idMapping = [];
         private static readonly List<GenerationType> generations = [];
@@ -49,9 +49,9 @@ namespace PrimalLike.Components
 
             Debug.Assert(IdDetail.IsValid(id));
             IdType index = (IdType)renderItemIds.Count;
-            activeLod.Add(0);
             renderItemIds.Add(AddRenderItem(entity.Id, info));
             ownerIds.Add(IdDetail.Index(id));
+            owningEntityIds.Add(entity.Id);
             idMapping[(int)IdDetail.Index(id)] = index;
 
             return new(id);
@@ -63,8 +63,8 @@ namespace PrimalLike.Components
             IdType index = idMapping[(int)IdDetail.Index(id)];
             GeometryId last_id = ownerIds[^1];
             Renderer.RemoveRenderItem(renderItemIds[(int)index]);
-            activeLod[(int)index] = activeLod[^1];
             renderItemIds[(int)index] = renderItemIds[^1];
+            owningEntityIds[(int)index] = owningEntityIds[^1];
             ownerIds[(int)index] = last_id;
             idMapping[(int)IdDetail.Index(last_id)] = index;
             idMapping[(int)IdDetail.Index(id)] = IdDetail.InvalidId;
@@ -77,6 +77,32 @@ namespace PrimalLike.Components
         public static IdType[] GetRenderItemIds()
         {
             return [.. renderItemIds];
+        }
+        public static IdType[] GetRenderItemIds(IdType[] geometryIds)
+        {
+            IdType[] itemids = new IdType[geometryIds.Length];
+            for (uint i = 0; i < geometryIds.Length; i++)
+            {
+                GeometryId id = geometryIds[i];
+                Debug.Assert(IdDetail.IsValid(id) && Exists(id));
+                IdType index = idMapping[(int)IdDetail.Index(id)];
+                Debug.Assert(index < renderItemIds.Count && IdDetail.IsValid(renderItemIds[(int)index]));
+                itemids[i] = renderItemIds[(int)index];
+            }
+            return itemids;
+        }
+        public static IdType[] GetEntityIds(IdType[] geometryIds)
+        {
+            IdType[] entityIds = new IdType[geometryIds.Length];
+            for (uint i = 0; i < geometryIds.Length; i++)
+            {
+                GeometryId id = geometryIds[i];
+                Debug.Assert(IdDetail.IsValid(id) && Exists(id));
+                IdType index = idMapping[(int)IdDetail.Index(id)];
+                Debug.Assert(index < owningEntityIds.Count && IdDetail.IsValid(owningEntityIds[(int)index]));
+                entityIds[i] = owningEntityIds[(int)index];
+            }
+            return entityIds;
         }
 
         private static IdType AddRenderItem(EntityId entityId, GeometryInfo geometryInfo)

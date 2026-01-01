@@ -27,6 +27,15 @@ namespace PrimalLike.Graphics
             gfx.Shutdown();
         }
 
+        public static void SetOption<T>(RendererOption option, T parameter)
+        {
+            gfx.SetOption(option, parameter);
+        }
+        public static T GetOption<T>(RendererOption option)
+        {
+            return gfx.GetOption<T>(option);
+        }
+
         public static string GetEngineShaderPath()
         {
             return gfx.GetEngineShaderPath();

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Threading;
 using Vortice.Direct3D12;
 
 namespace Direct3D12
@@ -55,9 +54,9 @@ namespace Direct3D12
             /// </summary>
             /// <param name="fenceEvent">Fence event</param>
             /// <param name="fence">Fence</param>
-            public void Wait(AutoResetEvent fenceEvent, ID3D12Fence1 fence)
+            public void Wait(ID3D12Fence1 fence)
             {
-                Debug.Assert(fenceEvent != null && fence != null);
+                Debug.Assert(fence != null);
 
                 // If the current fence value is still less than "fence_value"
                 // then we know the GPU has not finished executing the command lists
@@ -67,12 +66,12 @@ namespace Direct3D12
                     return;
                 }
 
-                // We have the fence create an event wich is singaled once the fence's current value equals "fence_value"
-                fence.SetEventOnCompletion(FenceValue, fenceEvent).CheckError();
+                // We have the fence create an event which is signaled once the fence's current value equals "fence_value"
+                fence.SetEventOnCompletion(FenceValue, null).CheckError();
 
                 // Wait until the fence has triggered the event that its current value has reached "fence_value"
                 // indicating that command queue has finished executing.
-                fenceEvent.WaitOne();
+                D3D12Helpers.DxCall(fence.SetEventOnCompletion(FenceValue, null));
             }
         }
 
@@ -80,7 +79,6 @@ namespace Direct3D12
         private readonly D3D12GraphicsCommandList cmdList;
         private readonly ID3D12Fence1 fence;
         private ulong fenceValue = 0;
-        private AutoResetEvent fenceEvent;
 
         private readonly int frameBufferCount;
         private readonly CommandFrame[] cmdFrames;
@@ -152,13 +150,6 @@ namespace Direct3D12
                 Release();
             }
             D3D12Helpers.NameD3D12Object(fence, "D3D12 Fence");
-
-            fenceEvent = new AutoResetEvent(false);
-            Debug.Assert(fenceEvent != null);
-            if (fenceEvent == null)
-            {
-                Release();
-            }
         }
         ~D3D12Command()
         {
@@ -184,10 +175,6 @@ namespace Direct3D12
             fence?.Dispose();
             fenceValue = 0;
 
-            fenceEvent.Close();
-            fenceEvent.Dispose();
-            fenceEvent = null;
-
             cmdQueue.Dispose();
             cmdList.Dispose();
 
@@ -198,15 +185,21 @@ namespace Direct3D12
             }
         }
 
+        /// <summary>
+        /// Wait for the current frame to be signaled and reset the command list/allocator.
+        /// </summary>
         public ID3D12GraphicsCommandList6 BeginFrame()
         {
             var frame = cmdFrames[frameIndex];
-            frame.Wait(fenceEvent, fence);
+            frame.Wait(fence);
             frame.CmdAllocator.Reset();
             cmdList.Reset(frame.CmdAllocator, null);
 
             return cmdList;
         }
+        /// <summary>
+        /// Signal the fence with the new fence value.
+        /// </summary>
         public void EndFrame(D3D12Surface surface)
         {
             cmdList.Close();
@@ -224,7 +217,7 @@ namespace Direct3D12
         {
             for (int i = 0; i < frameBufferCount; i++)
             {
-                cmdFrames[i].Wait(fenceEvent, fence);
+                cmdFrames[i].Wait(fence);
             }
             frameIndex = 0;
         }
