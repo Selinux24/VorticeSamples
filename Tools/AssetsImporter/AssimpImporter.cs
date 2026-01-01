@@ -113,11 +113,6 @@ namespace AssetsImporter
                 {
                     lod.Name = lod.Meshes[0].Name;
 
-                    if (Geometry.CoalesceMeshes(lod, progression, out var combinedMesh))
-                    {
-                        lod.Meshes.Clear();
-                        lod.Meshes.Add(combinedMesh);
-                    }
                     scene.LODGroups.Add(lod);
                 }
             }
