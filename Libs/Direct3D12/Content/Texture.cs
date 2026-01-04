@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading;
 using Utilities;
 using Vortice.Direct3D12;
 using Vortice.DXGI;
@@ -16,7 +17,7 @@ namespace Direct3D12.Content
     {
         static readonly FreeList<D3D12Texture> textures = new();
         static readonly FreeList<uint> descriptorIndices = new();
-        static readonly object textureMutex = new();
+        static readonly Lock textureMutex = new();
 
         public static bool Initialize()
         {

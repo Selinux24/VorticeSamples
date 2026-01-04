@@ -1,16 +1,16 @@
 ﻿using AssetsImporter;
+using DX12Windows.Assets;
+using DX12Windows.Lights;
 using DX12Windows.Shaders;
-using PrimalLike;
 using PrimalLike.Common;
 using PrimalLike.Components;
 using PrimalLike.Content;
 using PrimalLike.Graphics;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Numerics;
-using System.Threading;
+using TexturesImporter;
 using Vortice.Mathematics;
 
 namespace DX12Windows.Content
@@ -18,10 +18,21 @@ namespace DX12Windows.Content
     class ToyTankRenderItem : ITestRenderItem
     {
         private const string modelToyTank = "../../../../../Assets/ToyTank.fbx";
+        private const string envMapTexture = "../../../../../Assets/belfast_sunset_puresky_4k.hdr";
 
         private const string modelName = "toytank_model.model";
+
+        private const string iblBrdfLutTextureName = "ibl/brdf_lut.texture";
+        private const string iblDiffuseTextureName = "ibl/set2/diffuse.texture";
+        private const string iblSpecularTextureName = "ibl/set2/specular.texture";
+
         private uint modelId = uint.MaxValue;
         private uint entityId = uint.MaxValue;
+
+        private uint iblBrdfLutId = uint.MaxValue;
+        private uint iblDiffuseId = uint.MaxValue;
+        private uint iblSpecularId = uint.MaxValue;
+
         private uint mtlId = uint.MaxValue;
 
         public Vector3 InitialCameraPosition { get; } = new(0, 0.2f, -3f);
@@ -49,13 +60,26 @@ namespace DX12Windows.Content
                 }
             }
 
+            using TextureImporter importer = new();
+            string brdfLutPath = Path.Combine(outputsFolder, iblBrdfLutTextureName);
+            string diffusePath = Path.Combine(outputsFolder, iblDiffuseTextureName);
+            string specularPath = Path.Combine(outputsFolder, iblSpecularTextureName);
+            Importer.ImportEnvironmentMapTexture(importer, envMapTexture, brdfLutPath, diffusePath, specularPath);
+
             CreateRenderItems(outputsFolder);
         }
         private void CreateRenderItems(string outputsFolder)
         {
             Utils.Run(
                 new(() => { modelId = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, modelName)); }),
+
+                new(() => { iblBrdfLutId = ITestRenderItem.LoadTexture(Path.Combine(outputsFolder, iblBrdfLutTextureName)); }),
+                new(() => { iblDiffuseId = ITestRenderItem.LoadTexture(Path.Combine(outputsFolder, iblDiffuseTextureName)); }),
+                new(() => { iblSpecularId = ITestRenderItem.LoadTexture(Path.Combine(outputsFolder, iblSpecularTextureName)); }),
+
                 new(TestShaders.LoadShaders));
+
+            LightGenerator.CreateIblLight(iblBrdfLutId, iblDiffuseId, iblSpecularId);
 
             // NOTE: we need shaders to be ready before creating materials
             CreateMaterial();
@@ -63,9 +87,8 @@ namespace DX12Windows.Content
             GeometryInfo geometryInfo = new()
             {
                 GeometryContentId = modelId,
-                MaterialIds = [mtlId],
+                MaterialIds = [mtlId]
             };
-
             entityId = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, Quaternion.CreateFromYawPitchRoll(MathHelper.PiOver4, -MathHelper.PiOver2, 0f), 25f, geometryInfo).Id;
         }
         private void CreateMaterial()
@@ -78,7 +101,7 @@ namespace DX12Windows.Content
             info.Type = MaterialTypes.Opaque;
 
             info.Surface.BaseColor = new(0.5f, 1f, 0.5f, 1f);
-            info.Surface.Roughness = 0.5f;
+            info.Surface.Roughness = 0.2f;
             info.Surface.Metallic = 1.0f;
 
             mtlId = ContentToEngine.CreateResource(info, AssetTypes.Material);
@@ -94,6 +117,21 @@ namespace DX12Windows.Content
             if (IdDetail.IsValid(mtlId))
             {
                 ContentToEngine.DestroyResource(mtlId, AssetTypes.Material);
+            }
+
+            if (IdDetail.IsValid(iblBrdfLutId))
+            {
+                ContentToEngine.DestroyResource(iblBrdfLutId, AssetTypes.Texture);
+            }
+
+            if (IdDetail.IsValid(iblDiffuseId))
+            {
+                ContentToEngine.DestroyResource(iblDiffuseId, AssetTypes.Texture);
+            }
+
+            if (IdDetail.IsValid(iblSpecularId))
+            {
+                ContentToEngine.DestroyResource(iblSpecularId, AssetTypes.Texture);
             }
 
             // remove shaders and textures

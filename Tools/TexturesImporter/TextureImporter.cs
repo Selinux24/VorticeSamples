@@ -4,24 +4,77 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Net;
 using System.Runtime.InteropServices;
 using TexturesImporter.EnvMaps;
 using Utilities;
 
 namespace TexturesImporter
 {
-    public static class TextureImporter
+    static class TextureImporterExtents
+    {
+        public static void WriteImageAsset(this BlobStreamWriter blob, ScratchImage scratch)
+        {
+            int imageCount = scratch.GetImageCount();
+
+            for (int i = 0; i < imageCount; i++)
+            {
+                blob.WriteImageAsset(scratch.GetImage(i));
+            }
+        }
+        public static void WriteImageAsset(this BlobStreamWriter blob, Image image)
+        {
+            Debug.Assert(image.SlicePitch <= int.MaxValue);
+
+            blob.Write(image.Width);
+            blob.Write(image.Height);
+            blob.Write((uint)image.RowPitch);
+            blob.Write((uint)image.SlicePitch);
+            blob.Write(image.Pixels, (int)image.SlicePitch);
+        }
+        public static Image ReadImageAsset(this BlobStreamReader blob, DXGI_FORMAT format)
+        {
+            int width = blob.Read<int>();
+            int height = blob.Read<int>();
+            uint rowPitch = blob.Read<uint>();
+            uint slicePitch = blob.Read<uint>();
+            IntPtr pixels = blob.Position;
+
+            Image image = new(width, height, format, rowPitch, slicePitch, pixels, null);
+
+            blob.Skip(slicePitch);
+
+            return image;
+        }
+    }
+
+    public class TextureImporter() : IDisposable
     {
         const int SampleCount = 1024;
 
-        private static TexHelper Helper => TexHelper.Instance;
+        static TexHelper Helper => TexHelper.Instance;
 
-        public static void ShutDownTextureTools()
+        readonly DeviceManager deviceManager = new();
+
+        ~TextureImporter()
         {
-            DeviceManager.ShutDown();
+            Dispose(false);
+        }
+        /// <inheritdoc/>
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+        private void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                deviceManager.Dispose();
+            }
         }
 
-        private static TexMetadata MetadataFromTextureInfo(TextureInfo info)
+        static TexMetadata MetadataFromTextureInfo(TextureInfo info)
         {
             DXGI_FORMAT format = (DXGI_FORMAT)info.Format;
 
@@ -41,7 +94,7 @@ namespace TexturesImporter
 
             return new(width, height, depth, arraySize, mipLevels, miscFlags, miscFlags2, format, dimension);
         }
-        private static void TextureInfoFromMetadata(TexMetadata metadata, ref TextureInfo info)
+        static void TextureInfoFromMetadata(TexMetadata metadata, ref TextureInfo info)
         {
             DXGI_FORMAT format = metadata.Format;
             info.Format = (uint)format;
@@ -56,7 +109,7 @@ namespace TexturesImporter
             SetOrClearFlag(ref info.Flags, TextureFlags.IsVolumeMap, metadata.IsVolumemap());
             SetOrClearFlag(ref info.Flags, TextureFlags.IsSRGB, Helper.IsSRGB(format));
         }
-        private static void SetOrClearFlag(ref TextureFlags flags, TextureFlags flag, bool set)
+        static void SetOrClearFlag(ref TextureFlags flags, TextureFlags flag, bool set)
         {
             if (set)
             {
@@ -68,7 +121,7 @@ namespace TexturesImporter
             }
         }
 
-        private static ulong GetImageAssetSize(ScratchImage scratch)
+        static ulong GetImageAssetSize(ScratchImage scratch)
         {
             ulong totalSize = 0;
 
@@ -80,7 +133,7 @@ namespace TexturesImporter
 
             return totalSize;
         }
-        private static ulong GetImageAssetSize(Image image)
+        static ulong GetImageAssetSize(Image image)
         {
             long totalSize =
                 sizeof(int) +       // Width
@@ -91,41 +144,8 @@ namespace TexturesImporter
 
             return (ulong)totalSize;
         }
-        private static void WriteImageAsset(this BlobStreamWriter blob, ScratchImage scratch)
-        {
-            int imageCount = scratch.GetImageCount();
 
-            for (int i = 0; i < imageCount; i++)
-            {
-                blob.WriteImageAsset(scratch.GetImage(i));
-            }
-        }
-        private static void WriteImageAsset(this BlobStreamWriter blob, Image image)
-        {
-            Debug.Assert(image.SlicePitch <= int.MaxValue);
-
-            blob.Write(image.Width);
-            blob.Write(image.Height);
-            blob.Write((uint)image.RowPitch);
-            blob.Write((uint)image.SlicePitch);
-            blob.Write(image.Pixels, (int)image.SlicePitch);
-        }
-        private static Image ReadImageAsset(this BlobStreamReader blob, DXGI_FORMAT format)
-        {
-            int width = blob.Read<int>();
-            int height = blob.Read<int>();
-            uint rowPitch = blob.Read<uint>();
-            uint slicePitch = blob.Read<uint>();
-            IntPtr pixels = blob.Position;
-
-            Image image = new(width, height, format, rowPitch, slicePitch, pixels, null);
-
-            blob.Skip(slicePitch);
-
-            return image;
-        }
-
-        public static void Import(TextureData data)
+        public void Import(TextureData data)
         {
             var settings = data.ImportSettings;
             Debug.Assert(settings.Sources != null && settings.SourceCount > 0);
@@ -225,7 +245,7 @@ namespace TexturesImporter
                 TextureInfoFromMetadata(scratch.GetMetadata(), ref data.Info);
             }
         }
-        private static ScratchImage LoadFromWICFile(string szFile, WIC_FLAGS flags)
+        static ScratchImage LoadFromWICFile(string szFile, WIC_FLAGS flags)
         {
             try
             {
@@ -236,7 +256,7 @@ namespace TexturesImporter
                 return null;
             }
         }
-        private static ScratchImage LoadFromTGAFile(string szFile)
+        static ScratchImage LoadFromTGAFile(string szFile)
         {
             try
             {
@@ -247,7 +267,7 @@ namespace TexturesImporter
                 return null;
             }
         }
-        private static ScratchImage LoadFromHDRFile(string szFile)
+        static ScratchImage LoadFromHDRFile(string szFile)
         {
             try
             {
@@ -258,7 +278,7 @@ namespace TexturesImporter
                 return null;
             }
         }
-        private static ScratchImage LoadFromDDSFile(string szFile, DDS_FLAGS flags)
+        static ScratchImage LoadFromDDSFile(string szFile, DDS_FLAGS flags)
         {
             try
             {
@@ -269,7 +289,7 @@ namespace TexturesImporter
                 return null;
             }
         }
-        private static ScratchImage LoadFromFile(TextureData data, string fileName)
+        static ScratchImage LoadFromFile(TextureData data, string fileName)
         {
             Debug.Assert(File.Exists(fileName));
             if (!File.Exists(fileName))
@@ -331,7 +351,7 @@ namespace TexturesImporter
 
             return scratch;
         }
-        private static ScratchImage InitializeFromImages(TextureData data, Image[] images)
+        ScratchImage InitializeFromImages(TextureData data, Image[] images)
         {
             var settings = data.ImportSettings;
 
@@ -353,7 +373,7 @@ namespace TexturesImporter
 
                 if (Utils.Equal((float)image.Width / image.Height, 2f))
                 {
-                    if (!DeviceManager.RunOnGPU((device) =>
+                    if (!deviceManager.RunOnGPU((device) =>
                     {
                         scratch = EnvMapProcessing.EquirectangularToCubemapGPU(device, images, settings.CubemapSize, settings.PrefilterCubemap, settings.MirrorCubemap);
                         return scratch != null;
@@ -394,7 +414,7 @@ namespace TexturesImporter
 
             return scratch;
         }
-        private static ScratchImage GenerateMipmaps(ScratchImage scratch, TextureInfo info, int mipLevels, bool is3d)
+        static ScratchImage GenerateMipmaps(ScratchImage scratch, TextureInfo info, int mipLevels, bool is3d)
         {
             var metadata = scratch.GetMetadata();
             mipLevels = Math.Clamp(mipLevels, 0, GetMaxMipCount(metadata.Width, metadata.Height, metadata.Depth));
@@ -418,7 +438,7 @@ namespace TexturesImporter
 
             return mipScratch;
         }
-        private static void CopyIcon(ScratchImage bcScratch, TextureData data)
+        static void CopyIcon(ScratchImage bcScratch, TextureData data)
         {
             Debug.Assert(bcScratch.GetImageCount() > 0);
             using var scratch = bcScratch.Decompress(0, DXGI_FORMAT.UNKNOWN);
@@ -436,7 +456,7 @@ namespace TexturesImporter
             BlobStreamWriter blob = new(data.Icon, (int)size);
             blob.WriteImageAsset(image);
         }
-        private static ScratchImage CompressImage(TextureData data, ScratchImage scratch)
+        ScratchImage CompressImage(TextureData data, ScratchImage scratch)
         {
             Debug.Assert(data.ImportSettings.Compress && scratch.GetImageCount() > 0);
 
@@ -450,9 +470,9 @@ namespace TexturesImporter
             var outputFormat = DetermineOutputFormat(data, scratch, image);
 
             ScratchImage bcScratch = null;
-            if (!(DeviceManager.CanUseGpu(outputFormat) && DeviceManager.RunOnGPU((device) =>
+            if (!(DeviceManager.CanUseGpu(outputFormat) && deviceManager.RunOnGPU((device) =>
             {
-                bcScratch = DeviceManager.CompressGpu(scratch, outputFormat);
+                bcScratch = deviceManager.CompressGpu(scratch, outputFormat);
                 return bcScratch != null;
             })))
             {
@@ -467,7 +487,7 @@ namespace TexturesImporter
 
             return bcScratch;
         }
-        private static DXGI_FORMAT DetermineOutputFormat(TextureData data, ScratchImage scratch, Image image)
+        static DXGI_FORMAT DetermineOutputFormat(TextureData data, ScratchImage scratch, Image image)
         {
             Debug.Assert(data.ImportSettings.Compress);
             var imageFormat = image.Format;
@@ -535,7 +555,7 @@ namespace TexturesImporter
                 return (DXGI_FORMAT)data.ImportSettings.OutputFormat;
             }
         }
-        private static void CopySubresources(ScratchImage scratch, TextureData data)
+        static void CopySubresources(ScratchImage scratch, TextureData data)
         {
             Debug.Assert(scratch.GetMetadata().MipLevels > 0 && scratch.GetMetadata().MipLevels <= TextureData.MaxMips);
 
@@ -554,7 +574,7 @@ namespace TexturesImporter
             BlobStreamWriter blob = new(data.SubresourceData, (int)data.SubresourceSize);
             blob.WriteImageAsset(scratch);
         }
-        private static int GetMaxMipCount(int width, int height, int depth)
+        static int GetMaxMipCount(int width, int height, int depth)
         {
             int mipLevels = 1;
             while (width > 1 || height > 1 || depth > 1)
@@ -595,7 +615,7 @@ namespace TexturesImporter
                 data.Info.ImportError = ImportErrors.Decompress;
             }
         }
-        private static Image[] SubresourceDataToImageAssets(TextureData data)
+        static Image[] SubresourceDataToImageAssets(TextureData data)
         {
             Debug.Assert(data.SubresourceData != IntPtr.Zero && data.SubresourceSize > 0);
             Debug.Assert(data.Info.MipLevels > 0 && data.Info.MipLevels <= TextureData.MaxMips);
@@ -629,7 +649,7 @@ namespace TexturesImporter
             return images;
         }
 
-        public static void PrefilterIbl(TextureData data, IblFilter filterType)
+        public void PrefilterIbl(TextureData data, IblFilter filterType)
         {
             Debug.Assert(data.ImportSettings.PrefilterCubemap);
             ref var info = ref data.Info;
@@ -658,7 +678,7 @@ namespace TexturesImporter
             }
 
             ScratchImage filtered = null;
-            if (!DeviceManager.RunOnGPU((device) =>
+            if (!deviceManager.RunOnGPU((device) =>
             {
                 filtered = filterType == IblFilter.Diffuse ?
                     EnvMapProcessing.PrefilterDiffuse(device, cubemaps, SampleCount) :
@@ -698,10 +718,10 @@ namespace TexturesImporter
             }
         }
 
-        public static void ComputeBrdfIntegrationLut(TextureData data)
+        public void ComputeBrdfIntegrationLut(TextureData data)
         {
             ScratchImage result = null;
-            if (!DeviceManager.RunOnGPU((device) =>
+            if (!deviceManager.RunOnGPU((device) =>
             {
                 result = EnvMapProcessing.BrdfIntegrationLut(device, SampleCount);
                 return result != null;

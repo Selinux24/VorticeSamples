@@ -10,22 +10,22 @@ namespace DX12Windows.Lights
 {
     static class LightGenerator
     {
-        private const int randMax = 0x7fff;
-        private const float invRandMax = 1f / randMax;
+        const int randMax = 0x7fff;
+        const float invRandMax = 1f / randMax;
 
-        private static readonly ulong leftSet = 0;
-        private static readonly ulong rightSet = 1;
-        private static readonly List<Light> lights = [];
-        private static readonly List<Light> disabledLights = [];
-        private static readonly Random rand = new(37);
-      
-        private static Light iblLight;
+        static readonly ulong leftSet = 0;
+        static readonly ulong rightSet = 1;
+        static readonly List<Light> lights = [];
+        static readonly List<Light> disabledLights = [];
+        static readonly Random rand = new(37);
+
+        static Light iblLight = new();
 
 #if ANIMATE_LIGHTS
-        private static float t = 0;
+        static float t = 0;
 #endif
 
-        private static Vector3 RGBToColor(byte r, byte g, byte b)
+        static Vector3 RGBToColor(byte r, byte g, byte b)
         {
             return new()
             {
@@ -34,7 +34,7 @@ namespace DX12Windows.Lights
                 Z = b / 255f
             };
         }
-        private static float Random(float min = 0f)
+        static float Random(float min = 0f)
         {
             float v = rand.Next(0, randMax) * invRandMax;
 
@@ -52,7 +52,7 @@ namespace DX12Windows.Lights
                 GenerateLightsDefault();
             }
         }
-        private static void GenerateLightsForLab()
+        static void GenerateLightsForLab()
         {
             Application.CreateLightSet(leftSet);
             Application.CreateLightSet(rightSet);
@@ -120,7 +120,7 @@ namespace DX12Windows.Lights
             CreateLight(new(0, 0.1f, 7), new(0, 3.14f, 0), LightTypes.Spot, leftSet);
 #endif
         }
-        private static void GenerateLightsDefault()
+        static void GenerateLightsDefault()
         {
             Application.CreateLightSet(leftSet);
             Application.CreateLightSet(rightSet);
@@ -158,7 +158,7 @@ namespace DX12Windows.Lights
             info.Color = RGBToColor(163, 47, 30);
             lights.Add(Application.CreateLight(info));
         }
-        private static void CreateLight(Vector3 position, Vector3 rotation, LightTypes type, ulong lightSetKey)
+        static void CreateLight(Vector3 position, Vector3 rotation, LightTypes type, ulong lightSetKey)
         {
 #if ROTATE_LIGHTS
             uint entityId = type == LightTypes.Spot ?
@@ -216,7 +216,7 @@ namespace DX12Windows.Lights
             LightInitInfo info = new()
             {
                 EntityId = 0,
-                LightType = LightTypes.Ambient, 
+                LightType = LightTypes.Ambient,
                 LightSetKey = leftSet,
             };
             info.AmbientLight.BrdfLutTextureId = iblBrdfLutId;

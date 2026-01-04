@@ -8,7 +8,7 @@ using Vortice.DXGI;
 
 namespace TexturesImporter
 {
-    static class DeviceManager
+    class DeviceManager() : IDisposable
     {
         struct D3D11Device()
         {
@@ -18,9 +18,32 @@ namespace TexturesImporter
 
         private const uint WarpId = 0x1414;
 
-        private static readonly Lock deviceCreationMutex = new();
-        private static bool tryOnce = false;
-        private static readonly List<D3D11Device> d3d11Devices = [];
+        private readonly Lock deviceCreationMutex = new();
+        private bool tryOnce = false;
+        private readonly List<D3D11Device> d3d11Devices = [];
+
+        ~DeviceManager()
+        {
+            Dispose(false);
+        }
+        /// <inheritdoc/>
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+        private void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                for (int i = 0; i < d3d11Devices.Count; i++)
+                {
+                    d3d11Devices[i].Device?.Dispose();
+                }
+
+                d3d11Devices.Clear();
+            }
+        }
 
         public static bool CanUseGpu(DXGI_FORMAT format)
         {
@@ -50,30 +73,7 @@ namespace TexturesImporter
             };
         }
 
-        private static IDXGIAdapter[] GetAdaptersByPerformance()
-        {
-            using var factory = DXGI.CreateDXGIFactory1<IDXGIFactory7>();
-
-            List<IDXGIAdapter> adapters = [];
-
-            for (uint i = 0; factory.EnumAdapterByGpuPreference(i, GpuPreference.HighPerformance, out IDXGIAdapter adapter).Success; i++)
-            {
-                if (adapter == null)
-                {
-                    continue;
-                }
-
-                var desc = adapter.Description;
-
-                if (desc.VendorId != WarpId)
-                {
-                    adapters.Add(adapter);
-                }
-            }
-
-            return [.. adapters];
-        }
-        private static void CreateDevice()
+        private void CreateDevice()
         {
             if (d3d11Devices.Count > 0)
             {
@@ -115,21 +115,31 @@ namespace TexturesImporter
                 }
             }
         }
-        private static bool TryCreateDevice()
+        static IDXGIAdapter[] GetAdaptersByPerformance()
         {
-            lock (deviceCreationMutex)
+            using var factory = DXGI.CreateDXGIFactory1<IDXGIFactory7>();
+
+            List<IDXGIAdapter> adapters = [];
+
+            for (uint i = 0; factory.EnumAdapterByGpuPreference(i, GpuPreference.HighPerformance, out IDXGIAdapter adapter).Success; i++)
             {
-                tryOnce = false;
-                if (!tryOnce)
+                if (adapter == null)
                 {
-                    tryOnce = true;
-                    CreateDevice();
+                    continue;
+                }
+
+                var desc = adapter.Description;
+
+                if (desc.VendorId != WarpId)
+                {
+                    adapters.Add(adapter);
                 }
             }
 
-            return d3d11Devices.Count > 0;
+            return [.. adapters];
         }
-        public static bool RunOnGPU(Func<ID3D11Device, bool> func)
+
+        public bool RunOnGPU(Func<ID3D11Device, bool> func)
         {
             if (!TryCreateDevice())
             {
@@ -158,8 +168,22 @@ namespace TexturesImporter
 
             return result;
         }
+        bool TryCreateDevice()
+        {
+            lock (deviceCreationMutex)
+            {
+                tryOnce = false;
+                if (!tryOnce)
+                {
+                    tryOnce = true;
+                    CreateDevice();
+                }
+            }
 
-        public static ScratchImage CompressGpu(ScratchImage scratch, DXGI_FORMAT outputFormat)
+            return d3d11Devices.Count > 0;
+        }
+
+        public ScratchImage CompressGpu(ScratchImage scratch, DXGI_FORMAT outputFormat)
         {
             ScratchImage bcScrath = null;
 
@@ -183,16 +207,6 @@ namespace TexturesImporter
             }
 
             return bcScrath;
-        }
-
-        public static void ShutDown()
-        {
-            for (int i = 0; i < d3d11Devices.Count; i++)
-            {
-                d3d11Devices[i].Device?.Dispose();
-            }
-
-            d3d11Devices.Clear();
         }
     }
 }

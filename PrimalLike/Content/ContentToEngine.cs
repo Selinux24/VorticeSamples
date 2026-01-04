@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Threading;
 using Utilities;
 
 namespace PrimalLike.Content
@@ -20,10 +21,10 @@ namespace PrimalLike.Content
         private const IntPtr SingleMeshMarker = 0x01;
         private static readonly int shiftBits = (Marshal.SizeOf<IntPtr>() - sizeof(IdType)) << 3;
         private static readonly FreeList<IntPtr> geometryHierarchies = new();
-        private static readonly object geometryMutex = new();
+        private static readonly Lock geometryMutex = new();
 
         private static readonly FreeList<Dictionary<uint, CompiledShader>> shaderGroups = new();
-        private static readonly object shaderMutex = new();
+        private static readonly Lock shaderMutex = new();
 
         public static uint CreateResource<T>(T data, AssetTypes assetType)
         {
@@ -165,7 +166,7 @@ namespace PrimalLike.Content
 
             Debug.Assert(ValidateThresholdValues(stream, lodCount));
 
-            Debug.Assert(Marshal.SizeOf(typeof(IntPtr)) > 2, "We need the least significant bit for the single mesh marker.");
+            Debug.Assert(Marshal.SizeOf<nint>() > 2, "We need the least significant bit for the single mesh marker.");
             lock (geometryMutex)
             {
                 return geometryHierarchies.Add(stream.GetHierarchyBuffer());

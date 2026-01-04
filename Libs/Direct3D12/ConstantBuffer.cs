@@ -2,6 +2,7 @@
 using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Threading;
 using Vortice.Direct3D12;
 
 namespace Direct3D12
@@ -11,7 +12,7 @@ namespace Direct3D12
     /// </summary>
     unsafe class ConstantBuffer : IDisposable
     {
-        private readonly object mutex = new();
+        private readonly Lock mutex = new();
         private readonly D3D12Buffer buffer;
         private byte* cpuAddress;
         private uint cpuOffset;

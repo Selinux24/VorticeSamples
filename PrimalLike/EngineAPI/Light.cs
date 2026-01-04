@@ -5,16 +5,12 @@ using System.Numerics;
 
 namespace PrimalLike.EngineAPI
 {
-    public readonly struct Light
+    public readonly struct Light()
     {
-        private readonly LightId id;
-        private readonly ulong lightSetKey;
+        private readonly LightId id = LightId.MaxValue;
+        private readonly ulong lightSetKey = ulong.MaxValue;
 
-        public Light()
-        {
-            id = LightId.MaxValue;
-        }
-        public Light(LightId id, ulong lightSetKey)
+        public Light(LightId id, ulong lightSetKey) : this()
         {
             this.id = id;
             this.lightSetKey = lightSetKey;

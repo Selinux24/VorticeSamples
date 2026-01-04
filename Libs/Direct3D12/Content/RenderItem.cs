@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Threading;
 using Utilities;
 using Vortice.Direct3D12;
 
@@ -14,11 +15,11 @@ namespace Direct3D12.Content
     {
         static readonly FreeList<D3D12RenderItem> renderItems = new();
         static readonly FreeList<uint[]> renderItemIds = new();
-        static readonly object renderItemMutex = new();
+        static readonly Lock renderItemMutex = new();
 
         static readonly List<ID3D12PipelineState> pipelineStates = [];
         static readonly Dictionary<ulong, uint> psoMap = [];
-        static readonly object psoMutex = new();
+        static readonly Lock psoMutex = new();
 
         static readonly FrameCache frameCache = new();
 

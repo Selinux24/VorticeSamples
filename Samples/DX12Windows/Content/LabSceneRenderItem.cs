@@ -26,7 +26,7 @@ namespace DX12Windows.Content
         private const string emissiveTexture = "../../../../../Assets/Emissive.png";
         private const string metalRoughTexture = "../../../../../Assets/MetalRough.png";
         private const string normalTexture = "../../../../../Assets/Normal.png";
-        private const string envMapTexture = "../../../../../Assets/sunny_rose_garden_4k.hdr";
+        private const string envMapTexture = "../../../../../Assets/qwantani_moon_noon_puresky_4k.hdr";
 
         private const string fanModelName = "fan_model.model";
         private const string labModelName = "lab_model.model";
@@ -41,8 +41,8 @@ namespace DX12Windows.Content
         private const string normalTextureName = "normal.texture";
 
         private const string iblBrdfLutTextureName = "ibl/brdf_lut.texture";
-        private const string iblDiffuseTextureName = "ibl/set4/diffuse.texture";
-        private const string iblSpecularTextureName = "ibl/set4/specular.texture";
+        private const string iblDiffuseTextureName = "ibl/set1/diffuse.texture";
+        private const string iblSpecularTextureName = "ibl/set1/specular.texture";
 
         private uint fanModelId = uint.MaxValue;
         private uint intModelId = uint.MaxValue;
@@ -87,23 +87,25 @@ namespace DX12Windows.Content
                 () => PrimitiveMesh.CreatePrimitiveMesh(new() { SmoothingAngle = 0f }, new() { Type = PrimitiveMeshType.UvSphere, Segments = [48, 48], Size = new Vector3(0.5f) }, assetsFolder),
                 Path.Combine(outputsFolder, sphereModelName));
 
-            Importer.ImportAmbientOcclusionTexture(ambientOcclusionTexture, outputsFolder, ambientOcclusionTextureName);
-            Importer.ImportBaseColorTexture(baseColorTexture, outputsFolder, baseColorTextureName);
-            Importer.ImportEmissiveTexture(emissiveTexture, outputsFolder, emissiveTextureName);
-            Importer.ImportMetalRoughTexture(metalRoughTexture, outputsFolder, metalRoughTextureName);
-            Importer.ImportNormalTexture(normalTexture, outputsFolder, normalTextureName);
+            using TextureImporter importer = new();
+
+            Importer.ImportAmbientOcclusionTexture(importer, ambientOcclusionTexture, outputsFolder, ambientOcclusionTextureName);
+            Importer.ImportBaseColorTexture(importer, baseColorTexture, outputsFolder, baseColorTextureName);
+            Importer.ImportEmissiveTexture(importer, emissiveTexture, outputsFolder, emissiveTextureName);
+            Importer.ImportMetalRoughTexture(importer, metalRoughTexture, outputsFolder, metalRoughTextureName);
+            Importer.ImportNormalTexture(importer, normalTexture, outputsFolder, normalTextureName);
 
             string brdfLutPath = Path.Combine(outputsFolder, iblBrdfLutTextureName);
             string diffusePath = Path.Combine(outputsFolder, iblDiffuseTextureName);
             string specularPath = Path.Combine(outputsFolder, iblSpecularTextureName);
-            Importer.ImportEnvironmentMapTexture(envMapTexture, brdfLutPath, diffusePath, specularPath);
-
-            TextureImporter.ShutDownTextureTools();
+            Importer.ImportEnvironmentMapTexture(importer, envMapTexture, brdfLutPath, diffusePath, specularPath);
 
             CreateRenderItems(outputsFolder);
         }
         private void CreateRenderItems(string outputsFolder)
         {
+            Array.Fill(textureIds, uint.MaxValue);
+
             // NOTE: you can get these models if you're a patreon or ko-fi supporter of Primal Engine.
             //       https://www.patreon.com/collection/270663
             //       https://ko-fi.com/gameengineseries/shop
@@ -130,35 +132,55 @@ namespace DX12Windows.Content
 
             LightGenerator.CreateIblLight(iblBrdfLutId, iblDiffuseId, iblSpecularId);
 
-            GeometryInfo geometryInfo = new();
-
             // NOTE: we need shaders to be ready before creating materials
             CreateMaterial();
 
-            geometryInfo.MaterialIds = [defaultMtlId];
-
-            geometryInfo.GeometryContentId = labModelId;
-            labEntityId = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, Quaternion.Identity, geometryInfo).Id;
-
-            geometryInfo.GeometryContentId = fanModelId;
-            fanEntityId = HelloWorldApp.CreateOneGameEntity<FanScript>(new(-10.47f, 5.93f, -6.7f), Quaternion.Identity, geometryInfo).Id;
-
-            geometryInfo.GeometryContentId = intModelId;
-            intEntityId = HelloWorldApp.CreateOneGameEntity<WibblyWobblyScript>(new(0f, 1.3f, 0f), Quaternion.Identity, geometryInfo).Id;
-
-            geometryInfo.GeometryContentId = fembotModelId;
-            geometryInfo.MaterialIds = [fembotMtlId, fembotMtlId];
-            fembotEntityId = HelloWorldApp.CreateOneGameEntity(new(-6f, 0f, 10f), Quaternion.CreateFromYawPitchRoll(MathF.PI, 0f, 0f), geometryInfo).Id;
-
-            Array.Fill(sphereEntityIds, uint.MaxValue);
-            geometryInfo.GeometryContentId = sphereModelId;
-            for (int i = 0; i < pbrMtlIds.Length; i++)
             {
-                geometryInfo.MaterialIds = [pbrMtlIds[i]];
-                float x = -6f + i % 6;
-                float y = (i < 6) ? 7f : 5.5f;
-                float z = x;
-                sphereEntityIds[i] = HelloWorldApp.CreateOneGameEntity(new(x, y, z), Quaternion.Identity, geometryInfo).Id;
+                GeometryInfo geometryInfo = new()
+                {
+                    GeometryContentId = labModelId,
+                    MaterialIds = [defaultMtlId]
+                };
+                labEntityId = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, Quaternion.Identity, geometryInfo).Id;
+            }
+            {
+                GeometryInfo geometryInfo = new()
+                {
+                    GeometryContentId = fanModelId,
+                    MaterialIds = [defaultMtlId]
+                };
+                fanEntityId = HelloWorldApp.CreateOneGameEntity<FanScript>(new(-10.47f, 5.93f, -6.7f), Quaternion.Identity, geometryInfo).Id;
+            }
+            {
+                GeometryInfo geometryInfo = new()
+                {
+                    GeometryContentId = intModelId,
+                    MaterialIds = [defaultMtlId]
+                };
+                intEntityId = HelloWorldApp.CreateOneGameEntity<WibblyWobblyScript>(new(0f, 1.3f, 0f), Quaternion.Identity, geometryInfo).Id;
+            }
+            {
+                GeometryInfo geometryInfo = new()
+                {
+                    GeometryContentId = fembotModelId,
+                    MaterialIds = [fembotMtlId, fembotMtlId]
+                };
+                fembotEntityId = HelloWorldApp.CreateOneGameEntity(new(-6f, 0f, 10f), Quaternion.CreateFromYawPitchRoll(MathF.PI, 0f, 0f), geometryInfo).Id;
+            }
+            {
+                Array.Fill(sphereEntityIds, uint.MaxValue);
+                GeometryInfo geometryInfo = new()
+                {
+                    GeometryContentId = sphereModelId
+                };
+                for (int i = 0; i < pbrMtlIds.Length; i++)
+                {
+                    geometryInfo.MaterialIds = [pbrMtlIds[i]];
+                    float x = -6f + i % 6;
+                    float y = (i < 6) ? 7f : 5.5f;
+                    float z = x;
+                    sphereEntityIds[i] = HelloWorldApp.CreateOneGameEntity(new(x, y, z), Quaternion.Identity, geometryInfo).Id;
+                }
             }
         }
         private void CreateMaterial()

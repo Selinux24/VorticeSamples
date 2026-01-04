@@ -24,23 +24,23 @@ namespace TexturesImporter
 
         static void Main()
         {
-            ImportEnvMap(textureEnvMap, 1024, true, true);
-            Import(textureAmbientOcclusion);
-            Import(textureBaseColor);
-            Import(textureEmissive);
-            Import(textureMetalRough, BCFormats.BC5DualChannelGray);
-            Import(textureNormal);
-            Import(textureHumvee);
-            Import(textureM24, BCFormats.BC6HDR);
+            using var importer = new TextureImporter();
 
-            TextureImporter.ShutDownTextureTools();
+            ImportEnvMap(importer, textureEnvMap, 1024, true, true);
+            Import(importer, textureAmbientOcclusion);
+            Import(importer, textureBaseColor);
+            Import(importer, textureEmissive);
+            Import(importer, textureMetalRough, BCFormats.BC5DualChannelGray);
+            Import(importer, textureNormal);
+            Import(importer, textureHumvee);
+            Import(importer, textureM24, BCFormats.BC6HDR);
 
             Console.WriteLine();
             Console.WriteLine("Press any key to exit.");
             Console.ReadKey(true);
         }
 
-        static void Import(string fileName, BCFormats format = BCFormats.PickBestFit, bool compress = true, bool preferBc7 = true)
+        static void Import(TextureImporter importer, string fileName, BCFormats format = BCFormats.PickBestFit, bool compress = true, bool preferBc7 = true)
         {
             string texturePath = Path.Combine(assetFolder, fileName);
             if (!File.Exists(texturePath))
@@ -59,9 +59,9 @@ namespace TexturesImporter
                 Dimension = TextureDimensions.Texture2D
             };
 
-            ImportInternal(settings);
+            ImportInternal(importer, settings);
         }
-        static void ImportEnvMap(string fileName, int size, bool mirror, bool prefilter, BCFormats format = BCFormats.PickBestFit, bool compress = false, bool preferBc7 = true)
+        static void ImportEnvMap(TextureImporter importer, string fileName, int size, bool mirror, bool prefilter, BCFormats format = BCFormats.PickBestFit, bool compress = false, bool preferBc7 = true)
         {
             string texturePath = Path.Combine(assetFolder, fileName);
             if (!File.Exists(texturePath))
@@ -83,13 +83,13 @@ namespace TexturesImporter
                 PrefilterCubemap = prefilter
             };
 
-            ImportInternal(settings);
+            ImportInternal(importer, settings);
         }
 
-        static void ImportInternal(TextureImportSettings settings)
+        static void ImportInternal(TextureImporter importer, TextureImportSettings settings)
         {
             using var textureData = new TextureData(settings);
-            TextureImporter.Import(textureData);
+            importer.Import(textureData);
             if (!EvualuateResult(textureData)) return;
 
             if (textureData.ImportSettings.PrefilterCubemap && textureData.Info.Flags.HasFlag(TextureFlags.IsCubeMap))
@@ -97,18 +97,18 @@ namespace TexturesImporter
                 using var brdf = new TextureData(settings);
                 brdf.ImportSettings.Compress = false;
                 brdf.ImportSettings.MipLevels = 1;
-                TextureImporter.ComputeBrdfIntegrationLut(brdf);
+                importer.ComputeBrdfIntegrationLut(brdf);
                 if (!EvualuateResult(brdf)) return;
                 brdf.SaveTexture(GetTexturePath(brdf.ImportSettings.Sources, outputBrdfLutExt));
                 Console.WriteLine($"  BRDFL - Size: {brdf.Info.Width}x{brdf.Info.Height}, ArraySize: {brdf.Info.ArraySize}, Mips: {brdf.Info.MipLevels} - {(DXGI_FORMAT)brdf.Info.Format}");
 
                 using var diffuseData = textureData.Copy();
-                TextureImporter.PrefilterIbl(diffuseData, IblFilter.Diffuse);
+                importer.PrefilterIbl(diffuseData, IblFilter.Diffuse);
                 if (!EvualuateResult(diffuseData)) return;
                 diffuseData.SaveTexture(GetTexturePath(diffuseData.ImportSettings.Sources, outputDiffuseExt));
                 Console.WriteLine($"  FDIFF - Size: {diffuseData.Info.Width}x{diffuseData.Info.Height}, ArraySize: {diffuseData.Info.ArraySize}, Mips: {diffuseData.Info.MipLevels} - {(DXGI_FORMAT)diffuseData.Info.Format}");
 
-                TextureImporter.PrefilterIbl(textureData, IblFilter.Specular);
+                importer.PrefilterIbl(textureData, IblFilter.Specular);
                 if (!EvualuateResult(textureData)) return;
             }
 

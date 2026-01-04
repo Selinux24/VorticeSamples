@@ -1,11 +1,13 @@
 ﻿using AssetsImporter;
 using DX12Windows.Assets;
+using DX12Windows.Lights;
 using DX12Windows.Scripts;
 using DX12Windows.Shaders;
 using PrimalLike.Common;
 using PrimalLike.Components;
 using PrimalLike.Content;
 using PrimalLike.Graphics;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -18,12 +20,14 @@ namespace DX12Windows.Content
     {
         private const string modelHumvee = "../../../../../Assets/humvee.obj";
 
-        private const string baseColorTexture = "../../../../../Assets/humvee.jpg";
+        private const string envMapTexture = "../../../../../Assets/sunny_rose_garden_4k.hdr";
 
         private const string model1Name = "humvee_modelA.model";
         private const string model2Name = "humvee_modelB.model";
 
-        private const string baseColorTextureName = "humvee.texture";
+        private const string iblBrdfLutTextureName = "ibl/brdf_lut.texture";
+        private const string iblDiffuseTextureName = "ibl/set3/diffuse.texture";
+        private const string iblSpecularTextureName = "ibl/set3/specular.texture";
 
         private uint model1Id = uint.MaxValue;
         private uint model2Id = uint.MaxValue;
@@ -31,7 +35,9 @@ namespace DX12Windows.Content
         private uint entity1Id = uint.MaxValue;
         private uint entity2Id = uint.MaxValue;
 
-        private readonly uint[] textureIds = new uint[(int)TestShaders.TextureUsages.Count];
+        private uint iblBrdfLutId = uint.MaxValue;
+        private uint iblDiffuseId = uint.MaxValue;
+        private uint iblSpecularId = uint.MaxValue;
 
         private uint mtlId = uint.MaxValue;
 
@@ -61,34 +67,48 @@ namespace DX12Windows.Content
                 }
             }
 
-            Importer.ImportBaseColorTexture(baseColorTexture, outputsFolder, baseColorTextureName);
+            using TextureImporter importer = new();
 
-            TextureImporter.ShutDownTextureTools();
+            string brdfLutPath = Path.Combine(outputsFolder, iblBrdfLutTextureName);
+            string diffusePath = Path.Combine(outputsFolder, iblDiffuseTextureName);
+            string specularPath = Path.Combine(outputsFolder, iblSpecularTextureName);
+            Importer.ImportEnvironmentMapTexture(importer, envMapTexture, brdfLutPath, diffusePath, specularPath);
 
             CreateRenderItems(outputsFolder);
         }
         private void CreateRenderItems(string outputsFolder)
         {
             Utils.Run(
-                new(() => { textureIds[(uint)TestShaders.TextureUsages.BaseColor] = ITestRenderItem.LoadTexture(Path.Combine(outputsFolder, baseColorTextureName)); }),
-
                 new(() => { model1Id = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, model1Name)); }),
                 new(() => { model2Id = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, model2Name)); }),
 
+                new(() => { iblBrdfLutId = ITestRenderItem.LoadTexture(Path.Combine(outputsFolder, iblBrdfLutTextureName)); }),
+                new(() => { iblDiffuseId = ITestRenderItem.LoadTexture(Path.Combine(outputsFolder, iblDiffuseTextureName)); }),
+                new(() => { iblSpecularId = ITestRenderItem.LoadTexture(Path.Combine(outputsFolder, iblSpecularTextureName)); }),
+
                 new(TestShaders.LoadShaders));
 
-            GeometryInfo geometryInfo = new();
+            LightGenerator.CreateIblLight(iblBrdfLutId, iblDiffuseId, iblSpecularId);
 
             // NOTE: we need shaders to be ready before creating materials
             CreateMaterial();
 
-            geometryInfo.MaterialIds = [mtlId];
-
-            geometryInfo.GeometryContentId = model1Id;
-            entity1Id = HelloWorldApp.CreateOneGameEntity<RotatorScript>(Vector3.Zero, Quaternion.Identity, geometryInfo).Id;
-
-            geometryInfo.GeometryContentId = model2Id;
-            entity2Id = HelloWorldApp.CreateOneGameEntity<RotatorScript>(Vector3.Zero, Quaternion.Identity, geometryInfo).Id;
+            {
+                GeometryInfo geometryInfo = new()
+                {
+                    MaterialIds = [mtlId],
+                    GeometryContentId = model1Id
+                };
+                entity1Id = HelloWorldApp.CreateOneGameEntity<RotatorScript>(Vector3.Zero, Quaternion.Identity, geometryInfo).Id;
+            }
+            {
+                GeometryInfo geometryInfo = new()
+                {
+                    MaterialIds = [mtlId],
+                    GeometryContentId = model2Id
+                };
+                entity2Id = HelloWorldApp.CreateOneGameEntity<RotatorScript>(Vector3.Zero, Quaternion.Identity, geometryInfo).Id;
+            }
         }
         private void CreateMaterial()
         {
@@ -96,10 +116,12 @@ namespace DX12Windows.Content
 
             MaterialInitInfo info = new();
             info.ShaderIds[(uint)ShaderTypes.Vertex] = TestShaders.VsId;
-            info.ShaderIds[(uint)ShaderTypes.Pixel] = TestShaders.TexturedPsId;
+            info.ShaderIds[(uint)ShaderTypes.Pixel] = TestShaders.PsId;
             info.Type = MaterialTypes.Opaque;
-            info.TextureCount = (int)TestShaders.TextureUsages.Count;
-            info.TextureIds = textureIds;
+
+            info.Surface.BaseColor = new(0.5f, 0.1f, 0.5f, 1f);
+            info.Surface.Roughness = 0.2f;
+            info.Surface.Metallic = 1.0f;
 
             mtlId = ContentToEngine.CreateResource(info, AssetTypes.Material);
         }
@@ -116,6 +138,22 @@ namespace DX12Windows.Content
             if (IdDetail.IsValid(mtlId))
             {
                 ContentToEngine.DestroyResource(mtlId, AssetTypes.Material);
+            }
+
+            // remove textures
+            if (IdDetail.IsValid(iblBrdfLutId))
+            {
+                ContentToEngine.DestroyResource(iblBrdfLutId, AssetTypes.Texture);
+            }
+
+            if (IdDetail.IsValid(iblDiffuseId))
+            {
+                ContentToEngine.DestroyResource(iblDiffuseId, AssetTypes.Texture);
+            }
+
+            if (IdDetail.IsValid(iblSpecularId))
+            {
+                ContentToEngine.DestroyResource(iblSpecularId, AssetTypes.Texture);
             }
 
             // remove shaders and textures

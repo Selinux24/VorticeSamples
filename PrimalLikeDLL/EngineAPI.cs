@@ -184,10 +184,8 @@ namespace PrimalLikeDLL
             uint textureCount = blob.Read<uint>();
             if (textureCount > 0)
             {
-                var textureIds = blob.Position;
-                blob.Skip(sizeof(uint) * textureCount);
-                Debug.Assert(false);
-                //blob.Position = textureIds;
+                // Skip texture IDs
+                blob.Read<uint>((int)textureCount);
             }
 
             return blob.Position;
@@ -246,15 +244,11 @@ namespace PrimalLikeDLL
                 }
             }
         }
-        public static void RenderFrame(uint surfaceId, uint cameraId, ulong lightSet)
+        public static void RenderFrame(uint surfaceId, uint cameraId, ulong lightSet = 0 /* TEMPORARY */)
         {
             lock (mutex)
             {
                 Debug.Assert(surfaceId < surfaces.Count);
-
-                // TEMPORARY //////////////////////////////////////////////////////////////////////////////////
-                lightSet = 0;
-                // TEMPORARY //////////////////////////////////////////////////////////////////////////////////
 
                 var surface = surfaces[(int)surfaceId];
 
@@ -262,11 +256,10 @@ namespace PrimalLikeDLL
 
                 uint[] itemIds = [];
                 float[] thresholds = [];
-                uint[] entityIds = [];
                 if (count > 0)
                 {
                     itemIds = Geometry.GetRenderItemIds([.. surface.GeometryIds]);
-                    (thresholds, entityIds) = CalculateThresholds([.. surface.GeometryIds], surfaceId);
+                    thresholds = CalculateThresholds([.. surface.GeometryIds], surfaceId);
                 }
 
                 FrameInfo info = new()
@@ -281,7 +274,7 @@ namespace PrimalLikeDLL
                 surface.Surface.Render(info);
             }
         }
-        static (float[] thresholds, uint[] entityIds) CalculateThresholds(uint[] geometryIds, uint surfaceId)
+        static float[] CalculateThresholds(uint[] geometryIds, uint surfaceId)
         {
             uint[] entityIds = Geometry.GetEntityIds(geometryIds);
             float[] thresholds = new float[entityIds.Length];
@@ -297,7 +290,7 @@ namespace PrimalLikeDLL
                 thresholds[i] = Vector3.Distance(cameraPos, entityPos);
             }
 
-            return (thresholds, entityIds);
+            return thresholds;
         }
 
         static Entity CreateOneGameEntity(Vector3 position, Vector3 rotation, GeometryInfo? geometryInfo)

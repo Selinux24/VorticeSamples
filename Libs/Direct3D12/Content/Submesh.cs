@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.InteropServices;
+using System.Threading;
 using Utilities;
 using Vortice.Direct3D12;
 using Vortice.DXGI;
@@ -15,7 +16,7 @@ namespace Direct3D12.Content
     {
         static readonly FreeList<ID3D12Resource> submeshBuffers = new();
         static readonly FreeList<SubmeshView> submeshViews = new();
-        static readonly object submeshMutex = new();
+        static readonly Lock submeshMutex = new();
 
         public static bool Initialize()
         {
@@ -57,7 +58,7 @@ namespace Direct3D12.Content
             uint indexSize = (uint)((vertexCount < (1 << 16)) ? sizeof(ushort) : sizeof(uint));
 
             // NOTE: element size may be 0, for position-only vertex formats.
-            uint positionBufferSize = (uint)Marshal.SizeOf(typeof(Vector3)) * vertexCount;
+            uint positionBufferSize = (uint)Marshal.SizeOf<Vector3>() * vertexCount;
             uint elementBufferSize = elementSize * vertexCount;
             uint indexBufferSize = indexSize * indexCount;
 
@@ -74,7 +75,7 @@ namespace Direct3D12.Content
             SubmeshView view = new();
             view.PositionBufferView.BufferLocation = resource.GPUVirtualAddress;
             view.PositionBufferView.SizeInBytes = positionBufferSize;
-            view.PositionBufferView.StrideInBytes = (uint)Marshal.SizeOf(typeof(Vector3));
+            view.PositionBufferView.StrideInBytes = (uint)Marshal.SizeOf<Vector3>();
 
             if (elementSize > 0)
             {
