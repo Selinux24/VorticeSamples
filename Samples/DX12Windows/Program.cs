@@ -45,8 +45,6 @@ namespace DX12Windows
                 return;
             }
 
-            EngineShadersHelper.Compile();
-
             InitializeApp();
 
             LightGenerator.GenerateLights(opt);

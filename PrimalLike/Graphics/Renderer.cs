@@ -20,6 +20,11 @@ namespace PrimalLike.Graphics
         {
             SetPlatformInterface(graphicsFactory);
 
+            if (!gfx.CompileShaders())
+            {
+                return false;
+            }
+
             return gfx.Initialize();
         }
         public static void Shutdown()

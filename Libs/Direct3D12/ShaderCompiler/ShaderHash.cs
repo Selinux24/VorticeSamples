@@ -1,10 +1,10 @@
 ﻿using System.Runtime.InteropServices;
 using System.Text;
 
-namespace ShaderCompiler
+namespace Direct3D12.ShaderCompiler
 {
     [StructLayout(LayoutKind.Sequential)]
-    public struct ShaderHash(uint flags, byte[] hashDigest)
+    struct ShaderHash(uint flags, byte[] hashDigest)
     {
         public uint Flags = flags;
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = 16)]

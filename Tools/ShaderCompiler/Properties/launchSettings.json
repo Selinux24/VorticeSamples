@@ -1,8 +1,0 @@
-{
-  "profiles": {
-    "ShaderCompiler": {
-      "commandName": "Project",
-      "nativeDebugging": false
-    }
-  }
-}

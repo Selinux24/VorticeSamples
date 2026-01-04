@@ -6,7 +6,7 @@ using System.Diagnostics;
 
 namespace PrimalLike.Components
 {
-    static class GameEntity
+    public static class GameEntity
     {
         private static readonly List<GenerationType> generations = [];
         private static readonly Queue<EntityId> freeIds = [];

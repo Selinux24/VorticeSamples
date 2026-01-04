@@ -1,9 +1,9 @@
 ﻿using ContentTools;
+using Direct3D12.ShaderCompiler;
 using PrimalLike;
 using PrimalLike.Common;
 using PrimalLike.Content;
 using PrimalLike.Graphics;
-using ShaderCompiler;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -34,7 +34,7 @@ namespace D3D12LibTests
         private static void LoadShaders()
         {
             // Let's say our material uses a vertex shader and a pixel shader.
-            ShaderFileInfo info = new(Path.Combine(shadersSourcePath, "TestShader.hlsl"), "TestShaderVS", ShaderStage.Vertex);
+            ShaderFileInfo info = new(Path.Combine(shadersSourcePath, "TestShader.hlsl"), "TestShaderVS", (uint)ShaderStage.Vertex);
 
             string[] defines = ["ELEMENTS_TYPE=1", "ELEMENTS_TYPE=3"];
             uint[] keys =
@@ -52,21 +52,16 @@ namespace D3D12LibTests
                 extraArgs.Add(defines[i]);
                 bool compiledVs = Compiler.Compile(info, shadersIncludeDir, extraArgs, out var vertexShader);
                 Debug.Assert(compiledVs);
-                vertexShaders[i] = new(vertexShader.ByteCode, vertexShader.Hash.HashDigest);
+                vertexShaders[i] = vertexShader;
             }
 
             vsId = ContentToEngine.AddShaderGroup(vertexShaders, keys);
 
-            info = new ShaderFileInfo(Path.Combine(shadersSourcePath, "TestShader.hlsl"), "TestShaderPS", ShaderStage.Pixel);
+            info = new ShaderFileInfo(Path.Combine(shadersSourcePath, "TestShader.hlsl"), "TestShaderPS", (uint)ShaderStage.Pixel);
             bool compiledPs = Compiler.Compile(info, shadersIncludeDir, out var pixelShader);
             Debug.Assert(compiledPs);
 
-            PrimalLike.Content.CompiledShader[] pixelShaders =
-            [
-                new PrimalLike.Content.CompiledShader(pixelShader.ByteCode, pixelShader.Hash.HashDigest)
-            ];
-
-            psId = ContentToEngine.AddShaderGroup(pixelShaders, [uint.MaxValue]);
+            psId = ContentToEngine.AddShaderGroup([pixelShader], [uint.MaxValue]);
         }
         public static void CreateMaterial()
         {

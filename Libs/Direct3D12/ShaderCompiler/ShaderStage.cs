@@ -1,6 +1,6 @@
 ﻿using Vortice.Dxc;
 
-namespace ShaderCompiler
+namespace Direct3D12.ShaderCompiler
 {
     public enum ShaderStage
     {
@@ -13,6 +13,7 @@ namespace ShaderCompiler
         Amplification = (int)DxcShaderStage.Amplification,
         Mesh = (int)DxcShaderStage.Mesh,
         Library = (int)DxcShaderStage.Library,
+
         Count = (int)DxcShaderStage.Count
     }
 }

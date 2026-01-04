@@ -35,7 +35,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Libs\Direct3D12\Direct3D12.csproj" />
     <ProjectReference Include="..\..\Platforms\WindowsPlatform\WindowsPlatform.csproj" />
-    <ProjectReference Include="..\..\Tools\ShaderCompiler\ShaderCompiler.csproj" />
     <ProjectReference Include="..\..\Tools\AssetsImporter\AssetsImporter.csproj" />
     <ProjectReference Include="..\..\Tools\TexturesImporter\TexturesImporter.csproj" />
   </ItemGroup>

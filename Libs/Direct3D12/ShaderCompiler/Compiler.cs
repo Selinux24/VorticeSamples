@@ -1,17 +1,20 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
 using Vortice.Dxc;
 
-namespace ShaderCompiler
+namespace Direct3D12.ShaderCompiler
 {
     public static class Compiler
     {
-        public static DxcShaderModel DefaultShaderModel { get; set; } = DxcShaderModel.Model6_6;
+        static DxcShaderModel DefaultShaderModel { get; set; } = DxcShaderModel.Model6_6;
+        public static string GetShaderProfile(uint stage)
+        {
+            return DxcCompiler.GetShaderProfile((DxcShaderStage)stage, DefaultShaderModel);
+        }
 
-        public static bool CompileShaders(EngineShaderInfo[] engineShaderFiles, string shadersIncludeDir, string shadersOutputPath, IEnumerable<string> extraArgs = null)
+        public static bool CompileShaders(ShaderInfo[] engineShaderFiles, string shadersIncludeDir, string shadersOutputPath, IEnumerable<string> extraArgs = null)
         {
             shadersIncludeDir = Path.GetFullPath(shadersIncludeDir);
             if (!Directory.Exists(shadersIncludeDir))
@@ -42,7 +45,7 @@ namespace ShaderCompiler
             {
                 string[] fileArgs = [.. (file.ExtraArguments ?? []), .. (extraArgs ?? [])];
 
-                if (!Compile(file.Info, shadersIncludeDir, fileArgs, out var compiledShader))
+                if (!CompileInternal(file.Info, shadersIncludeDir, fileArgs, out var compiledShader))
                 {
                     return false;
                 }
@@ -56,7 +59,7 @@ namespace ShaderCompiler
 
             return saved;
         }
-        private static bool CompiledShadersAreUpToDate(EngineShaderInfo[] engineShaderFiles, string shadersIncludeDir, string shadersOutputPath)
+        static bool CompiledShadersAreUpToDate(ShaderInfo[] engineShaderFiles, string shadersIncludeDir, string shadersOutputPath)
         {
             var shadersCompilationTime = File.GetLastWriteTime(shadersOutputPath);
 
@@ -79,11 +82,17 @@ namespace ShaderCompiler
             return true;
         }
 
-        public static bool Compile(ShaderFileInfo info, string shadersIncludeDir, out CompiledShader compiledShader)
+        public static bool Compile(ShaderFileInfo info, string shadersIncludeDir, out PrimalLike.Content.CompiledShader compiledShader)
         {
             return Compile(info, shadersIncludeDir, [], out compiledShader);
         }
-        public static bool Compile(ShaderFileInfo info, string shadersIncludeDir, IEnumerable<string> extraArgs, out CompiledShader compiledShader)
+        public static bool Compile(ShaderFileInfo info, string shadersIncludeDir, IEnumerable<string> extraArgs, out PrimalLike.Content.CompiledShader compiledShader)
+        {
+            bool result = CompileInternal(info, shadersIncludeDir, extraArgs, out var dxcCompiledShader);
+            compiledShader = result ? new PrimalLike.Content.CompiledShader(dxcCompiledShader.ByteCode, dxcCompiledShader.Hash.HashDigest) : default;
+            return result;
+        }
+        static bool CompileInternal(ShaderFileInfo info, string shadersIncludeDir, IEnumerable<string> extraArgs, out CompiledShader compiledShader)
         {
             string shadersSourcePath = Path.GetFullPath(info.FileName);
             if (!File.Exists(shadersSourcePath))
@@ -139,7 +148,7 @@ namespace ShaderCompiler
 
             return true;
         }
-        private static string[] GetArgs(string shadersSourcePath, ShaderFileInfo info, DxcShaderModel shaderModel, IEnumerable<string> extraArgs = null)
+        static string[] GetArgs(string shadersSourcePath, ShaderFileInfo info, DxcShaderModel shaderModel, IEnumerable<string> extraArgs = null)
         {
             var args = new List<string>
             {
@@ -166,7 +175,7 @@ namespace ShaderCompiler
 
             return [.. args];
         }
-        private static bool SaveCompiledShaders(IEnumerable<CompiledShader> shaders, string shadersOutputPath)
+        static bool SaveCompiledShaders(IEnumerable<CompiledShader> shaders, string shadersOutputPath)
         {
             var shadersOutputDir = Path.GetDirectoryName(shadersOutputPath);
             if (!Directory.Exists(shadersOutputDir))

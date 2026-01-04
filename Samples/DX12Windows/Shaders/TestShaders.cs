@@ -1,7 +1,7 @@
 ﻿using ContentTools;
+using Direct3D12.ShaderCompiler;
 using PrimalLike.Common;
 using PrimalLike.Content;
-using ShaderCompiler;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -32,7 +32,7 @@ namespace DX12Windows.Shaders
         {
             // Let's say our material uses a vertex shader and a pixel shader.
             {
-                ShaderFileInfo info = new(Path.Combine(shadersSourcePath, "TestShader.hlsl"), "TestShaderVS", ShaderStage.Vertex);
+                ShaderFileInfo info = new(Path.Combine(shadersSourcePath, "TestShader.hlsl"), "TestShaderVS", (uint)ShaderStage.Vertex);
 
                 string[] defines = ["ELEMENTS_TYPE=1", "ELEMENTS_TYPE=3"];
                 uint[] keys =
@@ -42,7 +42,7 @@ namespace DX12Windows.Shaders
                 ];
 
                 List<string> extraArgs = [];
-                PrimalLike.Content.CompiledShader[] vertexShaders = new PrimalLike.Content.CompiledShader[2];
+                CompiledShader[] vertexShaders = new CompiledShader[2];
                 for (uint i = 0; i < defines.Length; i++)
                 {
                     extraArgs.Clear();
@@ -50,14 +50,14 @@ namespace DX12Windows.Shaders
                     extraArgs.Add(defines[i]);
                     bool compiledVs = Compiler.Compile(info, shadersIncludeDir, extraArgs, out var vertexShader);
                     Debug.Assert(compiledVs);
-                    vertexShaders[i] = new(vertexShader.ByteCode, vertexShader.Hash.HashDigest);
+                    vertexShaders[i] = vertexShader;
                 }
 
                 VsId = ContentToEngine.AddShaderGroup(vertexShaders, keys);
             }
 
             {
-                ShaderFileInfo info = new(Path.Combine(shadersSourcePath, "TestShader.hlsl"), "TestShaderPS", ShaderStage.Pixel);
+                ShaderFileInfo info = new(Path.Combine(shadersSourcePath, "TestShader.hlsl"), "TestShaderPS", (uint)ShaderStage.Pixel);
 
                 bool compiledPs = Compiler.Compile(info, shadersIncludeDir, out var pixelShader);
                 Debug.Assert(compiledPs);
@@ -70,16 +70,10 @@ namespace DX12Windows.Shaders
                 bool compiledTexturedPs = Compiler.Compile(info, shadersIncludeDir, extraArgs, out var texturedPixelShader);
                 Debug.Assert(compiledTexturedPs);
 
-                PrimalLike.Content.CompiledShader[] pixelShaders =
-                [
-                    new(pixelShader.ByteCode, pixelShader.Hash.HashDigest),
-                ];
+                CompiledShader[] pixelShaders = [pixelShader];
                 PsId = ContentToEngine.AddShaderGroup(pixelShaders, [uint.MaxValue]);
 
-                PrimalLike.Content.CompiledShader[] texturedPixelShaders =
-                [
-                    new(texturedPixelShader.ByteCode, texturedPixelShader.Hash.HashDigest),
-                ];
+                CompiledShader[] texturedPixelShaders = [texturedPixelShader];
                 TexturedPsId = ContentToEngine.AddShaderGroup(texturedPixelShaders, [uint.MaxValue]);
             }
         }

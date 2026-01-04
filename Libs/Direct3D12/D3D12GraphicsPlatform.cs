@@ -12,6 +12,17 @@ namespace Direct3D12
     class D3D12GraphicsPlatform : IGraphicsPlatform
     {
         /// <inheritdoc/>
+        public bool CompileShaders()
+        {
+            return D3D12Graphics.CompileShaders();
+        }
+        /// <inheritdoc/>
+        public string GetEngineShaderPath()
+        {
+            return D3D12Graphics.GetEngineShaderPath();
+        }
+
+        /// <inheritdoc/>
         public bool Initialize()
         {
             return D3D12Graphics.Initialize();
@@ -30,11 +41,6 @@ namespace Direct3D12
         public T GetOption<T>(RendererOption option)
         {
             return D3D12Graphics.GetOption<T>(option);
-        }
-        /// <inheritdoc/>
-        public string GetEngineShaderPath()
-        {
-            return D3D12Graphics.GetEngineShaderPath();
         }
 
         /// <inheritdoc/>

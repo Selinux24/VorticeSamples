@@ -42,7 +42,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Libs\Direct3D12\Direct3D12.csproj" />
     <ProjectReference Include="..\..\Platforms\WindowsPlatform\WindowsPlatform.csproj" />
-    <ProjectReference Include="..\..\Tools\ShaderCompiler\ShaderCompiler.csproj" />
+    <ProjectReference Include="..\..\Tools\ContentTools\ContentTools.csproj" />
   </ItemGroup>
 
 </Project>

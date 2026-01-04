@@ -5,7 +5,6 @@ using PrimalLike.Common;
 using PrimalLike.Components;
 using PrimalLike.Content;
 using PrimalLike.EngineAPI;
-using ShaderCompiler;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -18,19 +17,8 @@ namespace D3D12LibTests
 {
     public class RendererTest
     {
-        private const string shadersSourceDir = "../../../../../Libs/Direct3D12/Hlsl/";
-        private const string shadersIncludeDir = "../../../../../Libs/Direct3D12/Hlsl/";
-        private const string shadersOutputPath = "./Content/engineShaders.bin";
         private const string testModelFile = "./Content/Model.model";
         private const string testTextureFile = "./Content/texture.texture";
-
-        private static readonly EngineShaderInfo[] engineShaderFiles =
-        [
-            new ((int)EngineShaders.FullScreenTriangleVs, new (Path.Combine(shadersSourceDir, "FullScreenTriangle.hlsl"), "FullScreenTriangleVS", ShaderStage.Vertex)),
-            new ((int)EngineShaders.PostProcessPs, new (Path.Combine(shadersSourceDir, "PostProcess.hlsl"), "PostProcessPS", ShaderStage.Pixel)),
-            new ((int)EngineShaders.GridFrustumsCs, new (Path.Combine(shadersSourceDir, "GridFrustums.hlsl"), "ComputeGridFrustumsCS", ShaderStage.Compute), ["-D", "TILE_SIZE=32"]),
-            new ((int)EngineShaders.LightCullingCs, new (Path.Combine(shadersSourceDir, "CullLights.hlsl"), "CullLightsCS", ShaderStage.Compute), ["-D", "TILE_SIZE=32"]),
-        ];
 
         private TestApp app;
         private static readonly List<CameraSurface> cameraSurfaces = [];
@@ -135,7 +123,7 @@ namespace D3D12LibTests
 
         private void InitializeApplication()
         {
-            var resCompile = Compiler.CompileShaders(engineShaderFiles, shadersIncludeDir, shadersOutputPath);
+            var resCompile = D3D12Graphics.CompileShaders();
             Assert.That(resCompile, "Shader compilation error.");
 
             app = TestApp.Start<Win32PlatformFactory, D3D12GraphicsPlatformFactory>();

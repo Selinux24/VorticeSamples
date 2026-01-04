@@ -1,8 +1,8 @@
 ﻿using System;
 
-namespace ShaderCompiler
+namespace Direct3D12.ShaderCompiler
 {
-    public readonly struct CompiledShader(ReadOnlyMemory<byte> byteCode, ShaderHash hash, byte[] disassembly = null)
+    readonly struct CompiledShader(ReadOnlyMemory<byte> byteCode, ShaderHash hash, byte[] disassembly = null)
     {
         public ReadOnlyMemory<byte> ByteCode { get; } = byteCode;
         public ShaderHash Hash { get; } = hash;

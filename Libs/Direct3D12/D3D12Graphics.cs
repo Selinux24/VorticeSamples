@@ -4,7 +4,9 @@ using SharpGen.Runtime;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using Utilities;
 using Vortice.Direct3D;
 using Vortice.Direct3D12;
@@ -13,10 +15,10 @@ using Vortice.DXGI;
 [assembly: InternalsVisibleTo("D3D12LibTests")]
 namespace Direct3D12
 {
+    using Direct3D12.ShaderCompiler;
     using Direct3D12.Delight;
     using Direct3D12.Fx;
     using Direct3D12.Light;
-    using System.Threading;
 #if DEBUG
     using Vortice.Direct3D12.Debug;
     using Vortice.DXGI.Debug;
@@ -41,7 +43,17 @@ namespace Direct3D12
         private const uint D3d12SdkVersion = 615;
         private const string D3d12SdkPath = ".\\D3D12\\";
         private const FeatureLevel MinimumFeatureLevel = FeatureLevel.Level_11_0;
+
         private const string EngineShaderPaths = "Content/engineShaders.bin";
+        private const string EngineSourceShaderPaths = "../../../../../Libs/Direct3D12/Hlsl/";
+        private const string EngineSourceShadersIncludeDir = "../../../../../Libs/Direct3D12/Hlsl/";
+        private static readonly ShaderInfo[] engineShaderFiles =
+        [
+            new ((int)EngineShaders.FullScreenTriangleVs, new (Path.Combine(EngineSourceShaderPaths, "FullScreenTriangle.hlsl"), "FullScreenTriangleVS", (uint)ShaderStage.Vertex)),
+            new ((int)EngineShaders.PostProcessPs, new (Path.Combine(EngineSourceShaderPaths, "PostProcess.hlsl"), "PostProcessPS", (uint)ShaderStage.Pixel)),
+            new ((int)EngineShaders.GridFrustumsCs, new (Path.Combine(EngineSourceShaderPaths, "GridFrustums.hlsl"), "ComputeGridFrustumsCS", (uint)ShaderStage.Compute), ["-D", "TILE_SIZE=32"]),
+            new ((int)EngineShaders.LightCullingCs, new (Path.Combine(EngineSourceShaderPaths, "CullLights.hlsl"), "CullLightsCS", (uint)ShaderStage.Compute), ["-D", "TILE_SIZE=32"]),
+        ];
 
         private static ID3D12SDKConfiguration1 d3d12SdkConfig;
         private static ID3D12DeviceFactory d3d12DeviceFactory;
@@ -130,6 +142,17 @@ namespace Direct3D12
         public static bool VSyncEnabled()
         {
             return options.EnableVsync;
+        }
+
+        /// <inheritdoc/>
+        public static bool CompileShaders()
+        {
+            return Compiler.CompileShaders(engineShaderFiles, EngineSourceShadersIncludeDir, EngineShaderPaths);
+        }
+        /// <inheritdoc/>
+        public static string GetEngineShaderPath()
+        {
+            return EngineShaderPaths;
         }
 
         /// <inheritdoc/>
@@ -330,11 +353,6 @@ namespace Direct3D12
             mainDevice?.Dispose();
             mainDevice = null;
 #endif
-        }
-        /// <inheritdoc/>
-        public static string GetEngineShaderPath()
-        {
-            return EngineShaderPaths;
         }
 
         private static IDXGIAdapter4 DetermineMainAdapter()

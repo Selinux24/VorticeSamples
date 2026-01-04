@@ -5,7 +5,7 @@ namespace PrimalLike.Graphics
     /// <summary>
     /// Render surface structure.
     /// </summary>
-    public struct RenderSurface
+    public class RenderSurface
     {
         /// <summary>
         /// Window
