@@ -301,11 +301,12 @@ namespace Direct3D12
         private static void PrepareRenderFrame(ref D3D12FrameInfo d3d12Info)
         {
             Debug.Assert(d3d12Info.Camera != null);
-            Debug.Assert(d3d12Info.FrameInfo.RenderItemIds != null && d3d12Info.FrameInfo.RenderItemCount > 0);
 
             frameCache.Clear();
             RenderItem.GetD3D12RenderItemIds(ref d3d12Info.FrameInfo, ref frameCache.D3D12RenderItemIds);
             frameCache.Resize();
+
+            Debug.Assert(d3d12Info.FrameInfo.RenderItemIds != null && d3d12Info.FrameInfo.RenderItemCount > 0);
 
             var itemsCache = frameCache.ItemsCache();
             RenderItem.GetItems(frameCache.D3D12RenderItemIds, ref itemsCache);

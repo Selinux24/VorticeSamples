@@ -117,7 +117,7 @@ namespace PrimalLikeDLL
             lock (mutex)
             {
                 // TEMPORARY //////////////////////////////////////////////////////////////////////////////////
-                if (lights[0].IsValid) CreateLights();
+                if (!lights[0].IsValid) CreateLights();
                 // TEMPORARY //////////////////////////////////////////////////////////////////////////////////
 
                 var window = platform.CreateWindow(info);
@@ -258,8 +258,10 @@ namespace PrimalLikeDLL
                 float[] thresholds = [];
                 if (count > 0)
                 {
-                    itemIds = Geometry.GetRenderItemIds([.. surface.GeometryIds]);
-                    thresholds = CalculateThresholds([.. surface.GeometryIds], surfaceId);
+                    uint[] geometryIds = [.. surface.GeometryIds];
+                    uint[] entityIds = Geometry.GetEntityIds(geometryIds);
+                    itemIds = Geometry.GetRenderItemIds(geometryIds);
+                    thresholds = CalculateThresholds(entityIds, surfaceId);
                 }
 
                 FrameInfo info = new()
@@ -274,9 +276,8 @@ namespace PrimalLikeDLL
                 surface.Surface.Render(info);
             }
         }
-        static float[] CalculateThresholds(uint[] geometryIds, uint surfaceId)
+        static float[] CalculateThresholds(uint[] entityIds, uint surfaceId)
         {
-            uint[] entityIds = Geometry.GetEntityIds(geometryIds);
             float[] thresholds = new float[entityIds.Length];
 
             Entity camera = new(surfaces[(int)surfaceId].Camera.EntityId);

@@ -77,7 +77,7 @@ namespace DX12Windows.Content
                 new(() => { iblDiffuseId = ITestRenderItem.LoadTexture(Path.Combine(outputsFolder, iblDiffuseTextureName)); }),
                 new(() => { iblSpecularId = ITestRenderItem.LoadTexture(Path.Combine(outputsFolder, iblSpecularTextureName)); }),
 
-                new(TestShaders.LoadShaders));
+                new(TestShader.Load));
 
             LightGenerator.CreateIblLight(iblBrdfLutId, iblDiffuseId, iblSpecularId);
 
@@ -93,11 +93,11 @@ namespace DX12Windows.Content
         }
         private void CreateMaterial()
         {
-            Debug.Assert(IdDetail.IsValid(TestShaders.VsId) && IdDetail.IsValid(TestShaders.PsId));
+            Debug.Assert(IdDetail.IsValid(TestShader.VsId) && IdDetail.IsValid(TestShader.PsId));
 
             MaterialInitInfo info = new();
-            info.ShaderIds[(uint)ShaderTypes.Vertex] = TestShaders.VsId;
-            info.ShaderIds[(uint)ShaderTypes.Pixel] = TestShaders.PsId;
+            info.ShaderIds[(uint)ShaderTypes.Vertex] = TestShader.VsId;
+            info.ShaderIds[(uint)ShaderTypes.Pixel] = TestShader.PsId;
             info.Type = MaterialTypes.Opaque;
 
             info.Surface.BaseColor = new(0.5f, 1f, 0.5f, 1f);
@@ -135,7 +135,7 @@ namespace DX12Windows.Content
             }
 
             // remove shaders and textures
-            TestShaders.RemoveShaders();
+            TestShader.Remove();
         }
     }
 }

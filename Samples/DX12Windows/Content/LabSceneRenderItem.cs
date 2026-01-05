@@ -56,7 +56,7 @@ namespace DX12Windows.Content
         private uint fembotEntityId = uint.MaxValue;
         private readonly uint[] sphereEntityIds = new uint[12];
 
-        private readonly uint[] textureIds = new uint[(int)TestShaders.TextureUsages.Count];
+        private readonly uint[] textureIds = new uint[(int)TestShader.TextureUsages.Count];
 
         private uint iblBrdfLutId = uint.MaxValue;
         private uint iblDiffuseId = uint.MaxValue;
@@ -112,11 +112,11 @@ namespace DX12Windows.Content
             //       Use the editor to import the scene and put the 3 models in this location.
             //       You can replace them with any model that's available to you.
             Utils.Run(
-                new(() => { textureIds[(uint)TestShaders.TextureUsages.AmbientOcclusion] = ITestRenderItem.LoadTexture(Path.Combine(outputsFolder, ambientOcclusionTextureName)); }),
-                new(() => { textureIds[(uint)TestShaders.TextureUsages.BaseColor] = ITestRenderItem.LoadTexture(Path.Combine(outputsFolder, baseColorTextureName)); }),
-                new(() => { textureIds[(uint)TestShaders.TextureUsages.Emissive] = ITestRenderItem.LoadTexture(Path.Combine(outputsFolder, emissiveTextureName)); }),
-                new(() => { textureIds[(uint)TestShaders.TextureUsages.MetalRough] = ITestRenderItem.LoadTexture(Path.Combine(outputsFolder, metalRoughTextureName)); }),
-                new(() => { textureIds[(uint)TestShaders.TextureUsages.Normal] = ITestRenderItem.LoadTexture(Path.Combine(outputsFolder, normalTextureName)); }),
+                new(() => { textureIds[(uint)TestShader.TextureUsages.AmbientOcclusion] = ITestRenderItem.LoadTexture(Path.Combine(outputsFolder, ambientOcclusionTextureName)); }),
+                new(() => { textureIds[(uint)TestShader.TextureUsages.BaseColor] = ITestRenderItem.LoadTexture(Path.Combine(outputsFolder, baseColorTextureName)); }),
+                new(() => { textureIds[(uint)TestShader.TextureUsages.Emissive] = ITestRenderItem.LoadTexture(Path.Combine(outputsFolder, emissiveTextureName)); }),
+                new(() => { textureIds[(uint)TestShader.TextureUsages.MetalRough] = ITestRenderItem.LoadTexture(Path.Combine(outputsFolder, metalRoughTextureName)); }),
+                new(() => { textureIds[(uint)TestShader.TextureUsages.Normal] = ITestRenderItem.LoadTexture(Path.Combine(outputsFolder, normalTextureName)); }),
 
                 new(() => { iblBrdfLutId = ITestRenderItem.LoadTexture(Path.Combine(outputsFolder, iblBrdfLutTextureName)); }),
                 new(() => { iblDiffuseId = ITestRenderItem.LoadTexture(Path.Combine(outputsFolder, iblDiffuseTextureName)); }),
@@ -128,7 +128,7 @@ namespace DX12Windows.Content
                 new(() => { fembotModelId = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, fembotModelName)); }),
                 new(() => { sphereModelId = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, sphereModelName)); }),
 
-                new(TestShaders.LoadShaders));
+                new(TestShader.Load));
 
             LightGenerator.CreateIblLight(iblBrdfLutId, iblDiffuseId, iblSpecularId);
 
@@ -185,19 +185,18 @@ namespace DX12Windows.Content
         }
         private void CreateMaterial()
         {
-            Debug.Assert(IdDetail.IsValid(TestShaders.VsId) && IdDetail.IsValid(TestShaders.PsId));
+            Debug.Assert(IdDetail.IsValid(TestShader.VsId) && IdDetail.IsValid(TestShader.PsId));
 
             {
                 MaterialInitInfo info = new();
-                info.ShaderIds[(uint)ShaderTypes.Vertex] = TestShaders.VsId;
-                info.ShaderIds[(uint)ShaderTypes.Pixel] = TestShaders.PsId;
+                info.ShaderIds[(uint)ShaderTypes.Vertex] = TestShader.VsId;
+                info.ShaderIds[(uint)ShaderTypes.Pixel] = TestShader.PsId;
                 info.Type = MaterialTypes.Opaque;
 
                 defaultMtlId = ContentToEngine.CreateResource(info, AssetTypes.Material);
             }
 
             {
-                Array.Fill(pbrMtlIds, uint.MaxValue);
                 Vector2[] metalRough =
                 [
                     new(0f, 0.0f),
@@ -215,8 +214,8 @@ namespace DX12Windows.Content
                 ];
 
                 MaterialInitInfo info = new();
-                info.ShaderIds[(uint)ShaderTypes.Vertex] = TestShaders.VsId;
-                info.ShaderIds[(uint)ShaderTypes.Pixel] = TestShaders.PsId;
+                info.ShaderIds[(uint)ShaderTypes.Vertex] = TestShader.VsId;
+                info.ShaderIds[(uint)ShaderTypes.Pixel] = TestShader.PsId;
                 info.Type = MaterialTypes.Opaque;
 
                 ref var s = ref info.Surface;
@@ -233,11 +232,11 @@ namespace DX12Windows.Content
 
             {
                 MaterialInitInfo info = new();
-                info.ShaderIds[(uint)ShaderTypes.Vertex] = TestShaders.VsId;
-                info.ShaderIds[(uint)ShaderTypes.Pixel] = TestShaders.TexturedPsId;
+                info.ShaderIds[(uint)ShaderTypes.Vertex] = TestShader.VsId;
+                info.ShaderIds[(uint)ShaderTypes.Pixel] = TestShader.TexPsId;
                 info.Type = MaterialTypes.Opaque;
 
-                info.TextureCount = (int)TestShaders.TextureUsages.Count;
+                info.TextureCount = (int)TestShader.TextureUsages.Count;
                 info.TextureIds = textureIds;
 
                 fembotMtlId = ContentToEngine.CreateResource(info, AssetTypes.Material);
@@ -306,7 +305,7 @@ namespace DX12Windows.Content
             }
 
             // remove shaders and textures
-            TestShaders.RemoveShaders();
+            TestShader.Remove();
         }
     }
 }

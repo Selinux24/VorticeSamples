@@ -106,6 +106,7 @@ namespace D3D12LibTests
         private uint itemId = IdDetail.InvalidId;
         private uint modelId = IdDetail.InvalidId;
         private uint textureId = IdDetail.InvalidId;
+        private readonly ulong lightSetKey = 0;
 
         private const int numThreads = 8;
         private readonly Thread[] workers = new Thread[numThreads];
@@ -227,8 +228,12 @@ namespace D3D12LibTests
                 };
                 Entity entity = Application.CreateEntity(entityInfo);
                 cameraSurfaces[i].CreateCamera(entity);
-                cameraSurfaces[i].UpdateFrameInfo([itemId], [10f]);
+                cameraSurfaces[i].UpdateFrameInfo([itemId], [10f], lightSetKey);
             }
+        }
+        private void CreateLights()
+        {
+            Application.CreateLightSet(lightSetKey);
         }
 
         [Test()]
@@ -240,6 +245,7 @@ namespace D3D12LibTests
             LoadTestTexture();
             CreateRenderItem();
             CreateCameras();
+            CreateLights();
 
             app.Run();
 
@@ -254,6 +260,7 @@ namespace D3D12LibTests
             LoadTestTexture();
             CreateRenderItem();
             CreateCameras();
+            CreateLights();
 
             // Congifure worker threads
             InitTestWorkers();
@@ -284,6 +291,8 @@ namespace D3D12LibTests
             {
                 Application.RemoveRenderComponent(cameraSurfaces[i]);
             }
+
+            Application.RemoveLightSet(lightSetKey);
         }
     }
 }

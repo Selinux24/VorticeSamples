@@ -19,13 +19,13 @@ namespace D3D12LibTests
             Camera.AspectRatio = (float)Surface.Window.Width / Surface.Window.Height;
         }
 
-        public void UpdateFrameInfo(uint[] items, float[] thresholds)
+        public void UpdateFrameInfo(uint[] items, float[] thresholds, ulong lightSetKey)
         {
             frameInfo.CameraId = Camera.Id;
             frameInfo.RenderItemIds = items;
             frameInfo.RenderItemCount = (uint)items.Length;
             frameInfo.Thresholds = thresholds;
-            frameInfo.LightSetKey = ulong.MaxValue;
+            frameInfo.LightSetKey = lightSetKey;
         }
 
         public override FrameInfo GetFrameInfo(Time time)
