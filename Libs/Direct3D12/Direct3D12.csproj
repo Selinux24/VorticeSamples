@@ -4,6 +4,7 @@
     <TargetFramework>net9.0</TargetFramework>
     <Configurations>Debug;Release;ReleaseEditor;DebugEditor</Configurations>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseEditor|AnyCPU'">
@@ -24,8 +25,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Vortice.Direct3D12" Version="3.8.1" />
-    <PackageReference Include="Vortice.Dxc" Version="3.8.1" />
+    <PackageReference Include="Microsoft.Direct3D.D3D12" Version="1.618.5" GeneratePathProperty="true" />
+    <PackageReference Include="Vortice.Direct3D12" Version="3.8.2" />
+    <PackageReference Include="Vortice.Dxc" Version="3.8.2" />
   </ItemGroup>
 
   <ItemGroup>
@@ -33,7 +35,14 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
+    <None Include="$(PkgMicrosoft_Direct3D_D3D12)\build\native\bin\x64\D3D12Core.dll">
+      <Link>D3D12\D3D12Core.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="$(PkgMicrosoft_Direct3D_D3D12)\build\native\bin\x64\d3d12SDKLayers.dll">
+      <Link>D3D12\d3d12SDKLayers.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   
 </Project>

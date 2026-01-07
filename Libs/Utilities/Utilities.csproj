@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
+    <Configurations>Debug;Release;ReleaseEditor;DebugEditor</Configurations>
   </PropertyGroup>
   
 </Project>

@@ -3,6 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <OutputType>Exe</OutputType>
+    <Configurations>Debug;Release;DebugEditor;ReleaseEditor</Configurations>
   </PropertyGroup>
 
   <ItemGroup>
@@ -13,8 +14,8 @@
 
   <ItemGroup>
     <PackageReference Include="DirectXTexNet" Version="1.0.7" />
-    <PackageReference Include="Vortice.Direct3D11" Version="3.8.1" />
-    <PackageReference Include="Vortice.D3DCompiler" Version="3.8.1" />
+    <PackageReference Include="Vortice.Direct3D11" Version="3.8.2" />
+    <PackageReference Include="Vortice.D3DCompiler" Version="3.8.2" />
   </ItemGroup>
 
   <ItemGroup>

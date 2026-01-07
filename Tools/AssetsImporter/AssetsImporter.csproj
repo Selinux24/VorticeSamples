@@ -3,6 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <OutputType>Exe</OutputType>
+    <Configurations>Debug;Release;DebugEditor;ReleaseEditor</Configurations>
   </PropertyGroup>
 
   <ItemGroup>

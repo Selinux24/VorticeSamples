@@ -4,6 +4,7 @@
     <TargetFramework>net9.0</TargetFramework>
     <Configurations>Debug;Release;ReleaseEditor;DebugEditor</Configurations>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Platforms>AnyCPU</Platforms>
   </PropertyGroup>
 
   <ItemGroup>

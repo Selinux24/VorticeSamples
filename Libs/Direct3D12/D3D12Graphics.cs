@@ -40,7 +40,8 @@ namespace Direct3D12
         /// Gets or sets the number of frame buffers.
         /// </summary>
         public const int FrameBufferCount = 3;
-        private const uint D3d12SdkVersion = 615;
+
+        private const uint D3d12SdkVersion = 618;
         private const string D3d12SdkPath = ".\\D3D12\\";
         private const FeatureLevel MinimumFeatureLevel = FeatureLevel.Level_11_0;
 

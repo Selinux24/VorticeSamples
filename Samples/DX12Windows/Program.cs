@@ -1,7 +1,6 @@
 ﻿using Direct3D12;
 using DX12Windows.Content;
 using DX12Windows.Lights;
-using DX12Windows.Shaders;
 using PrimalLike;
 using PrimalLike.Components;
 using PrimalLike.EngineAPI;
