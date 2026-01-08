@@ -17,10 +17,5 @@ namespace Direct3D12.Shaders
 
         public Vector3 Attenuation;
         public float CosPenumbra;   // Cosine of the hald angle of penumbra
-
-#if !USE_BOUNDING_SPHERES
-        public uint Type;
-        public Vector3 _pad;
-#endif
     }
 }

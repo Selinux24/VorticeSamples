@@ -4,8 +4,17 @@
     <TargetFrameworks>net9.0-windows</TargetFrameworks>
     <Configurations>Debug;Release;ReleaseEditor;DebugEditor</Configurations>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Platforms>x64</Platforms>
   </PropertyGroup>
-  
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net9.0-windows|x64'">
+    <Optimize>True</Optimize>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='ReleaseEditor|net9.0-windows|x64'">
+    <Optimize>True</Optimize>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\..\PrimalLike\PrimalLike.csproj" />
     <ProjectReference Include="..\Native32\Native32.csproj" />

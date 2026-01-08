@@ -17,23 +17,25 @@ namespace DX12Windows.Content
 {
     class ToyTankRenderItem : ITestRenderItem
     {
-        private const string modelToyTank = "../../../../../Assets/ToyTank.fbx";
-        private const string envMapTexture = "../../../../../Assets/belfast_sunset_puresky_4k.hdr";
+        const string assetFolder = "../../../../../../Assets/";
 
-        private const string modelName = "toytank_model.model";
+        const string modelToyTank = assetFolder + "ToyTank.fbx";
+        const string envMapTexture = assetFolder + "belfast_sunset_puresky_4k.hdr";
 
-        private const string iblBrdfLutTextureName = "ibl/brdf_lut.texture";
-        private const string iblDiffuseTextureName = "ibl/set2/diffuse.texture";
-        private const string iblSpecularTextureName = "ibl/set2/specular.texture";
+        const string modelName = "toytank_model.model";
 
-        private uint modelId = uint.MaxValue;
-        private uint entityId = uint.MaxValue;
+        const string iblBrdfLutTextureName = "ibl/brdf_lut.texture";
+        const string iblDiffuseTextureName = "ibl/set2/diffuse.texture";
+        const string iblSpecularTextureName = "ibl/set2/specular.texture";
 
-        private uint iblBrdfLutId = uint.MaxValue;
-        private uint iblDiffuseId = uint.MaxValue;
-        private uint iblSpecularId = uint.MaxValue;
+        uint modelId = uint.MaxValue;
+        uint entityId = uint.MaxValue;
 
-        private uint mtlId = uint.MaxValue;
+        uint iblBrdfLutId = uint.MaxValue;
+        uint iblDiffuseId = uint.MaxValue;
+        uint iblSpecularId = uint.MaxValue;
+
+        uint mtlId = uint.MaxValue;
 
         public Vector3 InitialCameraPosition { get; } = new(0, 0.2f, -3f);
         public Quaternion InitialCameraRotation { get; } = Quaternion.CreateFromYawPitchRoll(3.14f, 3.14f, 0);
@@ -68,7 +70,7 @@ namespace DX12Windows.Content
 
             CreateRenderItems(outputsFolder);
         }
-        private void CreateRenderItems(string outputsFolder)
+        void CreateRenderItems(string outputsFolder)
         {
             Utils.Run(
                 new(() => { modelId = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, modelName)); }),
@@ -91,7 +93,7 @@ namespace DX12Windows.Content
             };
             entityId = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, Quaternion.CreateFromYawPitchRoll(MathHelper.PiOver4, -MathHelper.PiOver2, 0f), 25f, geometryInfo).Id;
         }
-        private void CreateMaterial()
+        void CreateMaterial()
         {
             Debug.Assert(IdDetail.IsValid(TestShader.VsId) && IdDetail.IsValid(TestShader.PsId));
 

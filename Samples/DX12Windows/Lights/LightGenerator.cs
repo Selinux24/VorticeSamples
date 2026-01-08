@@ -45,14 +45,18 @@ namespace DX12Windows.Lights
         {
             if (lightSet == 1)
             {
-                GenerateLightsForLab();
+#if DEBUG || DEBUGEDITOR
+                GenerateLightsForLab(true);
+#else
+                GenerateLightsForLab(false);
+#endif
             }
             else
             {
                 GenerateLightsDefault();
             }
         }
-        static void GenerateLightsForLab()
+        static void GenerateLightsForLab(bool randomLights)
         {
             Application.CreateLightSet(leftSet);
             Application.CreateLightSet(rightSet);
@@ -90,35 +94,38 @@ namespace DX12Windows.Lights
             info.Color = RGBToColor(163, 47, 30);
             lights.Add(Application.CreateLight(info));
 
-#if RANDOM_LIGHTS
-            float scale1 = 2f;
-            Vector3 scale = new(1f * scale1, 0.5f * scale1, 1f * scale1);
-            int dim = 10;
-            for (int x = -dim; x < dim; x++)
+            if (randomLights)
             {
-                for (int y = 0; y < 2 * dim; y++)
+                float scale1 = 2f;
+                Vector3 scale = new(1f * scale1, 0.5f * scale1, 1f * scale1);
+                int dim = 10;
+                for (int x = -dim; x < dim; x++)
                 {
-                    for (int z = -dim; z < dim; z++)
+                    for (int y = 0; y < 2 * dim; y++)
                     {
-                        CreateLight(
-                            new(x * scale.X, y * scale.Y, z * scale.Z),
-                            new(Random() * 3.14f, Random() * 3.14f, Random() * 3.14f),
-                            Random() > 0.5f ? LightTypes.Spot : LightTypes.Point,
-                            leftSet);
-                        CreateLight(
-                            new(x * scale.X, y * scale.Y, z * scale.Z),
-                            new(Random() * 3.14f, Random() * 3.14f, Random() * 3.14f),
-                            Random() > 0.5f ? LightTypes.Spot : LightTypes.Point,
-                            rightSet);
+                        for (int z = -dim; z < dim; z++)
+                        {
+                            CreateLight(
+                                new(x * scale.X, y * scale.Y, z * scale.Z),
+                                new(Random() * 3.14f, Random() * 3.14f, Random() * 3.14f),
+                                Random() > 0.5f ? LightTypes.Spot : LightTypes.Point,
+                                leftSet);
+                            CreateLight(
+                                new(x * scale.X, y * scale.Y, z * scale.Z),
+                                new(Random() * 3.14f, Random() * 3.14f, Random() * 3.14f),
+                                Random() > 0.5f ? LightTypes.Spot : LightTypes.Point,
+                                rightSet);
+                        }
                     }
                 }
             }
-#else
-            CreateLight(new(0, -3, 0), new(), LightTypes.Point, leftSet);
-            CreateLight(new(0, 0.2f, 1f), new(), LightTypes.Point, leftSet);
-            CreateLight(new(0, 3, 2.5f), new(), LightTypes.Point, leftSet);
-            CreateLight(new(0, 0.1f, 7), new(0, 3.14f, 0), LightTypes.Spot, leftSet);
-#endif
+            else
+            {
+                CreateLight(new(0, -3, 0), new(), LightTypes.Point, leftSet);
+                CreateLight(new(0, 0.2f, 1f), new(), LightTypes.Point, leftSet);
+                CreateLight(new(0, 3, 2.5f), new(), LightTypes.Point, leftSet);
+                CreateLight(new(0, 0.1f, 7), new(0, 3.14f, 0), LightTypes.Spot, leftSet);
+            }
         }
         static void GenerateLightsDefault()
         {

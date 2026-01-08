@@ -7,7 +7,6 @@ using PrimalLike.Common;
 using PrimalLike.Components;
 using PrimalLike.Content;
 using PrimalLike.Graphics;
-using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -18,28 +17,28 @@ namespace DX12Windows.Content
 {
     class HumveeRenderItem : ITestRenderItem
     {
-        private const string modelHumvee = "../../../../../Assets/humvee.obj";
+        const string assetFolder = "../../../../../../Assets/";
 
-        private const string envMapTexture = "../../../../../Assets/sunny_rose_garden_4k.hdr";
+        const string modelHumvee = assetFolder + "humvee.obj";
+        const string model1Name = "humvee_modelA.model";
+        const string model2Name = "humvee_modelB.model";
 
-        private const string model1Name = "humvee_modelA.model";
-        private const string model2Name = "humvee_modelB.model";
+        const string envMapTexture = assetFolder + "sunny_rose_garden_4k.hdr";
+        const string iblBrdfLutTextureName = "ibl/brdf_lut.texture";
+        const string iblDiffuseTextureName = "ibl/set3/diffuse.texture";
+        const string iblSpecularTextureName = "ibl/set3/specular.texture";
 
-        private const string iblBrdfLutTextureName = "ibl/brdf_lut.texture";
-        private const string iblDiffuseTextureName = "ibl/set3/diffuse.texture";
-        private const string iblSpecularTextureName = "ibl/set3/specular.texture";
+        uint model1Id = uint.MaxValue;
+        uint model2Id = uint.MaxValue;
 
-        private uint model1Id = uint.MaxValue;
-        private uint model2Id = uint.MaxValue;
+        uint entity1Id = uint.MaxValue;
+        uint entity2Id = uint.MaxValue;
 
-        private uint entity1Id = uint.MaxValue;
-        private uint entity2Id = uint.MaxValue;
+        uint iblBrdfLutId = uint.MaxValue;
+        uint iblDiffuseId = uint.MaxValue;
+        uint iblSpecularId = uint.MaxValue;
 
-        private uint iblBrdfLutId = uint.MaxValue;
-        private uint iblDiffuseId = uint.MaxValue;
-        private uint iblSpecularId = uint.MaxValue;
-
-        private uint mtlId = uint.MaxValue;
+        uint mtlId = uint.MaxValue;
 
         public Vector3 InitialCameraPosition { get; } = new(0f, 0.8f, -3f);
         public Quaternion InitialCameraRotation { get; } = Quaternion.CreateFromYawPitchRoll(3.14f, 3.14f, 0f);
@@ -76,7 +75,7 @@ namespace DX12Windows.Content
 
             CreateRenderItems(outputsFolder);
         }
-        private void CreateRenderItems(string outputsFolder)
+        void CreateRenderItems(string outputsFolder)
         {
             Utils.Run(
                 new(() => { model1Id = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, model1Name)); }),
@@ -110,7 +109,7 @@ namespace DX12Windows.Content
                 entity2Id = HelloWorldApp.CreateOneGameEntity<RotatorScript>(Vector3.Zero, Quaternion.Identity, geometryInfo).Id;
             }
         }
-        private void CreateMaterial()
+        void CreateMaterial()
         {
             Debug.Assert(IdDetail.IsValid(TestShader.VsId) && IdDetail.IsValid(TestShader.PsId));
 

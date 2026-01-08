@@ -31,11 +31,6 @@ float4 Heatmap(StructuredBuffer<uint2> buffer, float2 posXY, float blend)
     const float w = GlobalData.ViewWidth;
     const uint gridIndex = GetGridIndex(posXY, w);
     uint numLights = buffer[gridIndex].y;
-#if USE_BOUNDING_SPHERES
-    const uint numPointLights = numLights >> 16;
-    const uint numSpotlights = numLights & 0xffff;
-    numLights = numPointLights + numSpotlights;
-#endif
 
     const float3 mapTex[] = {
             float3(0,0,0),
@@ -65,25 +60,7 @@ float4 PostProcessPS(in noperspective float4 Position : SV_Position,
     const uint gridIndex = GetGridIndex(Position.xy, w);
     const Frustum f = Frustums[gridIndex];
 
-#if USE_BOUNDING_SPHERES
     float3 color = abs(f.ConeDirection);
-#else
-    const uint halfTile = TILE_SIZE / 2;
-    float3 color = abs(f.Planes[1].Normal);
-
-    if (GetGridIndex(float2(Position.x + halfTile, Position.y), w) == gridIndex && GetGridIndex(float2(Position.x, Position.y + halfTile), w) == gridIndex)
-    {
-        color = abs(f.Planes[0].Normal);
-    }
-    else if (GetGridIndex(float2(Position.x + halfTile, Position.y), w) != gridIndex && GetGridIndex(float2(Position.x, Position.y + halfTile), w) == gridIndex)
-    {
-        color = abs(f.Planes[2].Normal);
-    }
-    else if (GetGridIndex(float2(Position.x + halfTile, Position.y), w) == gridIndex && GetGridIndex(float2(Position.x, Position.y + halfTile), w) != gridIndex)
-    {
-        color = abs(f.Planes[3].Normal);
-    }
-#endif
 
     Texture2D gpassMain = ResourceDescriptorHeap[ShaderParams.GPassMainBufferIndex];
     color = lerp(gpassMain[Position.xy].xyz, color, 1.f);

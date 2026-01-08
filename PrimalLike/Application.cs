@@ -22,11 +22,11 @@ namespace PrimalLike
         /// </summary>
         public static Application Current { get; private set; }
 
-        private static readonly List<RenderComponent> renderSurfaces = [];
+        static readonly List<RenderComponent> renderSurfaces = [];
 
-        private readonly Time time = new();
-        private readonly Lock tickLock = new();
-        private readonly string contentFilename;
+        readonly Time time = new();
+        readonly Lock tickLock = new();
+        readonly string contentFilename;
 
         public event EventHandler OnInitialize;
         public event EventHandler OnShutdown;
@@ -49,9 +49,15 @@ namespace PrimalLike
         {
             this.contentFilename = contentFilename;
 
-            PlatformBase.Initialize(platformFactory);
+            if (!PlatformBase.Initialize(platformFactory))
+            {
+                throw new InvalidOperationException("Failed to initialize platform.");
+            }
 
-            Renderer.Initialize(graphicsFactory);
+            if (!Renderer.Initialize(graphicsFactory))
+            {
+                throw new InvalidOperationException("Failed to initialize renderer.");
+            }
 
             OnInitialize?.Invoke(this, EventArgs.Empty);
 

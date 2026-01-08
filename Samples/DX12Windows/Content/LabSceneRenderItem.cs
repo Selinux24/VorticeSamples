@@ -18,53 +18,55 @@ namespace DX12Windows.Content
 {
     class LabSceneRenderItem : ITestRenderItem
     {
-        private const string modelPrimalLab = "../../../../../Assets/LabScene.fbx";
-        private const string modelFembot = "../../../../../Assets/Fembot_v1.fbx";
+        const string assetFolder = "../../../../../../Assets/";
 
-        private const string ambientOcclusionTexture = "../../../../../Assets/AmbientOcclusion.png";
-        private const string baseColorTexture = "../../../../../Assets/BaseColor.png";
-        private const string emissiveTexture = "../../../../../Assets/Emissive.png";
-        private const string metalRoughTexture = "../../../../../Assets/MetalRough.png";
-        private const string normalTexture = "../../../../../Assets/Normal.png";
-        private const string envMapTexture = "../../../../../Assets/qwantani_moon_noon_puresky_4k.hdr";
+        const string modelPrimalLab = assetFolder + "LabScene.fbx";
+        const string modelFembot = assetFolder + "Fembot_v1.fbx";
 
-        private const string fanModelName = "fan_model.model";
-        private const string labModelName = "lab_model.model";
-        private const string intModelName = "int_model.model";
-        private const string fembotModelName = "fembot_model.model";
-        private const string sphereModelName = "sphere_model.model";
+        const string ambientOcclusionTexture = assetFolder + "AmbientOcclusion.png";
+        const string baseColorTexture = assetFolder + "BaseColor.png";
+        const string emissiveTexture = assetFolder + "Emissive.png";
+        const string metalRoughTexture = assetFolder + "MetalRough.png";
+        const string normalTexture = assetFolder + "Normal.png";
+        const string envMapTexture = assetFolder + "qwantani_moon_noon_puresky_4k.hdr";
 
-        private const string ambientOcclusionTextureName = "ambient_occlusion.texture";
-        private const string baseColorTextureName = "base_color.texture";
-        private const string emissiveTextureName = "emissive.texture";
-        private const string metalRoughTextureName = "metal_rough.texture";
-        private const string normalTextureName = "normal.texture";
+        const string fanModelName = "fan_model.model";
+        const string labModelName = "lab_model.model";
+        const string intModelName = "int_model.model";
+        const string fembotModelName = "fembot_model.model";
+        const string sphereModelName = "sphere_model.model";
 
-        private const string iblBrdfLutTextureName = "ibl/brdf_lut.texture";
-        private const string iblDiffuseTextureName = "ibl/set1/diffuse.texture";
-        private const string iblSpecularTextureName = "ibl/set1/specular.texture";
+        const string ambientOcclusionTextureName = "ambient_occlusion.texture";
+        const string baseColorTextureName = "base_color.texture";
+        const string emissiveTextureName = "emissive.texture";
+        const string metalRoughTextureName = "metal_rough.texture";
+        const string normalTextureName = "normal.texture";
 
-        private uint fanModelId = uint.MaxValue;
-        private uint intModelId = uint.MaxValue;
-        private uint labModelId = uint.MaxValue;
-        private uint fembotModelId = uint.MaxValue;
-        private uint sphereModelId = uint.MaxValue;
+        const string iblBrdfLutTextureName = "ibl/brdf_lut.texture";
+        const string iblDiffuseTextureName = "ibl/set1/diffuse.texture";
+        const string iblSpecularTextureName = "ibl/set1/specular.texture";
 
-        private uint fanEntityId = uint.MaxValue;
-        private uint intEntityId = uint.MaxValue;
-        private uint labEntityId = uint.MaxValue;
-        private uint fembotEntityId = uint.MaxValue;
-        private readonly uint[] sphereEntityIds = new uint[12];
+        uint fanModelId = uint.MaxValue;
+        uint intModelId = uint.MaxValue;
+        uint labModelId = uint.MaxValue;
+        uint fembotModelId = uint.MaxValue;
+        uint sphereModelId = uint.MaxValue;
 
-        private readonly uint[] textureIds = new uint[(int)TestShader.TextureUsages.Count];
+        uint fanEntityId = uint.MaxValue;
+        uint intEntityId = uint.MaxValue;
+        uint labEntityId = uint.MaxValue;
+        uint fembotEntityId = uint.MaxValue;
+        readonly uint[] sphereEntityIds = new uint[12];
 
-        private uint iblBrdfLutId = uint.MaxValue;
-        private uint iblDiffuseId = uint.MaxValue;
-        private uint iblSpecularId = uint.MaxValue;
+        readonly uint[] textureIds = new uint[(int)TestShader.TextureUsages.Count];
 
-        private uint defaultMtlId = uint.MaxValue;
-        private uint fembotMtlId = uint.MaxValue;
-        private readonly uint[] pbrMtlIds = new uint[12];
+        uint iblBrdfLutId = uint.MaxValue;
+        uint iblDiffuseId = uint.MaxValue;
+        uint iblSpecularId = uint.MaxValue;
+
+        uint defaultMtlId = uint.MaxValue;
+        uint fembotMtlId = uint.MaxValue;
+        readonly uint[] pbrMtlIds = new uint[12];
 
         public Vector3 InitialCameraPosition { get; } = new(-5.49f, 1.73f, 9.26f);
         public Quaternion InitialCameraRotation { get; } = Quaternion.CreateFromYawPitchRoll(5.61f, 0.19f, 0f);
@@ -102,7 +104,7 @@ namespace DX12Windows.Content
 
             CreateRenderItems(outputsFolder);
         }
-        private void CreateRenderItems(string outputsFolder)
+        void CreateRenderItems(string outputsFolder)
         {
             Array.Fill(textureIds, uint.MaxValue);
 
@@ -183,7 +185,7 @@ namespace DX12Windows.Content
                 }
             }
         }
-        private void CreateMaterial()
+        void CreateMaterial()
         {
             Debug.Assert(IdDetail.IsValid(TestShader.VsId) && IdDetail.IsValid(TestShader.PsId));
 

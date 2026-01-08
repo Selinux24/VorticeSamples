@@ -5,23 +5,15 @@
     <Configurations>Debug;Release;ReleaseEditor;DebugEditor</Configurations>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <Platforms>x64</Platforms>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseEditor|AnyCPU'">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseEditor|x64'">
     <Optimize>True</Optimize>
-    <DefineConstants>$(DefineConstants);USE_BOUNDING_SPHERES</DefineConstants>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <DefineConstants>$(DefineConstants);USE_BOUNDING_SPHERES</DefineConstants>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <DefineConstants>$(DefineConstants);USE_BOUNDING_SPHERES</DefineConstants>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugEditor|AnyCPU'">
-    <DefineConstants>$(DefineConstants);USE_BOUNDING_SPHERES</DefineConstants>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Optimize>True</Optimize>
   </PropertyGroup>
 
   <ItemGroup>
@@ -35,11 +27,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="$(PkgMicrosoft_Direct3D_D3D12)\build\native\bin\x64\D3D12Core.dll">
+    <None Include="$(PkgMicrosoft_Direct3D_D3D12)\build\native\bin\$(Platform)\D3D12Core.dll">
       <Link>D3D12\D3D12Core.dll</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="$(PkgMicrosoft_Direct3D_D3D12)\build\native\bin\x64\d3d12SDKLayers.dll">
+    <None Include="$(PkgMicrosoft_Direct3D_D3D12)\build\native\bin\$(Platform)\d3d12SDKLayers.dll" Condition="'$(Configuration)'=='Debug'Or'$(Configuration)'=='DebugEditor'">
       <Link>D3D12\d3d12SDKLayers.dll</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

@@ -10,14 +10,6 @@ namespace Direct3D12.Shaders
         public float Range;
 
         public Vector3 Direction;
-#if USE_BOUNDING_SPHERES
-        // If this is set to -1 then the light is a point light.
-        public float CosPenumbra;
-#else
-        public float ConeRadius;
-
-        public uint Type;
-        public Vector3 _pad;
-#endif
+        public float CosPenumbra; // If this is set to -1 then the light is a point light.
     }
 }

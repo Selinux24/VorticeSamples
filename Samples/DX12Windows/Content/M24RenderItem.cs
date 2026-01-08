@@ -18,39 +18,41 @@ namespace DX12Windows.Content
 {
     class M24RenderItem : ITestRenderItem
     {
-        private const string modelM24 = "../../../../../Assets/m24.dae";
-        private const string envMapTexture = "../../../../../Assets/kloofendal_48d_partly_cloudy_puresky_4k.hdr";
+        const string assetFolder = "../../../../../../Assets/";
 
-        private const string model1Name = "m24_1_model.model";
-        private const string model2Name = "m24_2_model.model";
-        private const string model3Name = "m24_3_model.model";
-        private const string model4Name = "m24_4_model.model";
-        private const string model5Name = "m24_5_model.model";
-        private const string model6Name = "m24_6_model.model";
+        const string modelM24 = assetFolder + "m24.dae";
+        const string envMapTexture = assetFolder + "kloofendal_48d_partly_cloudy_puresky_4k.hdr";
 
-        private const string iblBrdfLutTextureName = "ibl/brdf_lut.texture";
-        private const string iblDiffuseTextureName = "ibl/set4/diffuse.texture";
-        private const string iblSpecularTextureName = "ibl/set4/specular.texture";
+        const string model1Name = "m24_1_model.model";
+        const string model2Name = "m24_2_model.model";
+        const string model3Name = "m24_3_model.model";
+        const string model4Name = "m24_4_model.model";
+        const string model5Name = "m24_5_model.model";
+        const string model6Name = "m24_6_model.model";
 
-        private uint model1Id = uint.MaxValue;
-        private uint model2Id = uint.MaxValue;
-        private uint model3Id = uint.MaxValue;
-        private uint model4Id = uint.MaxValue;
-        private uint model5Id = uint.MaxValue;
-        private uint model6Id = uint.MaxValue;
+        const string iblBrdfLutTextureName = "ibl/brdf_lut.texture";
+        const string iblDiffuseTextureName = "ibl/set4/diffuse.texture";
+        const string iblSpecularTextureName = "ibl/set4/specular.texture";
 
-        private uint entity1Id = uint.MaxValue;
-        private uint entity2Id = uint.MaxValue;
-        private uint entity3Id = uint.MaxValue;
-        private uint entity4Id = uint.MaxValue;
-        private uint entity5Id = uint.MaxValue;
-        private uint entity6Id = uint.MaxValue;
+        uint model1Id = uint.MaxValue;
+        uint model2Id = uint.MaxValue;
+        uint model3Id = uint.MaxValue;
+        uint model4Id = uint.MaxValue;
+        uint model5Id = uint.MaxValue;
+        uint model6Id = uint.MaxValue;
 
-        private uint iblBrdfLutId = uint.MaxValue;
-        private uint iblDiffuseId = uint.MaxValue;
-        private uint iblSpecularId = uint.MaxValue;
+        uint entity1Id = uint.MaxValue;
+        uint entity2Id = uint.MaxValue;
+        uint entity3Id = uint.MaxValue;
+        uint entity4Id = uint.MaxValue;
+        uint entity5Id = uint.MaxValue;
+        uint entity6Id = uint.MaxValue;
 
-        private uint mtlId = uint.MaxValue;
+        uint iblBrdfLutId = uint.MaxValue;
+        uint iblDiffuseId = uint.MaxValue;
+        uint iblSpecularId = uint.MaxValue;
+
+        uint mtlId = uint.MaxValue;
 
         public Vector3 InitialCameraPosition { get; } = new(0, 10f, -45f);
         public Quaternion InitialCameraRotation { get; } = Quaternion.CreateFromYawPitchRoll(MathF.PI, MathF.PI, 0);
@@ -91,7 +93,7 @@ namespace DX12Windows.Content
 
             CreateRenderItems(outputsFolder);
         }
-        private void CreateRenderItems(string outputsFolder)
+        void CreateRenderItems(string outputsFolder)
         {
             Utils.Run(
                 new(() => { model1Id = ITestRenderItem.LoadModel(Path.Combine(outputsFolder, model1Name)); }),
@@ -163,7 +165,7 @@ namespace DX12Windows.Content
                 entity6Id = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, rotation, geometryInfo).Id;
             }
         }
-        private void CreateMaterial()
+        void CreateMaterial()
         {
             Debug.Assert(IdDetail.IsValid(TestShader.VsId) && IdDetail.IsValid(TestShader.PsId));
 

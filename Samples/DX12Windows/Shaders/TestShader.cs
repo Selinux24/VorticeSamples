@@ -2,8 +2,6 @@
 using Direct3D12.ShaderCompiler;
 using PrimalLike.Common;
 using PrimalLike.Content;
-using PrimalLike.Graphics;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 
@@ -23,7 +21,7 @@ namespace DX12Windows.Shaders
         }
 
         const string ShadersSourcePath = "./Hlsl/";
-        const string ShadersIncludeDir = "../../../../../Libs/Direct3D12/Hlsl/";
+        const string ShadersIncludeDir = "../../../../../../Libs/Direct3D12/Hlsl/";
 
         public static uint VsId { get; private set; } = IdDetail.InvalidId;
         public static uint PsId { get; private set; } = IdDetail.InvalidId;
@@ -31,6 +29,8 @@ namespace DX12Windows.Shaders
 
         public static void Load()
         {
+            Debug.Assert(File.Exists(Path.Combine(ShadersSourcePath, "TestShader.hlsl")));
+
             // Let's say our material uses a vertex shader and a pixel shader.
             {
                 ShaderFileInfo info = new(Path.Combine(ShadersSourcePath, "TestShader.hlsl"), "MainVS", (uint)ShaderStage.Vertex);

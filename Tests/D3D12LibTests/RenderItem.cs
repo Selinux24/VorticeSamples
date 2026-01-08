@@ -13,17 +13,17 @@ namespace D3D12LibTests
 {
     class RenderItem
     {
-        private const string shadersSourcePath = "./Hlsl/";
-        private const string shadersIncludeDir = "../../../../../Libs/Direct3D12/Hlsl/";
+        const string shadersSourcePath = "./Hlsl/";
+        const string shadersIncludeDir = "../../../../../../Libs/Direct3D12/Hlsl/";
 
-        private static uint modelId = IdDetail.InvalidId;
-        private static uint vsId = IdDetail.InvalidId;
-        private static uint psId = IdDetail.InvalidId;
-        private static uint mtlId = IdDetail.InvalidId;
+        static uint modelId = IdDetail.InvalidId;
+        static uint vsId = IdDetail.InvalidId;
+        static uint psId = IdDetail.InvalidId;
+        static uint mtlId = IdDetail.InvalidId;
 
-        private static readonly Dictionary<uint, uint> renderItemEntityMap = [];
+        static readonly Dictionary<uint, uint> renderItemEntityMap = [];
 
-        private static void LoadModel()
+        static void LoadModel()
         {
             string modelPath = Path.GetFullPath("./Content/Model.model");
             using var file = new MemoryStream(File.ReadAllBytes(modelPath));
@@ -31,7 +31,7 @@ namespace D3D12LibTests
             modelId = ContentToEngine.CreateResource(file, AssetTypes.Mesh);
             Debug.Assert(IdDetail.IsValid(modelId));
         }
-        private static void LoadShaders()
+        static void LoadShaders()
         {
             // Let's say our material uses a vertex shader and a pixel shader.
             ShaderFileInfo info = new(Path.Combine(shadersSourcePath, "TestShader.hlsl"), "TestShaderVS", (uint)ShaderStage.Vertex);
