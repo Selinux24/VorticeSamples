@@ -4,12 +4,10 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Threading;
 using Utilities;
 using Vortice.Direct3D12;
 using Vortice.DXGI;
-using static Direct3D12.D3D12Upload;
 
 namespace Direct3D12.Content
 {
@@ -50,7 +48,7 @@ namespace Direct3D12.Content
         ///  id::id_type         shader_ids[shader_type::count],
         /// } material_init_info
         ///</summary>
-        private static D3D12Texture CreateResourceFromTextureData(IntPtr data)
+        static D3D12Texture CreateResourceFromTextureData(IntPtr data)
         {
             Debug.Assert(data != IntPtr.Zero);
             BlobStreamReader blob = new(data);
@@ -121,37 +119,8 @@ namespace Direct3D12.Content
             device.GetCopyableFootprints(desc, 0, subresourceCount, 0, layouts, numRows, rowSizes, out ulong requiredSize);
 
             Debug.Assert(requiredSize > 0);
-            UploadContext context = new((uint)requiredSize);
-            unsafe
-            {
-                IntPtr cpuAddress = (IntPtr)context.CpuAddress;
-
-                for (int subresourceIdx = 0; subresourceIdx < subresourceCount; subresourceIdx++)
-                {
-                    PlacedSubresourceFootPrint layout = layouts[subresourceIdx];
-                    uint subresourceHeight = numRows[subresourceIdx];
-                    uint subresourceDepth = layout.Footprint.Depth;
-                    SubresourceData subResource = subresources[subresourceIdx];
-
-                    IntPtr destDataPtr = cpuAddress + (nint)layout.Offset;
-                    uint destRowPitch = layout.Footprint.RowPitch;
-                    uint destSlicePitch = layout.Footprint.RowPitch * subresourceHeight;
-
-                    for (uint depthIdx = 0; depthIdx < subresourceDepth; depthIdx++)
-                    {
-                        IntPtr srcSlice = (IntPtr)subResource.pData + (nint)(subResource.SlicePitch * depthIdx);
-                        IntPtr dstSlice = destDataPtr + (nint)(destSlicePitch * depthIdx);
-
-                        for (uint rowIdx = 0; rowIdx < subresourceHeight; rowIdx++)
-                        {
-                            IntPtr source = srcSlice + (nint)((uint)subResource.RowPitch * rowIdx);
-                            IntPtr destination = dstSlice + (nint)(destRowPitch * rowIdx);
-                            nuint byteCount = (nuint)rowSizes[subresourceIdx];
-                            NativeMemory.Copy(source.ToPointer(), destination.ToPointer(), byteCount);
-                        }
-                    }
-                }
-            }
+            D3D12Upload.UploadContext context = new((uint)requiredSize);
+            context.CopyData(subresources, subresourceCount, layouts, numRows, rowSizes);
 
             D3D12Helpers.DxCall(device.CreateCommittedResource(
                 HeapProperties.DefaultHeapProperties,

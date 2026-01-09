@@ -137,7 +137,7 @@ namespace Direct3D12.Content
             }
         }
 
-        private static D3DPrimitiveTopology GetD3DPrimitiveTopology(LibPrimitiveTopology type)
+        static D3DPrimitiveTopology GetD3DPrimitiveTopology(LibPrimitiveTopology type)
         {
             return type switch
             {

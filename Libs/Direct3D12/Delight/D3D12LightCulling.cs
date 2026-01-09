@@ -85,10 +85,10 @@ namespace Direct3D12.Delight
         const uint LightCullingTileSize = 32;
         const uint MaxLightsPerTile = 256;
 
-        private static ID3D12RootSignature lightCullingRootSignature = null;
-        private static ID3D12PipelineState gridFrustumPso = null;
-        private static ID3D12PipelineState lightCullingPso = null;
-        private static readonly FreeList<LightCuller> lightCullers = new();
+        static ID3D12RootSignature lightCullingRootSignature = null;
+        static ID3D12PipelineState gridFrustumPso = null;
+        static ID3D12PipelineState lightCullingPso = null;
+        static readonly FreeList<LightCuller> lightCullers = new();
 
         public static bool Initialize()
         {
@@ -103,7 +103,7 @@ namespace Direct3D12.Delight
         /// <remarks>
         /// See CullLightsCS in CullLights.hlsl for the root signature layout.
         /// </remarks>
-        private static bool CreateRootSignatures()
+        static bool CreateRootSignatures()
         {
             Debug.Assert(lightCullingRootSignature == null);
             RootParameter1[] parameters = new RootParameter1[(uint)LightCullingRootParameters.Count];
@@ -124,7 +124,7 @@ namespace Direct3D12.Delight
 
             return lightCullingRootSignature != null;
         }
-        private static bool CreatePsos()
+        static bool CreatePsos()
         {
             {
                 Debug.Assert(gridFrustumPso == null);
@@ -224,7 +224,7 @@ namespace Direct3D12.Delight
                 ResourceStates.UnorderedAccess,
                 ResourceStates.PixelShaderResource);
         }
-        private static void ResizeAndCalculateGridFrustums(
+        static void ResizeAndCalculateGridFrustums(
             ref CullingParameters culler,
             ID3D12GraphicsCommandList cmdList,
             ref D3D12FrameInfo d3d12Info,
@@ -237,7 +237,7 @@ namespace Direct3D12.Delight
             Resize(ref culler);
             CalculateGridFrustums(culler, cmdList, ref d3d12Info, barriers);
         }
-        private static void CalculateGridFrustums(
+        static void CalculateGridFrustums(
             CullingParameters culler,
             ID3D12GraphicsCommandList cmdList,
             ref D3D12FrameInfo d3d12Info,
@@ -268,7 +268,7 @@ namespace Direct3D12.Delight
                 ResourceStates.UnorderedAccess,
                 ResourceStates.NonPixelShaderResource | ResourceStates.PixelShaderResource);
         }
-        private static void Resize(ref CullingParameters culler)
+        static void Resize(ref CullingParameters culler)
         {
             uint tileSize = LightCullingTileSize;
             Debug.Assert(culler.ViewWidth >= tileSize && culler.ViewHeight >= tileSize);
@@ -294,7 +294,7 @@ namespace Direct3D12.Delight
 
             ResizeBuffers(ref culler);
         }
-        private static void ResizeBuffers(ref CullingParameters culler)
+        static void ResizeBuffers(ref CullingParameters culler)
         {
             uint alignment = (uint)Marshal.SizeOf<Vector4>();
             uint frustumsBufferStride = (uint)Marshal.SizeOf<Shaders.Frustum>();

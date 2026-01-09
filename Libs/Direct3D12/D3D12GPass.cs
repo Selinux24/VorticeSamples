@@ -164,20 +164,20 @@ namespace Direct3D12
         public const Format MainBufferFormat = Format.R16G16B16A16_Float;
         public const Format DepthBufferFormat = Format.D32_Float;
 
-        private const uint initialDimensionWidth = 100;
-        private const uint initialDimensionHeight = 100;
+        const uint initialDimensionWidth = 100;
+        const uint initialDimensionHeight = 100;
 
-        private static D3D12RenderTexture gpassMainBuffer;
-        private static D3D12DepthBuffer gpassDepthBuffer;
-        private static uint dimensionWidth = initialDimensionWidth;
-        private static uint dimensionHeight = initialDimensionHeight;
+        static D3D12RenderTexture gpassMainBuffer;
+        static D3D12DepthBuffer gpassDepthBuffer;
+        static uint dimensionWidth = initialDimensionWidth;
+        static uint dimensionHeight = initialDimensionHeight;
 
-        private static GPassCache frameCache = new();
+        static GPassCache frameCache = new();
 
 #if DEBUG
-        private static readonly Color clearValue = new(0.5f, 0.5f, 0.5f, 1.0f);
+        static readonly Color clearValue = new(0.5f, 0.5f, 0.5f, 1.0f);
 #else
-        private static readonly Color clearValue = new(0.0f);
+        static readonly Color clearValue = new(0.0f);
 #endif
 
         /// <summary>
@@ -193,7 +193,7 @@ namespace Direct3D12
         {
             return CreateBuffers(initialDimensionWidth, initialDimensionHeight);
         }
-        private static bool CreateBuffers(uint width, uint height)
+        static bool CreateBuffers(uint width, uint height)
         {
             Debug.Assert(width > 0 && height > 0);
             gpassMainBuffer?.Dispose();
@@ -242,7 +242,7 @@ namespace Direct3D12
             return gpassMainBuffer.GetResource() != null && gpassDepthBuffer.GetResource() != null;
         }
 
-        private static void FillPerObjectData(ref D3D12FrameInfo d3d12Info, MaterialsCache materialsCache)
+        static void FillPerObjectData(ref D3D12FrameInfo d3d12Info, MaterialsCache materialsCache)
         {
             uint renderItemsCount = frameCache.Size();
             uint currentEntityId = uint.MaxValue;
@@ -278,7 +278,7 @@ namespace Direct3D12
                 frameCache.PerObjectData[i] = currentGpuAddress;
             }
         }
-        private static void SetRootParameters(ID3D12GraphicsCommandList cmdList, uint cacheIndex)
+        static void SetRootParameters(ID3D12GraphicsCommandList cmdList, uint cacheIndex)
         {
             Debug.Assert(cacheIndex < frameCache.Size());
 
@@ -298,7 +298,7 @@ namespace Direct3D12
                 break;
             }
         }
-        private static void PrepareRenderFrame(ref D3D12FrameInfo d3d12Info)
+        static void PrepareRenderFrame(ref D3D12FrameInfo d3d12Info)
         {
             Debug.Assert(d3d12Info.Camera != null);
 
@@ -346,9 +346,9 @@ namespace Direct3D12
 
         public static void Shutdown()
         {
-            gpassMainBuffer.Dispose();
+            gpassMainBuffer?.Dispose();
             gpassMainBuffer = null;
-            gpassDepthBuffer.Dispose();
+            gpassDepthBuffer?.Dispose();
             gpassDepthBuffer = null;
             dimensionWidth = initialDimensionWidth;
             dimensionHeight = initialDimensionHeight;

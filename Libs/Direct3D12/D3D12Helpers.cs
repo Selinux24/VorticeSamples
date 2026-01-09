@@ -2,8 +2,8 @@
 global using D3D12GraphicsCommandList = Vortice.Direct3D12.ID3D12GraphicsCommandList6;
 global using DXGIAdapter = Vortice.DXGI.IDXGIAdapter4;
 global using DXGIFactory = Vortice.DXGI.IDXGIFactory7;
+using Direct3D12.Helpers;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
 using Vortice.Direct3D12;
 using Vortice.DXGI;
 using Vortice.Mathematics;
@@ -12,20 +12,20 @@ namespace Direct3D12
 {
     using HResult = SharpGen.Runtime.Result;
 
-    public static unsafe class D3D12Helpers
+    public static class D3D12Helpers
     {
         #region Structured Collections
 
         public readonly struct HeapPropertiesCollection()
         {
-            private static readonly HeapProperties defaultHeap = new(
+            static readonly HeapProperties defaultHeap = new(
                 HeapType.Default,
                 CpuPageProperty.Unknown,
                 MemoryPool.Unknown,
                 0,
                 0);
 
-            private static readonly HeapProperties uploadHeap = new(
+            static readonly HeapProperties uploadHeap = new(
                 HeapType.Upload,
                 CpuPageProperty.Unknown,
                 MemoryPool.Unknown,
@@ -37,7 +37,7 @@ namespace Direct3D12
         }
         public readonly struct RasterizerStatesCollection()
         {
-            private static readonly RasterizerDescription noCull = new(
+            static readonly RasterizerDescription noCull = new(
                 CullMode.None,
                 FillMode.Solid,
                 true,
@@ -50,7 +50,7 @@ namespace Direct3D12
                 0,
                 ConservativeRasterizationMode.Off);
 
-            private static readonly RasterizerDescription backFaceCull = new(
+            static readonly RasterizerDescription backFaceCull = new(
                 CullMode.Back,
                 FillMode.Solid,
                 true,
@@ -63,7 +63,7 @@ namespace Direct3D12
                 0,
                 ConservativeRasterizationMode.Off);
 
-            private static readonly RasterizerDescription frontFaceCull = new(
+            static readonly RasterizerDescription frontFaceCull = new(
                 CullMode.Front,
                 FillMode.Solid,
                 true,
@@ -76,7 +76,7 @@ namespace Direct3D12
                 0,
                 ConservativeRasterizationMode.Off);
 
-            private static readonly RasterizerDescription wireframe = new(
+            static readonly RasterizerDescription wireframe = new(
                 CullMode.None,
                 FillMode.Wireframe,
                 true,
@@ -96,23 +96,23 @@ namespace Direct3D12
         }
         public readonly struct DepthStatesCollection()
         {
-            private static readonly DepthStencilDescription1 disabled = new(
+            static readonly DepthStencilDescription1 disabled = new(
                 false,
                 DepthWriteMask.Zero,
                 ComparisonFunction.LessEqual);
-            private static readonly DepthStencilDescription1 enabled = new(
+            static readonly DepthStencilDescription1 enabled = new(
                 true,
                 DepthWriteMask.All,
                 ComparisonFunction.LessEqual);
-            private static readonly DepthStencilDescription1 enabledReadonly = new(
+            static readonly DepthStencilDescription1 enabledReadonly = new(
                 true,
                 DepthWriteMask.Zero,
                 ComparisonFunction.LessEqual);
-            private static readonly DepthStencilDescription1 reversed = new(
+            static readonly DepthStencilDescription1 reversed = new(
                 true,
                 DepthWriteMask.All,
                 ComparisonFunction.GreaterEqual);
-            private static readonly DepthStencilDescription1 reversedReadonly = new(
+            static readonly DepthStencilDescription1 reversedReadonly = new(
                 true,
                 DepthWriteMask.Zero,
                 ComparisonFunction.GreaterEqual);
@@ -125,7 +125,7 @@ namespace Direct3D12
         }
         public readonly struct BlendStatesCollection()
         {
-            private static readonly BlendDescription disabled = new(
+            static readonly BlendDescription disabled = new(
                 Blend.SourceAlpha,
                 Blend.InverseSourceAlpha,
                 Blend.One,
@@ -135,7 +135,7 @@ namespace Direct3D12
         }
         public readonly struct SampleStatesCollection()
         {
-            private static readonly StaticSamplerDescription staticPoint = new(
+            static readonly StaticSamplerDescription staticPoint = new(
                 new SamplerDescription(
                     Filter.MinMagMipPoint,
                     TextureAddressMode.Clamp,
@@ -147,7 +147,7 @@ namespace Direct3D12
                     new Color4(0f, 0f, 0f, 1f),
                     0f, float.MaxValue),
                 ShaderVisibility.Pixel, 0, 0);
-            private static readonly StaticSamplerDescription staticLinear = new(
+            static readonly StaticSamplerDescription staticLinear = new(
                 new SamplerDescription(
                     Filter.MinMagMipLinear,
                     TextureAddressMode.Clamp,
@@ -159,7 +159,7 @@ namespace Direct3D12
                     new Color4(0f, 0f, 0f, 1f),
                     0f, float.MaxValue),
                 ShaderVisibility.Pixel, 0, 0);
-            private static readonly StaticSamplerDescription staticAnisotropic = new(
+            static readonly StaticSamplerDescription staticAnisotropic = new(
                 new SamplerDescription(
                     Filter.Anisotropic,
                     TextureAddressMode.Clamp,
@@ -179,8 +179,8 @@ namespace Direct3D12
 
         #endregion
 
-        private const string SEPARATOR_BEGIN = "** ERROR on {0} *********************************************";
-        private const string SEPARATOR_END = "** {0} ******************************************************";
+        const string SEPARATOR_BEGIN = "** ERROR on {0} *********************************************";
+        const string SEPARATOR_END = "** {0} ******************************************************";
 
         public static bool DxCall(HResult result)
         {
@@ -277,7 +277,7 @@ namespace Direct3D12
             return new(rootConstants, visibility);
         }
 
-        private static RootParameter1 AsDescriptor(
+        public static RootParameter1 AsDescriptor(
             RootParameterType type,
             ShaderVisibility visibility,
             uint shaderRegister,
@@ -375,9 +375,9 @@ namespace Direct3D12
             // The buffer will be only used for upload or as constant buffer/UAV.
             Debug.Assert(desc.Flags == ResourceFlags.None || desc.Flags == ResourceFlags.AllowUnorderedAccess);
 
-            ID3D12Resource resource = null;
             ResourceStates resourceState = isCpuAccessible ? ResourceStates.GenericRead : state;
 
+            ID3D12Resource resource;
             if (heap != null)
             {
                 DxCall(D3D12Graphics.Device.CreatePlacedResource(
@@ -395,41 +395,25 @@ namespace Direct3D12
                     resourceState,
                     out resource));
             }
+            Debug.Assert(resource != null);
 
-            if (data != null)
+            if (data == null) return resource;
+
+            // If we have initial data which we'd like to be able to change later, we set is_cpu_accessible
+            // to true. If we only want to upload some data once to be used by the GPU, then is_cpu_accessible
+            // should be set to false.
+            if (isCpuAccessible)
             {
-                // If we have initial data which we'd like to be able to change later, we set is_cpu_accessible
-                // to true. If we only want to upload some data once to be used by the GPU, then is_cpu_accessible
-                // should be set to false.
-                if (isCpuAccessible)
-                {
-                    // NOTE: range's Begin and End fields are set to 0, to indicate that
-                    //       the CPU is not reading any data (i.e. write-only)
-                    void* cpuAddress = default;
-                    DxCall(resource.Map(0, cpuAddress));
-                    Debug.Assert(cpuAddress != null);
-                    uint sizeInBytes = (uint)(sizeof(T) * data.Length);
-                    fixed (T* dataPtr = data)
-                    {
-                        NativeMemory.Copy(dataPtr, cpuAddress, sizeInBytes);
-                    }
-                    resource.Unmap(0, null);
-                }
-                else
-                {
-                    D3D12Upload.UploadContext context = new(bufferSize);
-                    uint sizeInBytes = (uint)(sizeof(T) * data.Length);
-                    fixed (T* dataPtr = data)
-                    {
-                        NativeMemory.Copy(dataPtr, context.CpuAddress, sizeInBytes);
-                    }
-                    context.CmdList.CopyResource(resource, context.UploadBuffer);
-                    context.EndUpload();
-                    context = null;
-                }
+                BuffersHelper.Write(data, resource);
+            }
+            else
+            {
+                D3D12Upload.UploadContext context = new(bufferSize);
+                BuffersHelper.Write(data, context.CpuAddress);
+                context.CmdList.CopyResource(resource, context.UploadBuffer);
+                context.EndUpload();
             }
 
-            Debug.Assert(resource != null);
             return resource;
         }
 

@@ -9,9 +9,9 @@ namespace Direct3D12
 {
     class UavClearableBuffer : IDisposable
     {
-        private readonly D3D12Buffer buffer;
-        private DescriptorHandle uav;
-        private DescriptorHandle uavShaderVisible;
+        readonly D3D12Buffer buffer;
+        DescriptorHandle uav;
+        DescriptorHandle uavShaderVisible;
 
         public ID3D12Resource Buffer => buffer.Buffer;
         public ulong GpuAddress => buffer.GpuAddress;
@@ -42,7 +42,6 @@ namespace Direct3D12
             D3D12Graphics.Device.CreateUnorderedAccessView(buffer.Buffer, null, desc, uav.Cpu);
             D3D12Graphics.Device.CopyDescriptorsSimple(1, uavShaderVisible.Cpu, uav.Cpu, D3D12Graphics.SrvHeap.DescriptorType);
         }
-
         ~UavClearableBuffer()
         {
             Dispose(false);
@@ -53,7 +52,7 @@ namespace Direct3D12
             Dispose(true);
             GC.SuppressFinalize(this);
         }
-        private void Dispose(bool disposing)
+        void Dispose(bool disposing)
         {
             if (disposing)
             {

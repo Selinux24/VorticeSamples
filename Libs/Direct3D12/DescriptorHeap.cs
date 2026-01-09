@@ -8,17 +8,17 @@ namespace Direct3D12
 {
     class DescriptorHeap : IDisposable
     {
-        private readonly DescriptorHeapType type;
-        private readonly Lock mutex = new();
-        private readonly List<uint>[] deferredFreeIndices;
+        readonly DescriptorHeapType type;
+        readonly Lock mutex = new();
+        readonly List<uint>[] deferredFreeIndices;
 
-        private ID3D12DescriptorHeap heap;
-        private CpuDescriptorHandle cpuStart;
-        private GpuDescriptorHandle gpuStart;
-        private uint[] freeHandles;
-        private uint capacity = 0;
-        private int size = 0;
-        private uint descriptorSize;
+        ID3D12DescriptorHeap heap;
+        CpuDescriptorHandle cpuStart;
+        GpuDescriptorHandle gpuStart;
+        uint[] freeHandles;
+        uint capacity = 0;
+        int size = 0;
+        uint descriptorSize;
 
         public DescriptorHeapType DescriptorType { get => type; }
         public CpuDescriptorHandle CpuStart { get => cpuStart; }
@@ -49,14 +49,14 @@ namespace Direct3D12
             Dispose(true);
             GC.SuppressFinalize(this);
         }
-        private void Dispose(bool disposing)
+        void Dispose(bool disposing)
         {
             if (disposing)
             {
                 Release();
             }
         }
-        private void Release()
+        void Release()
         {
             if (heap == null)
             {

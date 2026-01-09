@@ -50,7 +50,7 @@ namespace Direct3D12.Content
                 materials.Remove(id);
             }
         }
-        
+
         public static void GetMaterials(uint[] materialIds, ref MaterialsCache cache, ref uint descriptorIndexCount)
         {
             Debug.Assert(materialIds != null && materialIds.Length > 0);
@@ -75,7 +75,7 @@ namespace Direct3D12.Content
                 descriptorIndexCount = totalIndexCount;
             }
         }
-        
+
         public static uint CreateRootSignature(MaterialTypes type, ShaderFlags flags)
         {
             Debug.Assert(type < MaterialTypes.Count);
@@ -154,7 +154,7 @@ namespace Direct3D12.Content
 
             return id;
         }
-        private static RootSignatureFlags GetRootSignatureFlags(ShaderFlags flags)
+        static RootSignatureFlags GetRootSignatureFlags(ShaderFlags flags)
         {
             RootSignatureFlags defaultFlags = D3D12RootSignatureDesc.DefaultFlags;
             if (flags.HasFlag(ShaderFlags.Vertex)) defaultFlags &= ~RootSignatureFlags.DenyVertexShaderRootAccess;
@@ -210,7 +210,7 @@ namespace Direct3D12.Content
                 DepthPsoId = depthPsoId
             };
         }
-        private static D3DPrimitiveTopologyType GetD3DPrimitiveTopologyType(D3DPrimitiveTopology topology)
+        static D3DPrimitiveTopologyType GetD3DPrimitiveTopologyType(D3DPrimitiveTopology topology)
         {
             return topology switch
             {
@@ -220,30 +220,30 @@ namespace Direct3D12.Content
                 _ => D3DPrimitiveTopologyType.Undefined,
             };
         }
-        private static CompiledShader[] GetMaterialShaders(D3D12MaterialStream material, uint elementsType)
+        static CompiledShader[] GetMaterialShaders(D3D12MaterialStream material, uint elementsType)
         {
-            ShaderFlags flags = material.ShaderFlags;
-            CompiledShader[] shaders = new CompiledShader[(int)ShaderTypes.Count];
+            var flags = material.ShaderFlags;
+            var shaders = new CompiledShader[(uint)ShaderTypes.Count];
+
             uint shaderIndex = 0;
             for (uint i = 0; i < (uint)ShaderTypes.Count; i++)
             {
                 ShaderFlags shaderFlags = (ShaderFlags)(1u << (int)i);
-                if (flags.HasFlag(shaderFlags))
-                {
-                    ShaderTypes shaderType = GetShaderType(shaderFlags);
-                    uint key = shaderType == ShaderTypes.Vertex ? elementsType : uint.MaxValue;
-                    uint shaderId = material.ShaderIds[shaderIndex];
-                    shaders[i] = ContentToEngine.GetShader(shaderId, key);
-                    Debug.Assert(shaders[i].ByteCodeSize > 0);
-                    shaderIndex++;
-                }
+                if (!flags.HasFlag(shaderFlags)) continue;
+
+                ShaderTypes shaderType = GetShaderType(shaderFlags);
+                uint key = shaderType == ShaderTypes.Vertex ? elementsType : uint.MaxValue;
+                uint shaderId = material.ShaderIds[shaderIndex];
+                shaders[i] = ContentToEngine.GetShader(shaderId, key);
+                Debug.Assert(shaders[i].ByteCodeSize > 0);
+                shaderIndex++;
             }
+
             return shaders;
         }
-        private static ShaderTypes GetShaderType(ShaderFlags flag)
+        static ShaderTypes GetShaderType(ShaderFlags flag)
         {
-            int index = BitOperations.TrailingZeroCount((uint)flag);
-            return (ShaderTypes)index;
+            return (ShaderTypes)BitOperations.TrailingZeroCount((uint)flag);
         }
     }
 }

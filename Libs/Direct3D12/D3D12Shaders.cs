@@ -3,21 +3,16 @@ using PrimalLike.Content;
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Text;
 
 namespace Direct3D12
 {
     class D3D12Shaders
     {
-        private static readonly CompiledShader?[] engineShaders = new CompiledShader?[(int)EngineShaders.Count];
-        private static byte[] engineShadersBlob;
+        static readonly CompiledShader?[] engineShaders = new CompiledShader?[(uint)EngineShaders.Count];
+        static byte[] engineShadersBlob;
 
         public static bool Initialize()
-        {
-            return LoadEngineShaders();
-        }
-        private static bool LoadEngineShaders()
         {
             Debug.Assert(engineShadersBlob == null);
             bool result = Application.LoadEngineShaders(out engineShadersBlob);
@@ -30,11 +25,8 @@ namespace Direct3D12
             for (uint i = 0; i < egCount; i++)
             {
                 int size = reader.ReadInt32();
-                byte[] hash = reader.ReadBytes(16);
+                reader.ReadBytes(16);
                 byte[] data = reader.ReadBytes(size);
-
-                IntPtr pt = Marshal.AllocHGlobal(size);
-                Marshal.Copy(data, 0, pt, size);
 
                 engineShaders[i] = new(data);
             }
@@ -43,10 +35,9 @@ namespace Direct3D12
 
             return result;
         }
-
         public static void Shutdown()
         {
-            int egCount = (int)EngineShaders.Count;
+            uint egCount = (uint)EngineShaders.Count;
             for (uint i = 0; i < egCount; i++)
             {
                 engineShaders[i] = null;

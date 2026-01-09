@@ -40,6 +40,7 @@ namespace Direct3D12
         /// Gets or sets the number of frame buffers.
         /// </summary>
         public const int FrameBufferCount = 3;
+        public const Format DefaultBackBufferFormat = Format.R16G16B16A16_Float;
 
         const uint D3d12SdkVersion = 618;
         const string D3d12SdkPath = "./D3D12/";
@@ -89,23 +90,23 @@ namespace Direct3D12
         /// <summary>
         /// Gets the RTV descriptor heap.
         /// </summary>
-        internal static DescriptorHeap RtvHeap { get => rtvDescHeap; }
+        public static DescriptorHeap RtvHeap { get => rtvDescHeap; }
         /// <summary>
         /// Gets the DSV descriptor heap.
         /// </summary>
-        internal static DescriptorHeap DsvHeap { get => dsvDescHeap; }
+        public static DescriptorHeap DsvHeap { get => dsvDescHeap; }
         /// <summary>
         /// Gets the SRV descriptor heap.
         /// </summary>
-        internal static DescriptorHeap SrvHeap { get => srvDescHeap; }
+        public static DescriptorHeap SrvHeap { get => srvDescHeap; }
         /// <summary>
         /// Gets the UAV descriptor heap.
         /// </summary>
-        internal static DescriptorHeap UavHeap { get => uavDescHeap; }
+        public static DescriptorHeap UavHeap { get => uavDescHeap; }
         /// <summary>
         /// Gets the constant buffer.
         /// </summary>
-        internal static ConstantBuffer CBuffer { get => constantBuffers[CurrentFrameIndex]; }
+        public static ConstantBuffer CBuffer { get => constantBuffers[CurrentFrameIndex]; }
         /// <summary>
         /// Gets the current frame index.
         /// </summary>

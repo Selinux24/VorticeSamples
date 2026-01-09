@@ -14,7 +14,6 @@ namespace Direct3D12
     /// </summary>
     class D3D12Surface : IDisposable
     {
-        public const Format DefaultBackBufferFormat = Format.R16G16B16A16_Float;
         const int BufferCount = 3;
 
         struct RenderTargetData
@@ -23,13 +22,13 @@ namespace Direct3D12
             public DescriptorHandle Rtv;
         }
 
-        private IDXGISwapChain4 swapChain;
-        private readonly RenderTargetData[] renderTargetData = new RenderTargetData[BufferCount];
-        private readonly Window window;
-        private uint currentBbIndex = 0;
-        private Viewport viewport;
-        private RectI scissorRect;
-        private uint lightCullingId = uint.MaxValue;
+        IDXGISwapChain4 swapChain;
+        readonly RenderTargetData[] renderTargetData = new RenderTargetData[BufferCount];
+        readonly Window window;
+        uint currentBbIndex = 0;
+        Viewport viewport;
+        RectI scissorRect;
+        uint lightCullingId = uint.MaxValue;
 
         /// <summary>
         /// Gets the width of the surface.
@@ -82,14 +81,14 @@ namespace Direct3D12
             Dispose(true);
             GC.SuppressFinalize(this);
         }
-        private void Dispose(bool disposing)
+        void Dispose(bool disposing)
         {
             if (disposing)
             {
                 Release();
             }
         }
-        private void Release()
+        void Release()
         {
             if (IdDetail.IsValid(lightCullingId))
             {
@@ -108,7 +107,7 @@ namespace Direct3D12
             swapChain = null;
         }
 
-        private static Format ToNonSrgb(Format format)
+        static Format ToNonSrgb(Format format)
         {
             if (format == Format.R8G8B8A8_UNorm_SRgb)
             {
@@ -117,7 +116,7 @@ namespace Direct3D12
 
             return format;
         }
-        private static SwapChainFlags GetFlags()
+        static SwapChainFlags GetFlags()
         {
             return D3D12Graphics.AllowTearing() ? SwapChainFlags.AllowTearing : SwapChainFlags.None;
         }
@@ -141,7 +140,7 @@ namespace Direct3D12
                 BufferCount = frameBufferCount,
                 BufferUsage = Usage.RenderTargetOutput,
                 Flags = GetFlags(),
-                Format = ToNonSrgb(DefaultBackBufferFormat),
+                Format = ToNonSrgb(D3D12Graphics.DefaultBackBufferFormat),
                 Height = window.Height,
                 Width = window.Width,
                 Scaling = Scaling.Stretch,
@@ -171,7 +170,7 @@ namespace Direct3D12
         /// <summary>
         /// Finishes the swap chain creation.
         /// </summary>
-        private void FinalizeSwapChainCreation()
+        void FinalizeSwapChainCreation()
         {
             // create RTVs for back-buffers
             for (uint i = 0; i < BufferCount; i++)
@@ -180,7 +179,7 @@ namespace Direct3D12
                 swapChain.GetBuffer(i, out renderTargetData[i].Resource);
                 RenderTargetViewDescription rtvdesc = new()
                 {
-                    Format = DefaultBackBufferFormat,
+                    Format = D3D12Graphics.DefaultBackBufferFormat,
                     ViewDimension = RenderTargetViewDimension.Texture2D
                 };
                 D3D12Graphics.Device.CreateRenderTargetView(renderTargetData[i].Resource, rtvdesc, renderTargetData[i].Rtv.Cpu);

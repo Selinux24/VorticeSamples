@@ -6,16 +6,13 @@ namespace Direct3D12
 {
     class D3D12RenderTexture : IDisposable
     {
-        private readonly D3D12Texture texture;
-        private readonly DescriptorHandle[] rtv = new DescriptorHandle[D3D12Texture.MaxMips];
+        readonly D3D12Texture texture;
+        readonly DescriptorHandle[] rtv = new DescriptorHandle[D3D12Texture.MaxMips];
 
         public int MipCount { get; private set; }
         public DescriptorHandle GetSrv() { return texture.Srv; }
         public ID3D12Resource GetResource() { return texture.Resource; }
 
-        public D3D12RenderTexture()
-        {
-        }
         public D3D12RenderTexture(D3D12TextureInitInfo info)
         {
             texture = new D3D12Texture(info);
@@ -64,14 +61,14 @@ namespace Direct3D12
             Dispose(true);
             GC.SuppressFinalize(this);
         }
-        private void Dispose(bool disposing)
+        void Dispose(bool disposing)
         {
             if (disposing)
             {
                 Release();
             }
         }
-        private void Release()
+        void Release()
         {
             for (uint i = 0; i < MipCount; i++)
             {
@@ -86,7 +83,7 @@ namespace Direct3D12
             return rtv[mipIndex];
         }
 
-        private void Reset()
+        void Reset()
         {
             for (int i = 0; i < MipCount; i++)
             {

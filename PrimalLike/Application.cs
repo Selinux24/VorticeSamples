@@ -7,6 +7,7 @@ using PrimalLike.Platform;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -57,6 +58,11 @@ namespace PrimalLike
             if (!Renderer.Initialize(graphicsFactory))
             {
                 throw new InvalidOperationException("Failed to initialize renderer.");
+            }
+
+            if (!File.Exists(contentFilename))
+            {
+                ContentLoader.CreateEmptyGame(contentFilename);
             }
 
             OnInitialize?.Invoke(this, EventArgs.Empty);

@@ -8,12 +8,13 @@ namespace Direct3D12.Light
 {
     public static class D3D12Light
     {
-        private static readonly Dictionary<ulong, LightSet> lightSets = [];
-        private static readonly D3D12LightBuffer[] lightBuffers = new D3D12LightBuffer[D3D12Graphics.FrameBufferCount];
+        static readonly Dictionary<ulong, LightSet> lightSets = [];
+        static readonly D3D12LightBuffer[] lightBuffers = new D3D12LightBuffer[D3D12Graphics.FrameBufferCount];
 
         delegate void SetFunction(LightSet set, uint id, object value);
         delegate object GetFunction(LightSet set, uint id);
-        private static readonly SetFunction[] setFunctions =
+
+        static readonly SetFunction[] setFunctions =
         [
             (set, id, value)=>SetIsEnabled(set, id, (bool)value),
             (set, id, value)=>SetIntensity(set, id, (float)value),
@@ -25,7 +26,7 @@ namespace Direct3D12.Light
             DummySet,
             DummySet,
         ];
-        private static readonly GetFunction[] getFunctions =
+        static readonly GetFunction[] getFunctions =
         [
             (set, id)=>GetIsEnabled(set, id),
             (set, id)=>GetIntensity(set, id),
@@ -105,72 +106,72 @@ namespace Direct3D12.Light
             value = (T)getFunctions[(int)parameter](lightSets[lightSetKey], id);
         }
 
-        private static void SetIsEnabled(LightSet set, uint id, bool value)
+        static void SetIsEnabled(LightSet set, uint id, bool value)
         {
             set.Enable(id, value);
         }
-        private static void SetIntensity(LightSet set, uint id, float value)
+        static void SetIntensity(LightSet set, uint id, float value)
         {
             set.Intensity(id, value);
         }
-        private static void SetColor(LightSet set, uint id, Vector3 value)
+        static void SetColor(LightSet set, uint id, Vector3 value)
         {
             set.Color(id, value);
         }
-        private static void SetAttenuation(LightSet set, uint id, Vector3 value)
+        static void SetAttenuation(LightSet set, uint id, Vector3 value)
         {
             set.Attenuation(id, value);
         }
-        private static void SetRange(LightSet set, uint id, float value)
+        static void SetRange(LightSet set, uint id, float value)
         {
             set.Range(id, value);
         }
-        private static void SetUmbra(LightSet set, uint id, float value)
+        static void SetUmbra(LightSet set, uint id, float value)
         {
             set.Umbra(id, value);
         }
-        private static void SetPenumbra(LightSet set, uint id, float value)
+        static void SetPenumbra(LightSet set, uint id, float value)
         {
             set.Penumbra(id, value);
         }
-        private static void DummySet(LightSet set, uint id, object value)
+        static void DummySet(LightSet set, uint id, object value)
         {
 
         }
 
-        private static bool GetIsEnabled(LightSet set, uint id)
+        static bool GetIsEnabled(LightSet set, uint id)
         {
             return set.IsEnabled(id);
         }
-        private static float GetIntensity(LightSet set, uint id)
+        static float GetIntensity(LightSet set, uint id)
         {
             return set.Intensity(id);
         }
-        private static Vector3 GetColor(LightSet set, uint id)
+        static Vector3 GetColor(LightSet set, uint id)
         {
             return set.Color(id);
         }
-        private static Vector3 GetAttenuation(LightSet set, uint id)
+        static Vector3 GetAttenuation(LightSet set, uint id)
         {
             return set.Attenuation(id);
         }
-        private static float GetRange(LightSet set, uint id)
+        static float GetRange(LightSet set, uint id)
         {
             return set.Range(id);
         }
-        private static float GetUmbra(LightSet set, uint id)
+        static float GetUmbra(LightSet set, uint id)
         {
             return set.Umbra(id);
         }
-        private static float GetPenumbra(LightSet set, uint id)
+        static float GetPenumbra(LightSet set, uint id)
         {
             return set.Penumbra(id);
         }
-        private static LightTypes GetLightType(LightSet set, uint id)
+        static LightTypes GetLightType(LightSet set, uint id)
         {
             return set.LightType(id);
         }
-        private static uint GetEntityId(LightSet set, uint id)
+        static uint GetEntityId(LightSet set, uint id)
         {
             return set.EntityId(id);
         }

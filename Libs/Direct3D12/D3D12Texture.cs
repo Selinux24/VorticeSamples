@@ -8,15 +8,12 @@ namespace Direct3D12
     {
         public const int MaxMips = 14;
 
-        private ID3D12Resource resource;
-        private DescriptorHandle srv;
+        ID3D12Resource resource;
+        DescriptorHandle srv;
 
         public ID3D12Resource Resource { get => resource; }
         public DescriptorHandle Srv { get => srv; }
 
-        public D3D12Texture()
-        {
-        }
         public D3D12Texture(D3D12TextureInitInfo info)
         {
             var device = D3D12Graphics.Device;
@@ -95,16 +92,14 @@ namespace Direct3D12
             Dispose(true);
             GC.SuppressFinalize(this);
         }
-        private void Dispose(bool disposing)
+        void Dispose(bool disposing)
         {
-            if (!disposing)
+            if (disposing)
             {
-                return;
+                Release();
             }
-
-            Release();
         }
-        private void Release()
+        void Release()
         {
             D3D12Graphics.SrvHeap.Free(ref srv);
             D3D12Graphics.DeferredRelease(resource);

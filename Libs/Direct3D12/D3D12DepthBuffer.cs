@@ -7,16 +7,13 @@ namespace Direct3D12
 {
     class D3D12DepthBuffer : IDisposable
     {
-        private readonly D3D12Texture texture;
-        private DescriptorHandle dsv;
+        readonly D3D12Texture texture;
+        DescriptorHandle dsv;
 
         public DescriptorHandle GetDsv() { return dsv; }
         public DescriptorHandle GetSrv() { return texture.Srv; }
         public ID3D12Resource GetResource() { return texture.Resource; }
 
-        public D3D12DepthBuffer()
-        {
-        }
         public D3D12DepthBuffer(D3D12TextureInitInfo info)
         {
             Debug.Assert(info.Desc != null);
@@ -61,12 +58,6 @@ namespace Direct3D12
             Debug.Assert(device != null);
             device.CreateDepthStencilView(texture.Resource, dsvDesc, dsv.Cpu);
         }
-        public D3D12DepthBuffer(D3D12DepthBuffer o)
-        {
-            texture = o.texture;
-            dsv = o.dsv;
-            o.dsv = default;
-        }
         ~D3D12DepthBuffer()
         {
             Release();
@@ -77,14 +68,14 @@ namespace Direct3D12
             Dispose(true);
             GC.SuppressFinalize(this);
         }
-        private void Dispose(bool disposing)
+        void Dispose(bool disposing)
         {
             if (disposing)
             {
                 Release();
             }
         }
-        private void Release()
+        void Release()
         {
             D3D12Graphics.DsvHeap.Free(ref dsv);
             texture.Dispose();

@@ -9,16 +9,16 @@ namespace Direct3D12.Content
 {
     class D3D12MaterialStream
     {
-        private readonly IntPtr buffer;
+        readonly IntPtr buffer;
 
         MaterialSurface materialSurface;
-        private uint[] textureIds;
-        private uint[] descriptorIndices;
-        private uint[] shaderIds;
-        private uint rootSignatureId;
-        private uint textureCount;
-        private MaterialTypes type;
-        private ShaderFlags shaderFlags;
+        uint[] textureIds;
+        uint[] descriptorIndices;
+        uint[] shaderIds;
+        uint rootSignatureId;
+        uint textureCount;
+        MaterialTypes type;
+        ShaderFlags shaderFlags;
 
         public IntPtr Buffer { get => buffer; }
         public MaterialSurface Surface { get => materialSurface; }
@@ -83,7 +83,7 @@ namespace Direct3D12.Content
             Initialize();
         }
 
-        private void Initialize()
+        void Initialize()
         {
             Debug.Assert(buffer != IntPtr.Zero);
 

@@ -20,18 +20,32 @@ namespace PrimalLike.Content
 
         static readonly List<Entity> entities = [];
 
+        public static void CreateEmptyGame(string path)
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+
+            using FileStream fileStream = new(path, FileMode.CreateNew, FileAccess.Write);
+            using BinaryWriter writer = new(fileStream, Encoding.UTF8, false);
+
+            writer.Write(0);
+        }
+
         public static bool LoadGame(string path)
         {
             using FileStream fileStream = new(path, FileMode.Open, FileAccess.Read);
             using BinaryReader reader = new(fileStream, Encoding.UTF8, false);
 
             int numEntities = reader.ReadInt32();
-            Debug.Assert(numEntities > 0, "The number of entities must be greater than zero.");
+
             for (int i = 0; i < numEntities; i++)
             {
                 EntityInfo info = new();
 
                 reader.ReadInt32(); // Reserved for future use
+
                 int numComponents = reader.ReadInt32();
                 if (numComponents <= 0)
                 {
@@ -67,7 +81,7 @@ namespace PrimalLike.Content
             }
         }
 
-        private static bool ReadTransform(BinaryReader reader, ref EntityInfo info)
+        static bool ReadTransform(BinaryReader reader, ref EntityInfo info)
         {
             int componentSize = reader.ReadInt32();
             long position = reader.BaseStream.Position;
@@ -85,25 +99,20 @@ namespace PrimalLike.Content
 
             return true;
         }
-        private static bool ReadScript(BinaryReader reader, ref EntityInfo info)
+        static bool ReadScript(BinaryReader reader, ref EntityInfo info)
         {
             int componentSize = reader.ReadInt32();
             long position = reader.BaseStream.Position;
 
             string scriptName = Encoding.UTF8.GetString(reader.ReadBytes(componentSize));
 
-            ScriptInfo script = new()
-            {
-                ScriptCreator = Script.GetScriptCreator(scriptName)
-            };
-
             Debug.Assert(position + componentSize == reader.BaseStream.Position);
 
-            info.Script = script;
+            info.Script = new(scriptName);
 
             return true;
         }
-        private static bool ReadGeometry(BinaryReader reader, ref EntityInfo info)
+        static bool ReadGeometry(BinaryReader reader, ref EntityInfo info)
         {
             return false;
         }
@@ -113,7 +122,7 @@ namespace PrimalLike.Content
             return ReadFile(path, out shaders);
         }
 
-        private static bool ReadFile(string path, out byte[] data)
+        static bool ReadFile(string path, out byte[] data)
         {
             data = null;
             if (!File.Exists(path))

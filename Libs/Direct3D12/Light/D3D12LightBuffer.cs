@@ -9,22 +9,22 @@ namespace Direct3D12.Light
     {
         #region Structures & Enumerations
 
-        unsafe struct LightBuffer()
+        struct LightBuffer()
         {
-            private D3D12Buffer buffer = new();
-            private byte* cpuAddress = null;
+            D3D12Buffer buffer = new();
+            unsafe byte* cpuAddress = null;
 
             public readonly ulong GpuAddress => buffer.GpuAddress;
             public readonly uint Size => buffer.Size;
 
-            public readonly void Write<T>(T[] lights) where T : unmanaged
+            public readonly unsafe void Write<T>(T[] lights) where T : unmanaged
             {
                 Debug.Assert(cpuAddress != null);
                 Debug.Assert(buffer.Size >= D3D12Helpers.AlignSizeForConstantBuffer((ulong)(Marshal.SizeOf<T>() * lights.Length)));
 
                 BuffersHelper.WriteArray(cpuAddress, lights);
             }
-            public readonly void Write<T>(uint i, T light) where T : unmanaged
+            public readonly unsafe void Write<T>(uint i, T light) where T : unmanaged
             {
                 Debug.Assert(cpuAddress != null);
                 Debug.Assert(buffer.Size >= Marshal.SizeOf<T>() * (i + 1));
@@ -52,16 +52,19 @@ namespace Direct3D12.Light
                     type == LightBufferTypes.CullingInfo ? "Light Culling Info Buffer" :
                     "Bounding Spheres Buffer");
 
-                fixed (byte** cpuAddress = &this.cpuAddress)
+                unsafe
                 {
-                    D3D12Helpers.DxCall(buffer.Buffer.Map(0, cpuAddress));
-                    Debug.Assert(this.cpuAddress != null);
+                    fixed (byte** cpuAddress = &this.cpuAddress)
+                    {
+                        D3D12Helpers.DxCall(buffer.Buffer.Map(0, cpuAddress));
+                        Debug.Assert(this.cpuAddress != null);
+                    }
                 }
             }
             public void Release()
             {
                 buffer.Dispose();
-                cpuAddress = null;
+                unsafe { cpuAddress = null; }
             }
         }
 
@@ -77,8 +80,8 @@ namespace Direct3D12.Light
 
         #endregion
 
-        private readonly LightBuffer[] buffers;
-        private ulong currentLightSetKey;
+        readonly LightBuffer[] buffers;
+        ulong currentLightSetKey;
 
         public D3D12LightBuffer()
         {
@@ -100,7 +103,7 @@ namespace Direct3D12.Light
             Dispose(true);
             GC.SuppressFinalize(this);
         }
-        private void Dispose(bool disposing)
+        void Dispose(bool disposing)
         {
             if (disposing)
             {

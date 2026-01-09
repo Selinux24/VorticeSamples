@@ -8,7 +8,9 @@ namespace Direct3D12.Fx
 {
     static class D3D12PostProcess
     {
-        public enum PostProcessRootParameters : uint
+        #region Classes and Structures
+
+        enum PostProcessRootParameters : uint
         {
             GlobalShaderData,
             RootConstants,
@@ -30,14 +32,16 @@ namespace Direct3D12.Fx
             public PipelineStateSubObjectTypeRasterizer Rasterizer;
         }
 
-        private static ID3D12RootSignature fxRootSig = null;
-        private static ID3D12PipelineState fxPso = null;
+        #endregion
+
+        static ID3D12RootSignature fxRootSig = null;
+        static ID3D12PipelineState fxPso = null;
 
         public static bool Initialize()
         {
             return CreateFxPsoAndRootSignature();
         }
-        private static bool CreateFxPsoAndRootSignature()
+        static bool CreateFxPsoAndRootSignature()
         {
             Debug.Assert(fxRootSig == null && fxPso == null);
 
@@ -67,7 +71,7 @@ namespace Direct3D12.Fx
                 Vs = new(D3D12Shaders.GetEngineShader(EngineShaders.FullScreenTriangleVs).Span),
                 Ps = new(D3D12Shaders.GetEngineShader(EngineShaders.PostProcessPs).Span),
                 PrimitiveTopology = new(PrimitiveTopologyType.Triangle),
-                RenderTargetFormats = new([D3D12Surface.DefaultBackBufferFormat]),
+                RenderTargetFormats = new([D3D12Graphics.DefaultBackBufferFormat]),
                 Rasterizer = new(D3D12Helpers.RasterizerStatesCollection.NoCull),
             };
 

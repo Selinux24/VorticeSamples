@@ -9,11 +9,12 @@ namespace Direct3D12
 {
     public class D3D12Camera
     {
-        private static readonly FreeList<D3D12Camera> cameras = new();
+        static readonly FreeList<D3D12Camera> cameras = new();
 
         delegate void SetFunction(D3D12Camera camera, object value);
         delegate object GetFunction(D3D12Camera camera);
-        private static readonly SetFunction[] setFunctions =
+
+        static readonly SetFunction[] setFunctions =
         [
             (camera, value)=>SetUpVector(camera, (Vector3)value),
             (camera, value)=>SetFieldOfView(camera, (float)value),
@@ -30,7 +31,7 @@ namespace Direct3D12
             DummySet,
             DummySet,
         ];
-        private static readonly GetFunction[] getFunctions =
+        static readonly GetFunction[] getFunctions =
         [
             (camera)=>GetUpVector(camera),
             (camera)=>GetFieldOfView(camera),
@@ -78,113 +79,113 @@ namespace Direct3D12
             return cameras[id];
         }
 
-        private static void SetUpVector(D3D12Camera camera, Vector3 value)
+        static void SetUpVector(D3D12Camera camera, Vector3 value)
         {
             camera.Up = value;
         }
-        private static void SetFieldOfView(D3D12Camera camera, float value)
+        static void SetFieldOfView(D3D12Camera camera, float value)
         {
             camera.FieldOfView = value;
         }
-        private static void SetAspectRatio(D3D12Camera camera, float value)
+        static void SetAspectRatio(D3D12Camera camera, float value)
         {
             camera.AspectRatio = value;
         }
-        private static void SetViewWidth(D3D12Camera camera, float value)
+        static void SetViewWidth(D3D12Camera camera, float value)
         {
             camera.ViewWidth = value;
         }
-        private static void SetViewHeight(D3D12Camera camera, float value)
+        static void SetViewHeight(D3D12Camera camera, float value)
         {
             camera.ViewHeight = value;
         }
-        private static void SetNearZ(D3D12Camera camera, float value)
+        static void SetNearZ(D3D12Camera camera, float value)
         {
             camera.NearZ = value;
         }
-        private static void SetFarZ(D3D12Camera camera, float value)
+        static void SetFarZ(D3D12Camera camera, float value)
         {
             camera.FarZ = value;
         }
-        private static void DummySet(D3D12Camera camera, object value)
+        static void DummySet(D3D12Camera camera, object value)
         {
 
         }
 
-        private static Matrix4x4 GetView(D3D12Camera camera)
+        static Matrix4x4 GetView(D3D12Camera camera)
         {
             return camera.View;
         }
-        private static Matrix4x4 GetProjection(D3D12Camera camera)
+        static Matrix4x4 GetProjection(D3D12Camera camera)
         {
             return camera.Projection;
         }
-        private static Matrix4x4 GetInverseProjection(D3D12Camera camera)
+        static Matrix4x4 GetInverseProjection(D3D12Camera camera)
         {
             return camera.InverseProjection;
         }
-        private static Matrix4x4 GetViewProjection(D3D12Camera camera)
+        static Matrix4x4 GetViewProjection(D3D12Camera camera)
         {
             return camera.ViewProjection;
         }
-        private static Matrix4x4 GetInverseViewProjection(D3D12Camera camera)
+        static Matrix4x4 GetInverseViewProjection(D3D12Camera camera)
         {
             return camera.InverseViewProjection;
         }
-        private static Vector3 GetUpVector(D3D12Camera camera)
+        static Vector3 GetUpVector(D3D12Camera camera)
         {
             return camera.Up;
         }
-        private static float GetFieldOfView(D3D12Camera camera)
+        static float GetFieldOfView(D3D12Camera camera)
         {
             Debug.Assert(camera.ProjectionType == CameraProjectionTypes.Perspective);
             return camera.FieldOfView;
         }
-        private static float GetAspectRatio(D3D12Camera camera)
+        static float GetAspectRatio(D3D12Camera camera)
         {
             Debug.Assert(camera.ProjectionType == CameraProjectionTypes.Perspective);
             return camera.AspectRatio;
         }
-        private static float GetViewWidth(D3D12Camera camera)
+        static float GetViewWidth(D3D12Camera camera)
         {
             Debug.Assert(camera.ProjectionType == CameraProjectionTypes.Orthographic);
             return camera.ViewWidth;
         }
-        private static float GetViewHeight(D3D12Camera camera)
+        static float GetViewHeight(D3D12Camera camera)
         {
             Debug.Assert(camera.ProjectionType == CameraProjectionTypes.Orthographic);
             return camera.ViewHeight;
         }
-        private static float GetNearZ(D3D12Camera camera)
+        static float GetNearZ(D3D12Camera camera)
         {
             return camera.NearZ;
         }
-        private static float GetFarZ(D3D12Camera camera)
+        static float GetFarZ(D3D12Camera camera)
         {
             return camera.FarZ;
         }
-        private static CameraProjectionTypes GetProjectionType(D3D12Camera camera)
+        static CameraProjectionTypes GetProjectionType(D3D12Camera camera)
         {
             return camera.ProjectionType;
         }
-        private static uint GetEntityId(D3D12Camera camera)
+        static uint GetEntityId(D3D12Camera camera)
         {
             return camera.EntityId;
         }
 
-        private Matrix4x4 view;
-        private Matrix4x4 projection;
-        private Matrix4x4 inverseProjection;
-        private Matrix4x4 viewProjection;
-        private Matrix4x4 inverseViewProjection;
-        private Vector3 up;
-        private float nearZ;
-        private float farZ;
-        private float fieldOfView; // The field of view for perspective camera or view width in pixels for orthographic camera
-        private float aspectRatio; // Width/height aspect ratio for perspective camera or view height in pixels for orthographic camera
-        private CameraProjectionTypes projectionType;
-        private uint entityId;
-        private bool isDirty;
+        Matrix4x4 view;
+        Matrix4x4 projection;
+        Matrix4x4 inverseProjection;
+        Matrix4x4 viewProjection;
+        Matrix4x4 inverseViewProjection;
+        Vector3 up;
+        float nearZ;
+        float farZ;
+        float fieldOfView; // The field of view for perspective camera or view width in pixels for orthographic camera
+        float aspectRatio; // Width/height aspect ratio for perspective camera or view height in pixels for orthographic camera
+        CameraProjectionTypes projectionType;
+        uint entityId;
+        bool isDirty;
 
         public Matrix4x4 View { get => view; }
         public Matrix4x4 Projection { get => projection; }
@@ -305,7 +306,7 @@ namespace Direct3D12
             Matrix4x4.Invert(viewProjection, out inverseViewProjection);
         }
 
-        private static Matrix4x4 XMMatrixPerspectiveFovRH(float fovY, float aspectRatio, float nearZ, float farZ)
+        static Matrix4x4 XMMatrixPerspectiveFovRH(float fovY, float aspectRatio, float nearZ, float farZ)
         {
             float h = 1.0f / MathF.Tan(fovY / 2.0f);
             float w = h / aspectRatio;
@@ -318,7 +319,7 @@ namespace Direct3D12
                 0, 0, q * nearZ, 0
             );
         }
-        private static Matrix4x4 XMMatrixOrthographicRH(float viewWidth, float viewHeight, float nearZ, float farZ)
+        static Matrix4x4 XMMatrixOrthographicRH(float viewWidth, float viewHeight, float nearZ, float farZ)
         {
             float w = 2.0f / viewWidth;
             float h = 2.0f / viewHeight;

@@ -9,6 +9,8 @@ namespace Direct3D12
     /// </summary>
     class D3D12Command : IDisposable
     {
+        #region Classes
+
         /// <summary>
         /// Command frame.
         /// </summary>
@@ -36,7 +38,7 @@ namespace Direct3D12
                 Dispose(true);
                 GC.SuppressFinalize(this);
             }
-            private void Dispose(bool disposing)
+            void Dispose(bool disposing)
             {
                 if (!disposing)
                 {
@@ -75,14 +77,16 @@ namespace Direct3D12
             }
         }
 
-        private readonly ID3D12CommandQueue cmdQueue;
-        private readonly D3D12GraphicsCommandList cmdList;
-        private readonly ID3D12Fence1 fence;
-        private ulong fenceValue = 0;
+        #endregion
 
-        private readonly int frameBufferCount;
-        private readonly CommandFrame[] cmdFrames;
-        private int frameIndex = 0;
+        readonly ID3D12CommandQueue cmdQueue;
+        readonly D3D12GraphicsCommandList cmdList;
+        readonly ID3D12Fence1 fence;
+        ulong fenceValue = 0;
+
+        readonly int frameBufferCount;
+        readonly CommandFrame[] cmdFrames;
+        int frameIndex = 0;
 
         public ID3D12CommandQueue CommandQueue { get => cmdQueue; }
         public D3D12GraphicsCommandList CommandList { get => cmdList; }
@@ -160,16 +164,14 @@ namespace Direct3D12
             Dispose(true);
             GC.SuppressFinalize(this);
         }
-        private void Dispose(bool disposing)
+        void Dispose(bool disposing)
         {
-            if (!disposing)
+            if (disposing)
             {
-                return;
+                Release();
             }
-
-            Release();
         }
-        private void Release()
+        void Release()
         {
             Flush();
             fence?.Dispose();

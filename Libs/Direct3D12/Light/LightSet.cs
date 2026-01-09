@@ -30,23 +30,23 @@ namespace Direct3D12.Light
         #endregion
 
         // NOTE: these are NOT tightly packed
-        private readonly FreeList<LightOwner> owners = new();
-        private readonly List<Shaders.DirectionalLightParameters> nonCullableLights = [];
-        private readonly List<uint> nonCullableOwners = [];
+        readonly FreeList<LightOwner> owners = new();
+        readonly List<Shaders.DirectionalLightParameters> nonCullableLights = [];
+        readonly List<uint> nonCullableOwners = [];
 
         // NOTE: these are tightly packed
-        private readonly List<Shaders.LightParameters> cullableLights = [];
-        private readonly List<Shaders.LightCullingLightInfo> cullingInfo = [];
-        private readonly List<Shaders.Sphere> boundingSpheres = [];
-        private readonly List<uint> cullableEntityIds = [];
-        private readonly List<uint> cullableOwners = [];
-        private readonly List<uint> dirtyBits = [];
+        readonly List<Shaders.LightParameters> cullableLights = [];
+        readonly List<Shaders.LightCullingLightInfo> cullingInfo = [];
+        readonly List<Shaders.Sphere> boundingSpheres = [];
+        readonly List<uint> cullableEntityIds = [];
+        readonly List<uint> cullableOwners = [];
+        readonly List<uint> dirtyBits = [];
 
-        private uint enabledLightCount = 0; // number of cullable lights
-        private uint somethingIsDirty = 0; // flag is set if any of cullable lights where changed.
+        uint enabledLightCount = 0; // number of cullable lights
+        uint somethingIsDirty = 0; // flag is set if any of cullable lights where changed.
 
-        private Shaders.AmbientLightParameters ambientLight = new();
-        private uint ambientLightId = uint.MaxValue;
+        Shaders.AmbientLightParameters ambientLight = new();
+        uint ambientLightId = uint.MaxValue;
 
         public bool SomethingIsDirty => somethingIsDirty != 0;
 
@@ -618,7 +618,7 @@ namespace Direct3D12.Light
             return owners.Size > 0;
         }
 
-        private static void CalculateConeBoundingSphere(Shaders.LightParameters parameters, ref Shaders.Sphere sphere)
+        static void CalculateConeBoundingSphere(Shaders.LightParameters parameters, ref Shaders.Sphere sphere)
         {
             var tip = parameters.Position;
             var direction = parameters.Direction;
@@ -638,7 +638,7 @@ namespace Direct3D12.Light
             }
         }
 
-        private void UpdateTransform(uint index)
+        void UpdateTransform(uint index)
         {
             var entity = new Entity(cullableEntityIds[(int)index]);
 
@@ -660,7 +660,7 @@ namespace Direct3D12.Light
             MakeDirty(index);
         }
 
-        private void AddCullableLightParameters(LightInitInfo info, uint index)
+        void AddCullableLightParameters(LightInitInfo info, uint index)
         {
             Debug.Assert(info.LightType != LightTypes.Directional && index < cullableLights.Count);
 
@@ -685,7 +685,7 @@ namespace Direct3D12.Light
 
             cullableLights[(int)index] = parameters;
         }
-        private void AddLightCullingInfo(LightInitInfo info, uint index)
+        void AddLightCullingInfo(LightInitInfo info, uint index)
         {
             Debug.Assert(info.LightType != LightTypes.Directional && index < cullingInfo.Count);
 
@@ -705,7 +705,7 @@ namespace Direct3D12.Light
             cullingInfo[(int)index] = cInfo;
             boundingSpheres[(int)index] = sphere;
         }
-        private void SwapCullableLights(uint index1, uint index2)
+        void SwapCullableLights(uint index1, uint index2)
         {
             Debug.Assert(index1 != index2);
 
@@ -785,7 +785,7 @@ namespace Direct3D12.Light
             }
         }
 
-        private void MakeDirty(uint index)
+        void MakeDirty(uint index)
         {
             Debug.Assert(index < dirtyBits.Count);
             somethingIsDirty = dirtyBits[(int)index] = dirtyBitsMask;

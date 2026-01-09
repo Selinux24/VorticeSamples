@@ -10,12 +10,12 @@ namespace Direct3D12
     /// <summary>
     /// A class that represents a constant buffer.
     /// </summary>
-    unsafe class ConstantBuffer : IDisposable
+    class ConstantBuffer : IDisposable
     {
-        private readonly Lock mutex = new();
-        private readonly D3D12Buffer buffer;
-        private byte* cpuAddress;
-        private uint cpuOffset;
+        readonly Lock mutex = new();
+        readonly D3D12Buffer buffer;
+        unsafe byte* cpuAddress;
+        uint cpuOffset;
 
         public ID3D12Resource Buffer => buffer.Buffer;
         public ulong GpuAddress => buffer.GpuAddress;
@@ -28,10 +28,13 @@ namespace Direct3D12
 
             D3D12Helpers.NameD3D12Object(buffer.Buffer, buffer.Size, "Constant Buffer - size");
 
-            fixed (byte** cpuAddress = &this.cpuAddress)
+            unsafe
             {
-                D3D12Helpers.DxCall(buffer.Buffer.Map(0, cpuAddress));
-                Debug.Assert(this.cpuAddress != null);
+                fixed (byte** cpuAddress = &this.cpuAddress)
+                {
+                    D3D12Helpers.DxCall(buffer.Buffer.Map(0, cpuAddress));
+                    Debug.Assert(this.cpuAddress != null);
+                }
             }
         }
         ~ConstantBuffer()
@@ -44,12 +47,12 @@ namespace Direct3D12
             Dispose(true);
             GC.SuppressFinalize(this);
         }
-        private void Dispose(bool disposing)
+        void Dispose(bool disposing)
         {
             if (disposing)
             {
                 buffer.Dispose();
-                cpuAddress = null;
+                unsafe { cpuAddress = null; }
                 cpuOffset = 0;
             }
         }
@@ -62,12 +65,15 @@ namespace Direct3D12
         /// <returns>Returns the GPU address</returns>
         public ulong Write<T>(T data) where T : unmanaged
         {
-            // NOTE: be careful not to read from this buffer. Reads are really really slow.
-            T* p = Allocate<T>(1);
-            // TODO: handle the case when cbuffer is full.
-            BuffersHelper.Write(p, data);
+            unsafe
+            {
+                // NOTE: be careful not to read from this buffer. Reads are really really slow.
+                var p = Allocate<T>(1);
+                // TODO: handle the case when cbuffer is full.
+                BuffersHelper.Write(p, data);
 
-            return GetGpuAddress(p);
+                return GetGpuAddress(p);
+            }
         }
         /// <summary>
         /// Write data to the constant buffer. This is a slow operation.
@@ -77,19 +83,22 @@ namespace Direct3D12
         /// <returns>Returns the GPU address</returns>
         public ulong Write<T>(T[] array) where T : unmanaged
         {
-            // NOTE: be careful not to read from this buffer. Reads are really really slow.
-            T* p = Allocate<T>(array.Length);
-            // TODO: handle the case when cbuffer is full.
-            BuffersHelper.WriteArray(p, array);
+            unsafe
+            {
+                // NOTE: be careful not to read from this buffer. Reads are really really slow.
+                var p = Allocate<T>(array.Length);
+                // TODO: handle the case when cbuffer is full.
+                BuffersHelper.WriteArray(p, array);
 
-            return GetGpuAddress(p);
+                return GetGpuAddress(p);
+            }
         }
         /// <summary>
         /// Allocates memory in the constant buffer.
         /// </summary>
         /// <typeparam name="T">Data type</typeparam>
         /// <returns>Returns the CPU address</returns>
-        private T* Allocate<T>(int arraySize) where T : unmanaged
+        unsafe T* Allocate<T>(int arraySize) where T : unmanaged
         {
             lock (mutex)
             {
@@ -112,7 +121,7 @@ namespace Direct3D12
         /// <typeparam name="T">Data type</typeparam>
         /// <param name="allocation">CPU allocation</param>
         /// <returns>Returns the GPU address</returns>
-        private ulong GetGpuAddress<T>(T* allocation) where T : unmanaged
+        unsafe ulong GetGpuAddress<T>(T* allocation) where T : unmanaged
         {
             lock (mutex)
             {

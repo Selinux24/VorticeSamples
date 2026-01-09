@@ -1,4 +1,6 @@
-﻿using Vortice.Direct3D12;
+﻿using System.Diagnostics;
+using Vortice.Direct3D12;
+using Vortice.Mathematics;
 
 namespace Direct3D12
 {
@@ -11,5 +13,13 @@ namespace Direct3D12
         public ResourceFlags Flags = ResourceFlags.None;
         public uint Size = 0;
         public uint Alignment = 0;
+        public readonly uint AlignedSize
+        {
+            get
+            {
+                Debug.Assert(Size > 0 && Alignment > 0);
+                return MathHelper.AlignUp(Size, Alignment);
+            }
+        }
     }
 }
