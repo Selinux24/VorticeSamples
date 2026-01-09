@@ -17,13 +17,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="game.bin" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Include="Content\game.bin">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
     <Content Include="Hlsl\TestShader.hlsl">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
