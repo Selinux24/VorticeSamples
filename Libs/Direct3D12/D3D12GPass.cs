@@ -1,6 +1,6 @@
 ﻿using Direct3D12.Content;
 using Direct3D12.Delight;
-using Direct3D12.Light;
+using Direct3D12.Lights;
 using PrimalLike.Components;
 using PrimalLike.Graphics;
 using System;

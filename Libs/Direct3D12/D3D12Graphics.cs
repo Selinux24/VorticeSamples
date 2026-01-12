@@ -18,7 +18,7 @@ namespace Direct3D12
     using Direct3D12.ShaderCompiler;
     using Direct3D12.Delight;
     using Direct3D12.Fx;
-    using Direct3D12.Light;
+    using Direct3D12.Lights;
 #if DEBUG
     using Vortice.Direct3D12.Debug;
     using Vortice.DXGI.Debug;

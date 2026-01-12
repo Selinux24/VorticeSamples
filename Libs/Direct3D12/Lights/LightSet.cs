@@ -8,13 +8,13 @@ using System.Diagnostics;
 using System.Numerics;
 using Utilities;
 
-namespace Direct3D12.Light
+namespace Direct3D12.Lights
 {
     class LightSet
     {
         #region Structures & Enumerations
 
-        public static class U32SetBits
+        static class U32SetBits
         {
             public static uint Bits(int n)
             {
@@ -55,7 +55,7 @@ namespace Direct3D12.Light
             Debug.Assert(U32SetBits.Bits(D3D12Graphics.FrameBufferCount) < 1u << 8, "That's quite a large frame buffer count!");
         }
 
-        public PrimalLike.EngineAPI.Light Add(LightInitInfo info)
+        public Light Add(LightInitInfo info)
         {
             if (info.LightType == LightTypes.Directional)
             {

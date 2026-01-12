@@ -1,6 +1,6 @@
 ﻿using PrimalLike.EngineAPI;
 
-namespace Direct3D12.Light
+namespace Direct3D12.Lights
 {
     struct LightOwner()
     {

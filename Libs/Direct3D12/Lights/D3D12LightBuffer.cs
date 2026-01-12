@@ -3,7 +3,7 @@ using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
-namespace Direct3D12.Light
+namespace Direct3D12.Lights
 {
     class D3D12LightBuffer : IDisposable
     {

@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
 
-namespace Direct3D12.Light
+namespace Direct3D12.Lights
 {
     public static class D3D12Light
     {
@@ -72,7 +72,7 @@ namespace Direct3D12.Light
             lightSets.Remove(lightSetKey);
         }
 
-        public static PrimalLike.EngineAPI.Light Create(LightInitInfo info)
+        public static Light Create(LightInitInfo info)
         {
             Debug.Assert(IdDetail.IsValid(info.EntityId));
             Debug.Assert(lightSets.ContainsKey(info.LightSetKey));

@@ -1,4 +1,4 @@
-﻿using Direct3D12.Light;
+﻿using Direct3D12.Lights;
 using PrimalLike.Common;
 using System;
 using System.Diagnostics;
