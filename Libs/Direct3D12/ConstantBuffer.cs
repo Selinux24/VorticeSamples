@@ -96,7 +96,7 @@ namespace Direct3D12
                 Debug.Assert(cpuOffset + alignedSize <= buffer.Size);
                 if (cpuOffset + alignedSize <= buffer.Size)
                 {
-                    IntPtr address = (IntPtr)((uint)cpuAddress + cpuOffset);
+                    IntPtr address = cpuAddress + (IntPtr)cpuOffset;
                     cpuOffset += alignedSize;
                     return address;
                 }
@@ -124,8 +124,8 @@ namespace Direct3D12
 
                 Debug.Assert(address <= (cpuAddress + cpuOffset));
                 Debug.Assert(address >= cpuAddress);
-                ulong offset = (ulong)(address - cpuAddress);
-                return buffer.GpuAddress + offset;
+                IntPtr offset = address - cpuAddress;
+                return buffer.GpuAddress + (ulong)offset;
             }
         }
 

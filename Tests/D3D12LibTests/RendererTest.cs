@@ -7,6 +7,7 @@ using PrimalLike.Content;
 using PrimalLike.EngineAPI;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Numerics;
 using System.Runtime.InteropServices;
@@ -165,6 +166,9 @@ namespace D3D12LibTests
             {
                 var resource = D3D12Helpers.CreateBuffer(buffer, bufferLength);
                 D3D12Helpers.DeferredRelease(resource);
+
+                //Output to the debug console to show activity
+                Debug.WriteLine($"Worker {Environment.CurrentManagedThreadId} created and released a buffer.");
             }
         }
 

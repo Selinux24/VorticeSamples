@@ -29,7 +29,9 @@ namespace Direct3D12.Light
             {
                 Debug.Assert(cpuAddress != IntPtr.Zero);
                 Debug.Assert(buffer.Size >= Marshal.SizeOf<T>() * (i + 1));
-                IntPtr p = checked((IntPtr)((uint)cpuAddress + Marshal.SizeOf<T>() * i));
+
+                uint offset = (uint)Marshal.SizeOf<T>() * i;
+                IntPtr p = cpuAddress + (IntPtr)offset;
 
                 BuffersHelper.WriteUnaligned(light, p);
             }
