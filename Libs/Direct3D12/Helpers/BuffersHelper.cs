@@ -2,59 +2,42 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using Vortice.Direct3D12;
 
 namespace Direct3D12.Helpers
 {
-    unsafe static class BuffersHelper
+    static class BuffersHelper
     {
-        public static void Write<T>(T* p, T data) where T : unmanaged
+        public static unsafe void WriteUnaligned<T>(T data, IntPtr dst) where T : unmanaged
         {
+            Debug.Assert(dst != IntPtr.Zero);
+
             uint size = (uint)Marshal.SizeOf<T>();
 
-            Unsafe.CopyBlockUnaligned(p, Unsafe.AsPointer(ref data), size);
+            Unsafe.CopyBlockUnaligned(dst.ToPointer(), Unsafe.AsPointer(ref data), size);
         }
-        public static void WriteArray<T>(byte* address, T[] data) where T : unmanaged
+        public static unsafe void WriteUnaligned<T>(T[] data, IntPtr dst) where T : unmanaged
         {
-            WriteArray((T*)address, data);
-        }
-        public static void WriteArray<T>(T* p, T[] data) where T : unmanaged
-        {
+            Debug.Assert(dst != IntPtr.Zero);
+            Debug.Assert(data?.Length > 0);
+
             uint size = (uint)Marshal.SizeOf<T>();
 
             for (uint i = 0; i < data.Length; i++)
             {
-                Unsafe.CopyBlockUnaligned(
-                    p,
-                    Unsafe.AsPointer(ref data[i]),
-                    size);
+                Unsafe.CopyBlockUnaligned(dst.ToPointer(), Unsafe.AsPointer(ref data[i]), size);
 
-                p++;
+                dst += (IntPtr)size;
             }
         }
-        public static void Write<T>(T[] data, IntPtr destination) where T : unmanaged
-        {
-            uint sizeInBytes = (uint)(sizeof(T) * data.Length);
-            fixed (T* dataPtr = data)
-            {
-                NativeMemory.Copy(dataPtr, (T*)destination, sizeInBytes);
-            }
-        }
-        public static void Write<T>(T[] data, ID3D12Resource destination) where T : unmanaged
-        {
-            // NOTE: range's Begin and End fields are set to 0, to indicate that
-            //       the CPU is not reading any data (i.e. write-only)
-            T* cpuAddress = default;
-            D3D12Helpers.DxCall(destination.Map(0, cpuAddress));
-            Debug.Assert(cpuAddress != null);
 
-            uint sizeInBytes = (uint)(sizeof(T) * data.Length);
-            fixed (T* dataPtr = data)
-            {
-                NativeMemory.Copy(dataPtr, cpuAddress, sizeInBytes);
-            }
+        public static unsafe void WriteAligned(IntPtr src, IntPtr dst, ulong srcSizeInBytes, ulong dstSizeInBytes)
+        {
+            Debug.Assert(src != IntPtr.Zero);
+            Debug.Assert(dst != IntPtr.Zero);
+            Debug.Assert(srcSizeInBytes > 0);
+            Debug.Assert(dstSizeInBytes > 0);
 
-            destination.Unmap(0, null);
+            Buffer.MemoryCopy(src.ToPointer(), dst.ToPointer(), srcSizeInBytes, dstSizeInBytes);
         }
     }
 }

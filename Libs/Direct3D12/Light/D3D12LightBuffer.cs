@@ -12,25 +12,26 @@ namespace Direct3D12.Light
         struct LightBuffer()
         {
             D3D12Buffer buffer = new();
-            unsafe byte* cpuAddress = null;
+            IntPtr cpuAddress = IntPtr.Zero;
 
+            public readonly IntPtr CpuAddress => cpuAddress;
             public readonly ulong GpuAddress => buffer.GpuAddress;
             public readonly uint Size => buffer.Size;
 
-            public readonly unsafe void Write<T>(T[] lights) where T : unmanaged
+            public readonly void Write<T>(T[] lights) where T : unmanaged
             {
-                Debug.Assert(cpuAddress != null);
+                Debug.Assert(cpuAddress != IntPtr.Zero);
                 Debug.Assert(buffer.Size >= D3D12Helpers.AlignSizeForConstantBuffer((ulong)(Marshal.SizeOf<T>() * lights.Length)));
 
-                BuffersHelper.WriteArray(cpuAddress, lights);
+                BuffersHelper.WriteUnaligned(lights, cpuAddress);
             }
-            public readonly unsafe void Write<T>(uint i, T light) where T : unmanaged
+            public readonly void Write<T>(uint i, T light) where T : unmanaged
             {
-                Debug.Assert(cpuAddress != null);
+                Debug.Assert(cpuAddress != IntPtr.Zero);
                 Debug.Assert(buffer.Size >= Marshal.SizeOf<T>() * (i + 1));
-                T* p = (T*)(cpuAddress + Marshal.SizeOf<T>() * i);
+                IntPtr p = checked((IntPtr)((uint)cpuAddress + Marshal.SizeOf<T>() * i));
 
-                BuffersHelper.Write(p, light);
+                BuffersHelper.WriteUnaligned(light, p);
             }
 
             public void Resize(LightBufferTypes type, uint size, uint frameIndex)
@@ -52,19 +53,13 @@ namespace Direct3D12.Light
                     type == LightBufferTypes.CullingInfo ? "Light Culling Info Buffer" :
                     "Bounding Spheres Buffer");
 
-                unsafe
-                {
-                    fixed (byte** cpuAddress = &this.cpuAddress)
-                    {
-                        D3D12Helpers.DxCall(buffer.Buffer.Map(0, cpuAddress));
-                        Debug.Assert(this.cpuAddress != null);
-                    }
-                }
+                D3D12Helpers.DxCall(buffer.Buffer.Map(0, out cpuAddress));
+                Debug.Assert(cpuAddress != IntPtr.Zero);
             }
             public void Release()
             {
                 buffer.Dispose();
-                unsafe { cpuAddress = null; }
+                cpuAddress = IntPtr.Zero;
             }
         }
 

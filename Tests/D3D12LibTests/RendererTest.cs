@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
+using System.Runtime.InteropServices;
 using System.Threading;
 using WindowsPlatform;
 using static Native32.User32;
@@ -17,13 +18,12 @@ namespace D3D12LibTests
 {
     public class RendererTest
     {
-        private const string testModelFile = "./Content/Model.model";
-        private const string testTextureFile = "./Content/texture.texture";
+        const string testModelFile = "./Content/Model.model";
+        const string testTextureFile = "./Content/texture.texture";
 
-        private TestApp app;
-        private static readonly List<CameraSurface> cameraSurfaces = [];
-        private static bool resized = false;
-        private static IntPtr CustomWndProc(IntPtr hwnd, uint msg, IntPtr wParam, IntPtr lParam)
+        static readonly List<CameraSurface> cameraSurfaces = [];
+        static bool resized = false;
+        static IntPtr CustomWndProc(IntPtr hwnd, uint msg, IntPtr wParam, IntPtr lParam)
         {
             bool toggleFullscreen = false;
 
@@ -103,26 +103,31 @@ namespace D3D12LibTests
             return DefWindowProcW(hwnd, msg, wParam, lParam);
         }
 
-        private uint itemId = IdDetail.InvalidId;
-        private uint modelId = IdDetail.InvalidId;
-        private uint textureId = IdDetail.InvalidId;
-        private readonly ulong lightSetKey = 0;
+        TestApp app;
 
-        private const int numThreads = 8;
-        private readonly Thread[] workers = new Thread[numThreads];
-        private readonly byte[] buffer = new byte[1024 * 1024];
+        uint itemId = IdDetail.InvalidId;
+        uint modelId = IdDetail.InvalidId;
+        uint textureId = IdDetail.InvalidId;
+        readonly ulong lightSetKey = 0;
+
+        const int numThreads = 8;
+        readonly Thread[] workers = new Thread[numThreads];
+        const uint bufferLength = 1024 * 1024;
+        readonly IntPtr buffer = Marshal.AllocHGlobal((int)bufferLength);
 
         // Test preparation
         [OneTimeSetUp]
         public void Setup()
         {
-            for (int i = 0; i < buffer.Length; i++)
+            IntPtr b = buffer;
+            for (uint i = 0; i < bufferLength; i++)
             {
-                buffer[i] = 0;
+                Marshal.WriteByte(b, 0);
+                b++;
             }
         }
 
-        private void InitializeApplication()
+        void InitializeApplication()
         {
             var resCompile = D3D12Graphics.CompileShaders();
             Assert.That(resCompile, "Shader compilation error.");
@@ -133,7 +138,7 @@ namespace D3D12LibTests
             app.OnShutdown += AppShutdown;
         }
 
-        private void InitTestWorkers()
+        void InitTestWorkers()
         {
             //Initalize worker threads
             for (int i = 0; i < numThreads; i++)
@@ -147,40 +152,40 @@ namespace D3D12LibTests
                 workers[i].Start();
             }
         }
-        private void JoinTestWorkers()
+        void JoinTestWorkers()
         {
             for (int i = 0; i < numThreads; i++)
             {
                 workers[i].Join();
             }
         }
-        private void BufferWorker()
+        void BufferWorker()
         {
             while (!app.IsExiting)
             {
-                var resource = D3D12Helpers.CreateBuffer(buffer, (uint)buffer.Length);
+                var resource = D3D12Helpers.CreateBuffer(buffer, bufferLength);
                 D3D12Helpers.DeferredRelease(resource);
             }
         }
 
-        private void LoadTestModel()
+        void LoadTestModel()
         {
             using var file = new MemoryStream(File.ReadAllBytes(testModelFile));
             modelId = ContentToEngine.CreateResource(file, AssetTypes.Mesh);
             Assert.That(modelId != uint.MaxValue, "Model creation error.");
         }
-        private void LoadTestTexture()
+        void LoadTestTexture()
         {
             using var file = new MemoryStream(File.ReadAllBytes(testTextureFile));
             textureId = ContentToEngine.CreateResource(file, AssetTypes.Texture);
             Assert.That(textureId != uint.MaxValue, "Texture creation error.");
         }
 
-        private void CreateRenderItem()
+        void CreateRenderItem()
         {
             itemId = RenderItem.CreateRenderItem(Application.CreateEntity(new()).Id);
         }
-        private void CreateCameras()
+        void CreateCameras()
         {
             Win32WindowInfo[] initInfos =
             [
@@ -231,7 +236,7 @@ namespace D3D12LibTests
                 cameraSurfaces[i].UpdateFrameInfo([itemId], [10f], lightSetKey);
             }
         }
-        private void CreateLights()
+        void CreateLights()
         {
             Application.CreateLightSet(lightSetKey);
         }
@@ -273,7 +278,7 @@ namespace D3D12LibTests
             Assert.That(true);
         }
 
-        private void AppShutdown(object sender, EventArgs e)
+        void AppShutdown(object sender, EventArgs e)
         {
             RenderItem.DestroyRenderItem(itemId);
 

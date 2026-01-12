@@ -119,8 +119,16 @@ namespace Direct3D12.Content
             device.GetCopyableFootprints(desc, 0, subresourceCount, 0, layouts, numRows, rowSizes, out ulong requiredSize);
 
             Debug.Assert(requiredSize > 0);
-            D3D12Upload.UploadContext context = new((uint)requiredSize);
-            context.CopyData(subresources, subresourceCount, layouts, numRows, rowSizes);
+            UploadContext context = new(requiredSize);
+            for (int subresourceIdx = 0; subresourceIdx < subresourceCount; subresourceIdx++)
+            {
+                var subResource = subresources[subresourceIdx];
+                var layout = layouts[subresourceIdx];
+                uint subresourceHeight = numRows[subresourceIdx];
+                ulong bytesPerRow = checked(rowSizes[subresourceIdx]);
+
+                D3D12Helpers.CopySubresource(context.CpuAddress, subResource, layout, subresourceHeight, bytesPerRow);
+            }
 
             D3D12Helpers.DxCall(device.CreateCommittedResource(
                 HeapProperties.DefaultHeapProperties,

@@ -3,7 +3,9 @@ global using D3D12GraphicsCommandList = Vortice.Direct3D12.ID3D12GraphicsCommand
 global using DXGIAdapter = Vortice.DXGI.IDXGIAdapter4;
 global using DXGIFactory = Vortice.DXGI.IDXGIFactory7;
 using Direct3D12.Helpers;
+using System;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using Vortice.Direct3D12;
 using Vortice.DXGI;
 using Vortice.Mathematics;
@@ -349,8 +351,35 @@ namespace Direct3D12
             return signature;
         }
 
+        public static ID3D12Resource CreateBuffer(
+            ulong bufferSize,
+            bool isCpuAccessible = false,
+            ResourceStates state = ResourceStates.Common,
+            ResourceFlags flags = ResourceFlags.None,
+            ID3D12Heap heap = null, ulong heapOffset = 0)
+        {
+            return CreateBuffer<byte>(IntPtr.Zero, bufferSize, isCpuAccessible, state, flags, heap, heapOffset);
+        }
+        public static ID3D12Resource CreateBuffer(
+            IntPtr data, ulong bufferSize,
+            bool isCpuAccessible = false,
+            ResourceStates state = ResourceStates.Common,
+            ResourceFlags flags = ResourceFlags.None,
+            ID3D12Heap heap = null, ulong heapOffset = 0)
+        {
+            return CreateBuffer<byte>(data, bufferSize, isCpuAccessible, state, flags, heap, heapOffset);
+        }
         public static ID3D12Resource CreateBuffer<T>(
-            T[] data, uint bufferSize,
+            ulong bufferSize,
+            bool isCpuAccessible = false,
+            ResourceStates state = ResourceStates.Common,
+            ResourceFlags flags = ResourceFlags.None,
+            ID3D12Heap heap = null, ulong heapOffset = 0) where T : unmanaged
+        {
+            return CreateBuffer<T>(IntPtr.Zero, bufferSize, isCpuAccessible, state, flags, heap, heapOffset);
+        }
+        public static ID3D12Resource CreateBuffer<T>(
+            IntPtr data, ulong bufferSize,
             bool isCpuAccessible = false,
             ResourceStates state = ResourceStates.Common,
             ResourceFlags flags = ResourceFlags.None,
@@ -397,19 +426,31 @@ namespace Direct3D12
             }
             Debug.Assert(resource != null);
 
-            if (data == null) return resource;
+            if (data == IntPtr.Zero) return resource;
+
+            ulong sizeInBytes = bufferSize * (uint)Marshal.SizeOf<T>();
 
             // If we have initial data which we'd like to be able to change later, we set is_cpu_accessible
             // to true. If we only want to upload some data once to be used by the GPU, then is_cpu_accessible
             // should be set to false.
             if (isCpuAccessible)
             {
-                BuffersHelper.Write(data, resource);
+                // NOTE: range's Begin and End fields are set to 0, to indicate that
+                //       the CPU is not reading any data (i.e. write-only)
+                DxCall(resource.Map(0, out IntPtr cpuAddress));
+                Debug.Assert(cpuAddress != IntPtr.Zero);
+
+                BuffersHelper.WriteAligned(data, cpuAddress, sizeInBytes, sizeInBytes);
+
+                resource.Unmap(0, null);
             }
             else
             {
-                D3D12Upload.UploadContext context = new(bufferSize);
-                BuffersHelper.Write(data, context.CpuAddress);
+                UploadContext context = new(bufferSize);
+                Debug.Assert(context.CpuAddress != IntPtr.Zero);
+
+                BuffersHelper.WriteAligned(data, context.CpuAddress, sizeInBytes, sizeInBytes);
+
                 context.CmdList.CopyResource(resource, context.UploadBuffer);
                 context.EndUpload();
             }
@@ -440,6 +481,49 @@ namespace Direct3D12
             sampler.ShaderVisibility = visibility;
 
             return sampler;
+        }
+
+        public static unsafe HResult Map(this ID3D12Resource resource, uint subresource, out IntPtr data)
+        {
+            data = IntPtr.Zero;
+
+            IntPtr ptr = IntPtr.Zero;
+            HResult res = resource.Map(subresource, &ptr);
+            if (res.Success) data = ptr;
+
+            return res;
+        }
+
+        public static unsafe void CopySubresource(IntPtr destination, SubresourceData data, PlacedSubresourceFootPrint layout, uint numRows, ulong bytesPerRow)
+        {
+            checked
+            {
+                IntPtr source = new(data.pData);
+
+                uint destOffset = (uint)layout.Offset;
+
+                uint subresourceDepth = layout.Footprint.Depth;
+                uint destRowPitch = layout.Footprint.RowPitch;
+                uint destSlicePitch = layout.Footprint.RowPitch * numRows;
+
+                for (uint depthIdx = 0; depthIdx < subresourceDepth; depthIdx++)
+                {
+                    uint srcSliceOffset = (uint)data.SlicePitch * depthIdx;
+                    IntPtr srcSliceBase = source + (IntPtr)srcSliceOffset;
+                    uint dstSliceOffset = destOffset + (destSlicePitch * depthIdx);
+
+                    for (uint rowIdx = 0; rowIdx < numRows; rowIdx++)
+                    {
+                        uint srcRowOffset = (uint)data.RowPitch * rowIdx;
+                        IntPtr src = (IntPtr)(srcSliceBase + srcRowOffset);
+
+                        uint dstRowOffset = dstSliceOffset + (destRowPitch * rowIdx);
+                        IntPtr dst = (IntPtr)(destination + dstRowOffset);
+
+                        BuffersHelper.WriteAligned(src, dst, bytesPerRow, bytesPerRow);
+                    }
+                }
+            }
         }
     }
 }

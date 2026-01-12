@@ -67,7 +67,8 @@ namespace Direct3D12.Content
             uint alignedElementBufferSize = Vortice.Mathematics.MathHelper.AlignUp(elementBufferSize, alignment);
             uint totalBufferSize = alignedPositionBufferSize + alignedElementBufferSize + indexBufferSize;
 
-            byte[] buffer = blob.Read((int)totalBufferSize);
+            IntPtr buffer = blob.Position;
+            blob.Skip(totalBufferSize);
             var resource = D3D12Helpers.CreateBuffer(buffer, totalBufferSize);
 
             data = blob.Position;

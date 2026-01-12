@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using Vortice.Direct3D12;
 using Vortice.Mathematics;
 
@@ -7,7 +8,7 @@ namespace Direct3D12
     struct D3D12BufferInitInfo()
     {
         public ID3D12Heap1 Heap = null;
-        public byte[] Data = null;
+        public IntPtr Data = IntPtr.Zero;
         public ResourceAllocationInfo1 AllocationInfo = new();
         public ResourceStates InitialState = ResourceStates.Common;
         public ResourceFlags Flags = ResourceFlags.None;
