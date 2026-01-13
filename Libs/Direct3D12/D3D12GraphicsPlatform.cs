@@ -17,6 +17,19 @@ namespace Direct3D12
             return D3D12Graphics.CompileShaders();
         }
         /// <inheritdoc/>
+        public bool CompileShader(ShaderFileInfo info, string includeDir, string[] extraArgs, out CompiledShader shader)
+        {
+            shader = default;
+
+            bool result = D3D12Graphics.CompileShader(info, includeDir, extraArgs, out var internalShader);
+            if (result)
+            {
+                shader = new CompiledShader(internalShader.ByteCode, internalShader.Hash.HashDigest);
+            }
+
+            return result;
+        }
+        /// <inheritdoc/>
         public string GetEngineShaderPath()
         {
             return D3D12Graphics.GetEngineShaderPath();

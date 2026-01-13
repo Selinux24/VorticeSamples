@@ -7,8 +7,8 @@ namespace PrimalLike.EngineAPI
 {
     public readonly struct Light()
     {
-        private readonly LightId id = LightId.MaxValue;
-        private readonly ulong lightSetKey = ulong.MaxValue;
+        readonly LightId id = LightId.MaxValue;
+        readonly ulong lightSetKey = ulong.MaxValue;
 
         public Light(LightId id, ulong lightSetKey) : this()
         {
@@ -112,12 +112,12 @@ namespace PrimalLike.EngineAPI
             }
         }
 
-        private T GetValue<T>(LightId id, LightParametersTypes parameter) where T : unmanaged
+        T GetValue<T>(LightId id, LightParametersTypes parameter) where T : unmanaged
         {
             Renderer.Gfx.GetParameter(id, lightSetKey, parameter, out T value);
             return value;
         }
-        private void SetValue<T>(LightId id, LightParametersTypes parameter, T value) where T : unmanaged
+        void SetValue<T>(LightId id, LightParametersTypes parameter, T value) where T : unmanaged
         {
             Renderer.Gfx.SetParameter(id, lightSetKey, parameter, value);
         }

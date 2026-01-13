@@ -2,7 +2,7 @@
 
 namespace Direct3D12
 {
-    public struct D3D12FrameInfo()
+    struct D3D12FrameInfo()
     {
         public FrameInfo FrameInfo = default;
         public D3D12Camera Camera = null;

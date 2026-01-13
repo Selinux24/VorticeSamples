@@ -8,12 +8,25 @@ namespace PrimalLike.Components
 {
     public static class GameEntity
     {
-        private static readonly List<GenerationType> generations = [];
-        private static readonly Queue<EntityId> freeIds = [];
+        static readonly List<GenerationType> generations = [];
+        static readonly Queue<EntityId> freeIds = [];
 
-        internal static List<TransformComponent> Transforms { get; } = [];
-        internal static List<ScriptComponent> Scripts { get; } = [];
-        internal static List<GeometryComponent> Geometries { get; } = [];
+        static readonly List<TransformComponent> transforms = [];
+        static readonly List<ScriptComponent> scripts = [];
+        static readonly List<GeometryComponent> geometries = [];
+
+        public static TransformComponent GetTransform(EntityId index)
+        {
+            return transforms[(int)index];
+        }
+        public static ScriptComponent GetScript(EntityId index)
+        {
+            return scripts[(int)index];
+        }
+        public static GeometryComponent GetGeometry(EntityId index)
+        {
+            return geometries[(int)index];
+        }
 
         public static Entity Create(EntityInfo info)
         {
@@ -29,30 +42,30 @@ namespace PrimalLike.Components
             {
                 id = (EntityId)generations.Count;
                 generations.Add(0);
-                Transforms.Add(new());
-                Scripts.Add(new());
-                Geometries.Add(new());
+                transforms.Add(new());
+                scripts.Add(new());
+                geometries.Add(new());
             }
 
             Entity entity = new(id);
             IdType index = IdDetail.Index(id);
 
-            Debug.Assert(!Transforms[(int)index].IsValid());
-            Transforms[(int)index] = Transform.Create(info.Transform, entity);
-            Debug.Assert(Transforms[(int)index].IsValid());
+            Debug.Assert(!transforms[(int)index].IsValid());
+            transforms[(int)index] = Transform.Create(info.Transform, entity);
+            Debug.Assert(transforms[(int)index].IsValid());
 
             if (info.Script != null && info.Script?.ScriptCreator != null)
             {
-                Debug.Assert(!Scripts[(int)index].IsValid());
-                Scripts[(int)index] = Script.Create(info.Script.Value, entity);
-                Debug.Assert(Scripts[(int)index].IsValid());
+                Debug.Assert(!scripts[(int)index].IsValid());
+                scripts[(int)index] = Script.Create(info.Script.Value, entity);
+                Debug.Assert(scripts[(int)index].IsValid());
             }
 
             if (info.Geometry != null)
             {
-                Debug.Assert(!Geometries[(int)index].IsValid());
-                Geometries[(int)index] = Geometry.Create(info.Geometry.Value, entity);
-                Debug.Assert(Geometries[(int)index].IsValid());
+                Debug.Assert(!geometries[(int)index].IsValid());
+                geometries[(int)index] = Geometry.Create(info.Geometry.Value, entity);
+                Debug.Assert(geometries[(int)index].IsValid());
             }
 
             return entity;
@@ -62,22 +75,22 @@ namespace PrimalLike.Components
             IdType index = IdDetail.Index(id);
             Debug.Assert(IsAlive(id));
 
-            if (Geometries[(int)index].IsValid())
+            if (geometries[(int)index].IsValid())
             {
-                Geometry.Remove(Geometries[(int)index]);
-                Geometries[(int)index] = new();
+                Geometry.Remove(geometries[(int)index]);
+                geometries[(int)index] = new();
             }
 
-            if (Scripts[(int)index].IsValid())
+            if (scripts[(int)index].IsValid())
             {
-                Script.Remove(Scripts[(int)index]);
-                Scripts[(int)index] = new();
+                Script.Remove(scripts[(int)index]);
+                scripts[(int)index] = new();
             }
 
-            if (Transforms[(int)index].IsValid())
+            if (transforms[(int)index].IsValid())
             {
-                Transform.Remove(Transforms[(int)index]);
-                Transforms[(int)index] = new();
+                Transform.Remove(transforms[(int)index]);
+                transforms[(int)index] = new();
             }
 
             if (generations[(int)index] < IdDetail.MaxGeneration)
@@ -94,10 +107,10 @@ namespace PrimalLike.Components
 
             if (type == ComponentTypes.Script)
             {
-                if (Scripts[(int)index].IsValid())
+                if (scripts[(int)index].IsValid())
                 {
-                    Script.Remove(Scripts[(int)index]);
-                    Scripts[(int)index] = new();
+                    Script.Remove(scripts[(int)index]);
+                    scripts[(int)index] = new();
                 }
 
                 if (info.Script?.ScriptCreator != null)
@@ -107,17 +120,17 @@ namespace PrimalLike.Components
 
                     if (newScript.IsValid())
                     {
-                        Scripts[(int)index] = newScript;
+                        scripts[(int)index] = newScript;
                         return true;
                     }
                 }
             }
             else if (type == ComponentTypes.Geometry)
             {
-                if (Geometries[(int)index].IsValid())
+                if (geometries[(int)index].IsValid())
                 {
-                    Geometry.Remove(Geometries[(int)index]);
-                    Geometries[(int)index] = new();
+                    Geometry.Remove(geometries[(int)index]);
+                    geometries[(int)index] = new();
                 }
 
                 if (info.Geometry != null)
@@ -127,7 +140,7 @@ namespace PrimalLike.Components
 
                     if (newGeometry.IsValid())
                     {
-                        Geometries[(int)index] = newGeometry;
+                        geometries[(int)index] = newGeometry;
                         return true;
                     }
                 }
@@ -142,7 +155,7 @@ namespace PrimalLike.Components
             Debug.Assert(index < generations.Count, "Index is outside of the generation list bounds.");
             return generations[(int)index] ==
                 IdDetail.Generation(id) &&
-                Transforms[(int)index].IsValid();
+                transforms[(int)index].IsValid();
         }
     }
 }

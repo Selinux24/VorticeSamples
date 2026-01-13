@@ -51,10 +51,10 @@ namespace Direct3D12
         const string EngineSourceShadersIncludeDir = "../../../../../../Libs/Direct3D12/Hlsl/";
         static readonly ShaderInfo[] engineShaderFiles =
         [
-            new ((int)EngineShaders.FullScreenTriangleVs, new (Path.Combine(EngineSourceShaderPaths, "FullScreenTriangle.hlsl"), "FullScreenTriangleVS", (uint)ShaderStage.Vertex)),
-            new ((int)EngineShaders.PostProcessPs, new (Path.Combine(EngineSourceShaderPaths, "PostProcess.hlsl"), "PostProcessPS", (uint)ShaderStage.Pixel)),
-            new ((int)EngineShaders.GridFrustumsCs, new (Path.Combine(EngineSourceShaderPaths, "GridFrustums.hlsl"), "ComputeGridFrustumsCS", (uint)ShaderStage.Compute), ["-D", "TILE_SIZE=32"]),
-            new ((int)EngineShaders.LightCullingCs, new (Path.Combine(EngineSourceShaderPaths, "CullLights.hlsl"), "CullLightsCS", (uint)ShaderStage.Compute), ["-D", "TILE_SIZE=32"]),
+            new ((int)EngineShaders.FullScreenTriangleVs, new (Path.Combine(EngineSourceShaderPaths, "FullScreenTriangle.hlsl"), "FullScreenTriangleVS", ShaderTypes.Vertex)),
+            new ((int)EngineShaders.PostProcessPs, new (Path.Combine(EngineSourceShaderPaths, "PostProcess.hlsl"), "PostProcessPS", ShaderTypes.Pixel)),
+            new ((int)EngineShaders.GridFrustumsCs, new (Path.Combine(EngineSourceShaderPaths, "GridFrustums.hlsl"), "ComputeGridFrustumsCS", ShaderTypes.Compute), ["-D", "TILE_SIZE=32"]),
+            new ((int)EngineShaders.LightCullingCs, new (Path.Combine(EngineSourceShaderPaths, "CullLights.hlsl"), "CullLightsCS", ShaderTypes.Compute), ["-D", "TILE_SIZE=32"]),
         ];
 
         static ID3D12SDKConfiguration1 d3d12SdkConfig;
@@ -149,6 +149,10 @@ namespace Direct3D12
         public static bool CompileShaders()
         {
             return Compiler.CompileShaders(engineShaderFiles, EngineSourceShadersIncludeDir, EngineShaderPaths);
+        }
+        public static bool CompileShader(ShaderFileInfo info, string includeDir, string[] extraArgs, out CompiledShader shader)
+        {
+            return Compiler.CompileShader(info, includeDir, extraArgs, out shader);
         }
         public static string GetEngineShaderPath()
         {

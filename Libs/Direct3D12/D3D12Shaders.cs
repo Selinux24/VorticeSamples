@@ -1,5 +1,5 @@
 ﻿using PrimalLike;
-using PrimalLike.Content;
+using PrimalLike.Graphics;
 using System;
 using System.Diagnostics;
 using System.IO;

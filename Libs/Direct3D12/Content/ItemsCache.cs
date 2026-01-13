@@ -2,7 +2,7 @@
 
 namespace Direct3D12.Content
 {
-    public struct ItemsCache
+    struct ItemsCache
     {
         public uint[] EntityIds;
         public uint[] SubmeshGpuIds;

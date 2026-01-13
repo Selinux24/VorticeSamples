@@ -8,9 +8,9 @@ namespace PrimalLike.Content
 {
     class GeometryHierarchyStream
     {
-        private readonly IntPtr buffer;
-        private readonly int bufferSize;
-        private readonly uint lodCount;
+        readonly IntPtr buffer;
+        readonly int bufferSize;
+        readonly uint lodCount;
 
         public uint LodCount { get => lodCount; }
         public List<float> Thresholds { get; } = [];

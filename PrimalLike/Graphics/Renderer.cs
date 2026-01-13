@@ -7,9 +7,9 @@ namespace PrimalLike.Graphics
 {
     static class Renderer
     {
-        private static IGraphicsPlatform gfx;
+        static IGraphicsPlatform gfx;
 
-        private static void SetPlatformInterface(IGraphicsPlatformFactory graphicsFactory)
+        static void SetPlatformInterface(IGraphicsPlatformFactory graphicsFactory)
         {
             gfx = graphicsFactory.CreateGraphicsPlatform();
         }
@@ -44,6 +44,10 @@ namespace PrimalLike.Graphics
         public static string GetEngineShaderPath()
         {
             return gfx.GetEngineShaderPath();
+        }
+        public static bool CompileShader(ShaderFileInfo info, string includeDir, string[] extraArgs, out CompiledShader shader)
+        {
+            return gfx.CompileShader(info, includeDir, extraArgs, out shader);
         }
 
         public static Surface CreateSurface(Window window)

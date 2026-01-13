@@ -11,7 +11,7 @@ namespace PrimalLike
         /// <summary>
         /// Stopwatch to keep track of time.
         /// </summary>
-        private readonly Stopwatch stopwatch = new();
+        readonly Stopwatch stopwatch = new();
 
         /// <summary>
         /// Elapsed time since the last frame.

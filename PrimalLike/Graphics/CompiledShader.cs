@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 
-namespace PrimalLike.Content
+namespace PrimalLike.Graphics
 {
     [StructLayout(LayoutKind.Sequential)]
     public struct CompiledShader

@@ -14,7 +14,7 @@ namespace PrimalLike.EngineAPI
         /// <summary>
         /// The window id.
         /// </summary>
-        private WindowId id = WindowId.MaxValue;
+        WindowId id = WindowId.MaxValue;
 
         /// <summary>
         /// Constructor.

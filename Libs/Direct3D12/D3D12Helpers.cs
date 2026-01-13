@@ -14,7 +14,7 @@ namespace Direct3D12
 {
     using HResult = SharpGen.Runtime.Result;
 
-    public static class D3D12Helpers
+    static class D3D12Helpers
     {
         #region Structured Collections
 

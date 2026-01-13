@@ -8,10 +8,10 @@ namespace PrimalLike
     /// </summary>
     static class FpsTimer
     {
-        private static readonly Stopwatch stopwatch = new();
-        private static float msAvg = 0f;
-        private static int counter = 1;
-        private static DateTime seconds = DateTime.Now;
+        static readonly Stopwatch stopwatch = new();
+        static float msAvg = 0f;
+        static int counter = 1;
+        static DateTime seconds = DateTime.Now;
 
         /// <summary>
         /// Gets the frames per second.

@@ -5,13 +5,13 @@ namespace PrimalLike.Platform
 {
     static class PlatformBase
     {
-        private static IPlatform platform;
+        static IPlatform platform;
 
         public static bool Initialize(IPlatformFactory platformFactory)
         {
             platform = platformFactory.CreatePlatform();
 
-            return true;
+            return platform != null;
         }
 
         public static Window CreateWindow(IPlatformWindowInfo info)

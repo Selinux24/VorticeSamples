@@ -1,7 +1,7 @@
 ﻿using ContentTools;
-using Direct3D12.ShaderCompiler;
 using PrimalLike.Common;
 using PrimalLike.Content;
+using PrimalLike.Graphics;
 using System.Diagnostics;
 using System.IO;
 
@@ -33,7 +33,7 @@ namespace DX12Windows.Shaders
 
             // Let's say our material uses a vertex shader and a pixel shader.
             {
-                ShaderFileInfo info = new(Path.Combine(ShadersSourcePath, "TestShader.hlsl"), "MainVS", (uint)ShaderStage.Vertex);
+                ShaderFileInfo info = new(Path.Combine(ShadersSourcePath, "TestShader.hlsl"), "MainVS", ShaderTypes.Vertex);
 
                 string[] defines = ["ELEMENTS_TYPE=0", "ELEMENTS_TYPE=1", "ELEMENTS_TYPE=3"];
                 uint[] keys = [(uint)ElementsType.PositionOnly, (uint)ElementsType.StaticNormal, (uint)ElementsType.StaticNormalTexture];
@@ -42,7 +42,7 @@ namespace DX12Windows.Shaders
                 for (uint i = 0; i < defines.Length; i++)
                 {
                     string[] extraArgs = ["-D", defines[i],];
-                    bool compiledVs = Compiler.Compile(info, ShadersIncludeDir, extraArgs, out var vertexShader);
+                    bool compiledVs = ContentToEngine.CompileShader(info, ShadersIncludeDir, extraArgs, out var vertexShader);
                     Debug.Assert(compiledVs);
                     vertexShaders[i] = vertexShader;
                 }
@@ -50,14 +50,14 @@ namespace DX12Windows.Shaders
             }
 
             {
-                ShaderFileInfo info = new(Path.Combine(ShadersSourcePath, "TestShader.hlsl"), "MainPS", (uint)ShaderStage.Pixel);
+                ShaderFileInfo info = new(Path.Combine(ShadersSourcePath, "TestShader.hlsl"), "MainPS", ShaderTypes.Pixel);
 
-                bool compiledPs = Compiler.Compile(info, ShadersIncludeDir, out var pixelShader);
+                bool compiledPs = ContentToEngine.CompileShader(info, ShadersIncludeDir, out var pixelShader);
                 Debug.Assert(compiledPs);
                 PsId = ContentToEngine.AddShaderGroup([pixelShader], [uint.MaxValue]);
 
                 string[] extraArgs = ["-D", "TEXTURED_MTL=1"];
-                bool compiledTexPs = Compiler.Compile(info, ShadersIncludeDir, extraArgs, out var texPixelShader);
+                bool compiledTexPs = ContentToEngine.CompileShader(info, ShadersIncludeDir, extraArgs, out var texPixelShader);
                 Debug.Assert(compiledTexPs);
                 TexPsId = ContentToEngine.AddShaderGroup([texPixelShader], [uint.MaxValue]);
             }

@@ -10,8 +10,6 @@ namespace Direct3D12
         readonly DescriptorHandle[] rtv = new DescriptorHandle[D3D12Texture.MaxMips];
 
         public int MipCount { get; private set; }
-        public DescriptorHandle GetSrv() { return texture.Srv; }
-        public ID3D12Resource GetResource() { return texture.Resource; }
 
         public D3D12RenderTexture(D3D12TextureInitInfo info)
         {
@@ -81,6 +79,14 @@ namespace Direct3D12
         public DescriptorHandle GetRtv(int mipIndex)
         {
             return rtv[mipIndex];
+        }
+        public DescriptorHandle GetSrv()
+        {
+            return texture.Srv;
+        }
+        public ID3D12Resource GetResource()
+        {
+            return texture.Resource;
         }
 
         void Reset()

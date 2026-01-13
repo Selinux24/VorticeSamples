@@ -13,6 +13,14 @@ namespace PrimalLike.Graphics
         /// </summary>
         bool CompileShaders();
         /// <summary>
+        /// Compiles a shader
+        /// </summary>
+        /// <param name="info">Shader info</param>
+        /// <param name="includeDir">Includes directory</param>
+        /// <param name="extraArgs">Compilation arguments</param>
+        /// <param name="shader">Compiled shader</param>
+        bool CompileShader(ShaderFileInfo info, string includeDir, string[] extraArgs, out CompiledShader shader);
+        /// <summary>
         /// Gets the engine shader path.
         /// </summary>
         string GetEngineShaderPath();

@@ -11,10 +11,6 @@ namespace PrimalLike.Graphics
     public abstract class RenderComponent(IPlatformWindowInfo info)
     {
         /// <summary>
-        /// Gets the window info.
-        /// </summary>
-        protected IPlatformWindowInfo Info { get; private set; } = info;
-        /// <summary>
         /// Gets the render surface.
         /// </summary>
         public RenderSurface Surface { get; private set; } = Application.CreateRenderSurface(info);

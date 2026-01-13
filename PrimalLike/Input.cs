@@ -7,10 +7,10 @@ namespace PrimalLike
 {
     public static class Input
     {
-        private static readonly Dictionary<ulong, InputValue> inputValues = [];
-        private static readonly Dictionary<ulong, InputBinding> inputBindings = [];
-        private static readonly Dictionary<ulong, ulong> sourceBindingMap = [];
-        private static readonly List<InputSystemBase> inputCallbacks = [];
+        static readonly Dictionary<ulong, InputValue> inputValues = [];
+        static readonly Dictionary<ulong, InputBinding> inputBindings = [];
+        static readonly Dictionary<ulong, ulong> sourceBindingMap = [];
+        static readonly List<InputSystemBase> inputCallbacks = [];
 
         public static void AddInputCallback(InputSystemBase callback)
         {
@@ -23,7 +23,7 @@ namespace PrimalLike
             inputCallbacks.Remove(callback);
         }
 
-        private static ulong GetKey(InputSources type, uint code)
+        static ulong GetKey(InputSources type, uint code)
         {
             return (ulong)type << 32 | code;
         }

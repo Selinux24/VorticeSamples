@@ -5,7 +5,7 @@ using Vortice.Direct3D12;
 
 namespace Direct3D12
 {
-    public class UploadContext
+    class UploadContext
     {
         #region Classes and Structs
 
@@ -34,8 +34,10 @@ namespace Direct3D12
             public void Release(ID3D12Fence1 uploadFence)
             {
                 WaitAndReset(uploadFence);
-                CmdAllocator.Dispose();
-                CmdList.Dispose();
+                CmdAllocator?.Dispose();
+                CmdAllocator = null;
+                CmdList?.Dispose();
+                CmdList = null;
             }
         }
 
@@ -65,24 +67,24 @@ namespace Direct3D12
 
             for (int i = 0; i < UploadFrameCount; i++)
             {
-                UploadFrame frame = new();
-
-                if (!D3D12Helpers.DxCall(device.CreateCommandAllocator(CommandListType.Copy, out frame.CmdAllocator)))
+                if (!D3D12Helpers.DxCall(device.CreateCommandAllocator(CommandListType.Copy, out ID3D12CommandAllocator cmdAllocator)))
                 {
                     return InitFailed();
                 }
+                D3D12Helpers.NameD3D12Object(cmdAllocator, i, "Upload Command Allocator");
 
-                if (!D3D12Helpers.DxCall(device.CreateCommandList(0, CommandListType.Copy, frame.CmdAllocator, null, out frame.CmdList)))
+                if (!D3D12Helpers.DxCall(device.CreateCommandList(0, CommandListType.Copy, cmdAllocator, null, out ID3D12GraphicsCommandList cmdList)))
                 {
                     return InitFailed();
                 }
+                cmdList.Close();
+                D3D12Helpers.NameD3D12Object(cmdList, i, "Upload Command List");
 
-                frame.CmdList.Close();
-
-                D3D12Helpers.NameD3D12Object(frame.CmdAllocator, i, "Upload Command Allocator");
-                D3D12Helpers.NameD3D12Object(frame.CmdList, i, "Upload Command List");
-
-                uploadFrames[i] = frame;
+                uploadFrames[i] = new()
+                {
+                    CmdAllocator = cmdAllocator,
+                    CmdList = cmdList,
+                };
             }
 
             CommandQueueDescription desc = new()

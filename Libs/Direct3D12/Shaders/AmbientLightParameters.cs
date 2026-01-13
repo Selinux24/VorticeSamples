@@ -3,7 +3,7 @@
 namespace Direct3D12.Shaders
 {
     [StructLayout(LayoutKind.Sequential)]
-    public struct AmbientLightParameters()
+    struct AmbientLightParameters()
     {
         public float Intensity = -1f;
         public uint DiffuseSrvIndex = uint.MaxValue;

@@ -7,12 +7,12 @@ namespace Direct3D12
     /// <summary>
     /// Resource barrier helper class.
     /// </summary>
-    public class D3D12ResourceBarrier : IDisposable
+    class D3D12ResourceBarrier : IDisposable
     {
         const int MaxResourceBarriers = 64;
 
-        private readonly ResourceBarrier[] barriers;
-        private uint offset;
+        readonly ResourceBarrier[] barriers;
+        uint offset;
 
         public D3D12ResourceBarrier()
         {
@@ -29,12 +29,9 @@ namespace Direct3D12
             Dispose(true);
             GC.SuppressFinalize(this);
         }
-        private void Dispose(bool disposing)
+        void Dispose(bool disposing)
         {
-            if (!disposing)
-            {
-                return;
-            }
+            if (!disposing) return;
 
             offset = 0;
             for (int i = 0; i < barriers.Length; i++)

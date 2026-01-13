@@ -322,7 +322,7 @@ namespace PrimalLike
                 }
             }
         }
-        private void CheckEndRun()
+        void CheckEndRun()
         {
             if (IsExiting && IsRunning)
             {
@@ -331,6 +331,7 @@ namespace PrimalLike
                 IsRunning = false;
             }
         }
+        
         /// <summary>
         /// Updates the application.
         /// </summary>

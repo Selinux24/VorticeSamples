@@ -9,14 +9,14 @@ namespace PrimalLike.Components
 {
     public static class Geometry
     {
-        private static readonly List<IdType> renderItemIds = [];
-        private static readonly List<EntityId> owningEntityIds = [];
-        private static readonly List<GeometryId> ownerIds = [];
-        private static readonly List<IdType> idMapping = [];
-        private static readonly List<GenerationType> generations = [];
-        private static readonly Queue<GeometryId> freeIds = [];
+        static readonly List<IdType> renderItemIds = [];
+        static readonly List<EntityId> owningEntityIds = [];
+        static readonly List<GeometryId> ownerIds = [];
+        static readonly List<IdType> idMapping = [];
+        static readonly List<GenerationType> generations = [];
+        static readonly Queue<GeometryId> freeIds = [];
 
-        private static bool Exists(GeometryId id)
+        static bool Exists(GeometryId id)
         {
             Debug.Assert(IdDetail.IsValid(id));
             IdType index = IdDetail.Index(id);
@@ -105,7 +105,7 @@ namespace PrimalLike.Components
             return entityIds;
         }
 
-        private static IdType AddRenderItem(EntityId entityId, GeometryInfo geometryInfo)
+        static IdType AddRenderItem(EntityId entityId, GeometryInfo geometryInfo)
         {
             return Renderer.AddRenderItem(entityId, geometryInfo.GeometryContentId, geometryInfo.MaterialIds);
         }

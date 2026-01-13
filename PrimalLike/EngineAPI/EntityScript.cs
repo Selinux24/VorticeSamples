@@ -18,7 +18,6 @@ namespace PrimalLike.EngineAPI
         {
         }
 
-
         protected void SetRotation(Quaternion rotation)
         {
             Components.Script.SetRotation(this, rotation);

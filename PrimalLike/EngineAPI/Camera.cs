@@ -7,7 +7,7 @@ namespace PrimalLike.EngineAPI
 {
     public class Camera
     {
-        private readonly CameraId id;
+        readonly CameraId id;
 
         public Camera()
         {
@@ -149,12 +149,12 @@ namespace PrimalLike.EngineAPI
             }
         }
 
-        private static T GetValue<T>(CameraId id, CameraParameters parameter) where T : unmanaged
+        static T GetValue<T>(CameraId id, CameraParameters parameter) where T : unmanaged
         {
             Renderer.Gfx.GetParameter(id, parameter, out T value);
             return value;
         }
-        private static void SetValue<T>(CameraId id, CameraParameters parameter, T value) where T : unmanaged
+        static void SetValue<T>(CameraId id, CameraParameters parameter, T value) where T : unmanaged
         {
             Renderer.Gfx.SetParameter(id, parameter, value);
         }

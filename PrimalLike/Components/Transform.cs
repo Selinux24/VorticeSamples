@@ -9,18 +9,18 @@ namespace PrimalLike.Components
 {
     public static class Transform
     {
-        private static readonly List<Matrix4x4> toWorld = [];
-        private static readonly List<Matrix4x4> invWorld = [];
-        private static readonly List<ushort> hasTransforms = [];
-        private static readonly List<TransformFlags> changesFromPreviousFrame = [];
-        private static ushort readWriteFlag = 0;
+        static readonly List<Matrix4x4> toWorld = [];
+        static readonly List<Matrix4x4> invWorld = [];
+        static readonly List<ushort> hasTransforms = [];
+        static readonly List<TransformFlags> changesFromPreviousFrame = [];
+        static ushort readWriteFlag = 0;
 
         public static List<Quaternion> Rotations { get; } = [];
         public static List<Vector3> Orientations { get; } = [];
         public static List<Vector3> Positions { get; } = [];
         public static List<Vector3> Scales { get; } = [];
 
-        private static void CalculateTransformMatrices(IdType index)
+        static void CalculateTransformMatrices(IdType index)
         {
             Debug.Assert(Rotations.Count > index);
             Debug.Assert(Positions.Count > index);
@@ -42,12 +42,12 @@ namespace PrimalLike.Components
 
             hasTransforms[(int)index] = 1;
         }
-        private static Vector3 CalculateOrientation(Quaternion rotation)
+        static Vector3 CalculateOrientation(Quaternion rotation)
         {
             return Vector3.Normalize(Vector3.Transform(Vector3.UnitZ, rotation));
         }
 
-        private static void SetRotation(TransformId id, Quaternion rotation)
+        static void SetRotation(TransformId id, Quaternion rotation)
         {
             IdType index = IdDetail.Index(id);
             Rotations[(int)index] = rotation;
@@ -55,7 +55,7 @@ namespace PrimalLike.Components
             hasTransforms[(int)index] = 0;
             changesFromPreviousFrame[(int)index] |= TransformFlags.Rotation;
         }
-        private static void SetOrientation(TransformId id, Vector3 orientation)
+        static void SetOrientation(TransformId id, Vector3 orientation)
         {
             IdType index = IdDetail.Index(id);
             Vector3 n = Vector3.Normalize(orientation);
@@ -64,14 +64,14 @@ namespace PrimalLike.Components
             hasTransforms[(int)index] = 0;
             changesFromPreviousFrame[(int)index] |= TransformFlags.Orientation;
         }
-        private static void SetPosition(TransformId id, Vector3 position)
+        static void SetPosition(TransformId id, Vector3 position)
         {
             IdType index = IdDetail.Index(id);
             Positions[(int)index] = position;
             hasTransforms[(int)index] = 0;
             changesFromPreviousFrame[(int)index] |= TransformFlags.Position;
         }
-        private static void SetScale(TransformId id, Vector3 scale)
+        static void SetScale(TransformId id, Vector3 scale)
         {
             IdType index = IdDetail.Index(id);
             Scales[(int)index] = scale;

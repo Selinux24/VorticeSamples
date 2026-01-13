@@ -7,7 +7,7 @@ using Utilities;
 
 namespace Direct3D12
 {
-    public class D3D12Camera
+    class D3D12Camera
     {
         static readonly FreeList<D3D12Camera> cameras = new();
 

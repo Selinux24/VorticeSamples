@@ -7,7 +7,7 @@ namespace PrimalLike.EngineAPI
 {
     public class Entity
     {
-        private readonly EntityId id;
+        readonly EntityId id;
 
         public Entity()
         {
@@ -26,7 +26,7 @@ namespace PrimalLike.EngineAPI
             get
             {
                 Debug.Assert(GameEntity.IsAlive(Id), $"The transform's entity id {Id} is not alive.");
-                return GameEntity.Transforms[(int)IdDetail.Index(Id)];
+                return GameEntity.GetTransform(IdDetail.Index(Id));
             }
         }
         public ScriptComponent Script
@@ -34,7 +34,7 @@ namespace PrimalLike.EngineAPI
             get
             {
                 Debug.Assert(GameEntity.IsAlive(Id), $"The script's entity id {Id} is not alive.");
-                return GameEntity.Scripts[(int)IdDetail.Index(Id)];
+                return GameEntity.GetScript(IdDetail.Index(Id));
             }
         }
         public GeometryComponent Geometry
@@ -42,10 +42,9 @@ namespace PrimalLike.EngineAPI
             get
             {
                 Debug.Assert(GameEntity.IsAlive(Id), $"The geometry's entity id {Id} is not alive.");
-                return GameEntity.Geometries[(int)IdDetail.Index(Id)];
+                return GameEntity.GetGeometry(IdDetail.Index(Id));
             }
         }
-
 
         public Quaternion Rotation { get => Transform.Rotation; }
         public Vector3 Orientation { get => Transform.Orientation; }

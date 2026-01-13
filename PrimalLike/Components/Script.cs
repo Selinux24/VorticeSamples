@@ -10,16 +10,16 @@ namespace PrimalLike.Components
 {
     public static class Script
     {
-        private static readonly List<EntityScript> entityScripts = [];
-        private static readonly List<IdType> idMapping = [];
-        private static readonly List<GenerationType> generations = [];
-        private static readonly Queue<ScriptId> freeIds = [];
-        private static readonly List<TransformCache> transformCache = [];
-        private static readonly Dictionary<IdType, uint> cacheMap = [];
+        static readonly List<EntityScript> entityScripts = [];
+        static readonly List<IdType> idMapping = [];
+        static readonly List<GenerationType> generations = [];
+        static readonly Queue<ScriptId> freeIds = [];
+        static readonly List<TransformCache> transformCache = [];
+        static readonly Dictionary<IdType, uint> cacheMap = [];
 
-        private static readonly Dictionary<string, Func<Entity, EntityScript>> scriptRegistry = [];
+        static readonly Dictionary<string, Func<Entity, EntityScript>> scriptRegistry = [];
 
-        private static bool Exists(ScriptId id)
+        static bool Exists(ScriptId id)
         {
             Debug.Assert(IdDetail.IsValid(id));
             IdType index = IdDetail.Index(id);
@@ -30,7 +30,7 @@ namespace PrimalLike.Components
                 entityScripts[(int)idMapping[(int)index]] != null &&
                 entityScripts[(int)idMapping[(int)index]].IsValid;
         }
-        private static uint GetCache(Entity entity)
+        static uint GetCache(Entity entity)
         {
             Debug.Assert(GameEntity.IsAlive(entity.Id));
             TransformId id = entity.Transform.Id;
@@ -50,6 +50,7 @@ namespace PrimalLike.Components
             Debug.Assert(index < transformCache.Count);
             return index;
         }
+     
         public static void SetRotation(Entity entity, Quaternion rotation)
         {
             uint index = GetCache(entity);
@@ -170,7 +171,8 @@ namespace PrimalLike.Components
         }
 
 #if EDITOR
-        private static readonly List<string> scriptNames = [];
+        static readonly List<string> scriptNames = [];
+
         public static bool AddScriptName(string name)
         {
             scriptNames.Add(name);

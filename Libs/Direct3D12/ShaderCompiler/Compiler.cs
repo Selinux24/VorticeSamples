@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using PrimalLike.Graphics;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -6,12 +7,25 @@ using Vortice.Dxc;
 
 namespace Direct3D12.ShaderCompiler
 {
-    public static class Compiler
+    static class Compiler
     {
         static DxcShaderModel DefaultShaderModel { get; set; } = DxcShaderModel.Model6_6;
-        public static string GetShaderProfile(uint stage)
+        static string GetShaderProfile(ShaderTypes stage)
         {
-            return DxcCompiler.GetShaderProfile((DxcShaderStage)stage, DefaultShaderModel);
+            var dxcStage = stage switch
+            {
+                ShaderTypes.Vertex => DxcShaderStage.Vertex,
+                ShaderTypes.Hull => DxcShaderStage.Hull,
+                ShaderTypes.Domain => DxcShaderStage.Domain,
+                ShaderTypes.Geometry => DxcShaderStage.Geometry,
+                ShaderTypes.Pixel => DxcShaderStage.Pixel,
+                ShaderTypes.Compute => DxcShaderStage.Compute,
+                ShaderTypes.Amplification => DxcShaderStage.Amplification,
+                ShaderTypes.Mesh => DxcShaderStage.Mesh,
+                _ => DxcShaderStage.Vertex,
+            };
+
+            return DxcCompiler.GetShaderProfile(dxcStage, DefaultShaderModel);
         }
 
         public static bool CompileShaders(ShaderInfo[] engineShaderFiles, string shadersIncludeDir, string shadersOutputPath, IEnumerable<string> extraArgs = null)
@@ -82,14 +96,10 @@ namespace Direct3D12.ShaderCompiler
             return true;
         }
 
-        public static bool Compile(ShaderFileInfo info, string shadersIncludeDir, out PrimalLike.Content.CompiledShader compiledShader)
-        {
-            return Compile(info, shadersIncludeDir, [], out compiledShader);
-        }
-        public static bool Compile(ShaderFileInfo info, string shadersIncludeDir, IEnumerable<string> extraArgs, out PrimalLike.Content.CompiledShader compiledShader)
+        public static bool CompileShader(ShaderFileInfo info, string shadersIncludeDir, IEnumerable<string> extraArgs, out CompiledShader compiledShader)
         {
             bool result = CompileInternal(info, shadersIncludeDir, extraArgs, out var dxcCompiledShader);
-            compiledShader = result ? new PrimalLike.Content.CompiledShader(dxcCompiledShader.ByteCode, dxcCompiledShader.Hash.HashDigest) : default;
+            compiledShader = result ? dxcCompiledShader : default;
             return result;
         }
         static bool CompileInternal(ShaderFileInfo info, string shadersIncludeDir, IEnumerable<string> extraArgs, out CompiledShader compiledShader)
@@ -103,7 +113,7 @@ namespace Direct3D12.ShaderCompiler
             }
 
             string shaderSource = File.ReadAllText(shadersSourcePath);
-            var args = GetArgs(shadersIncludeDir, info, DefaultShaderModel, extraArgs);
+            var args = GetArgs(shadersIncludeDir, info, extraArgs);
 
             if (!DxcCompiler.Utils.CreateDefaultIncludeHandler(out var includeHandler).Success)
             {
@@ -114,7 +124,7 @@ namespace Direct3D12.ShaderCompiler
 
             using (includeHandler)
             {
-                Debug.WriteLine($"Shader Compilation: {info.Stage} {info.Profile} - {info.EntryPoint} {info.FileName}");
+                Debug.WriteLine($"Shader Compilation: {info.Profile} - {info.EntryPoint} {info.FileName}");
 
                 using IDxcResult results = DxcCompiler.Compiler.Compile(shaderSource, args, includeHandler);
                 if (results.GetStatus().Failure)
@@ -148,13 +158,13 @@ namespace Direct3D12.ShaderCompiler
 
             return true;
         }
-        static string[] GetArgs(string shadersSourcePath, ShaderFileInfo info, DxcShaderModel shaderModel, IEnumerable<string> extraArgs = null)
+        static string[] GetArgs(string shadersSourcePath, ShaderFileInfo info, IEnumerable<string> extraArgs = null)
         {
             var args = new List<string>
             {
                 info.FileName,
                 "-E", info.EntryPoint,
-                "-T", info.Profile,
+                "-T", info.Profile ?? GetShaderProfile(info.Stage),
                 "-I", shadersSourcePath,
                 "-enable-16bit-types",
                 Dxc.DXC_ARG_ALL_RESOURCES_BOUND,

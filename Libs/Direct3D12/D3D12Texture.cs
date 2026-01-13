@@ -105,7 +105,7 @@ namespace Direct3D12
             D3D12Graphics.DeferredRelease(resource);
         }
 
-        private void Reset()
+        void Reset()
         {
             resource = null;
             srv = default;

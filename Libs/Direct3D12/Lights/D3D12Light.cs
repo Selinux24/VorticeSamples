@@ -6,7 +6,7 @@ using System.Numerics;
 
 namespace Direct3D12.Lights
 {
-    public static class D3D12Light
+    static class D3D12Light
     {
         static readonly Dictionary<ulong, LightSet> lightSets = [];
         static readonly D3D12LightBuffer[] lightBuffers = new D3D12LightBuffer[D3D12Graphics.FrameBufferCount];

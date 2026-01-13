@@ -18,13 +18,13 @@ namespace PrimalLike.Content
         /// <summary>
         /// This constant indicates that an element in GeometryHierarchies is not a pointer, but a gpuId
         /// </summary>
-        private const IntPtr SingleMeshMarker = 0x01;
-        private static readonly int shiftBits = (Marshal.SizeOf<IntPtr>() - sizeof(IdType)) << 3;
-        private static readonly FreeList<IntPtr> geometryHierarchies = new();
-        private static readonly Lock geometryMutex = new();
+        const IntPtr SingleMeshMarker = 0x01;
+        static readonly int shiftBits = (Marshal.SizeOf<IntPtr>() - sizeof(IdType)) << 3;
+        static readonly FreeList<IntPtr> geometryHierarchies = new();
+        static readonly Lock geometryMutex = new();
 
-        private static readonly FreeList<Dictionary<uint, CompiledShader>> shaderGroups = new();
-        private static readonly Lock shaderMutex = new();
+        static readonly FreeList<Dictionary<uint, CompiledShader>> shaderGroups = new();
+        static readonly Lock shaderMutex = new();
 
         public static uint CreateResource<T>(T data, AssetTypes assetType)
         {
@@ -84,12 +84,12 @@ namespace PrimalLike.Content
             }
         }
 
-        private static uint CreateGeometryResource(IntPtr data)
+        static uint CreateGeometryResource(IntPtr data)
         {
             Debug.Assert(data != IntPtr.Zero);
             return IsSingleMesh(data) ? CreateSingleSubmesh(data) : CreateMeshHierarchy(data);
         }
-        private static bool IsSingleMesh(IntPtr data)
+        static bool IsSingleMesh(IntPtr data)
         {
             Debug.Assert(data != IntPtr.Zero);
             var blob = new BlobStreamReader(data);
@@ -102,7 +102,7 @@ namespace PrimalLike.Content
             Debug.Assert(submeshCount > 0);
             return submeshCount == 1;
         }
-        private static uint CreateSingleSubmesh(IntPtr data)
+        static uint CreateSingleSubmesh(IntPtr data)
         {
             Debug.Assert(data != IntPtr.Zero);
             BlobStreamReader blob = new(data);
@@ -120,12 +120,12 @@ namespace PrimalLike.Content
                 return geometryHierarchies.Add(fakePointer);
             }
         }
-        private static IntPtr CreateGpuIdFakePointer(uint gpuId)
+        static IntPtr CreateGpuIdFakePointer(uint gpuId)
         {
             Debug.Assert(Marshal.SizeOf<IntPtr>() > sizeof(IdType));
             return new(((IntPtr)gpuId << shiftBits) | SingleMeshMarker);
         }
-        private static uint CreateMeshHierarchy(IntPtr data)
+        static uint CreateMeshHierarchy(IntPtr data)
         {
             Debug.Assert(data != IntPtr.Zero);
             int size = GetGeometryHierarchyBufferSize(data);
@@ -172,7 +172,7 @@ namespace PrimalLike.Content
                 return geometryHierarchies.Add(stream.GetHierarchyBuffer());
             }
         }
-        private static int GetGeometryHierarchyBufferSize(IntPtr data)
+        static int GetGeometryHierarchyBufferSize(IntPtr data)
         {
             Debug.Assert(data != IntPtr.Zero);
             BlobStreamReader blob = new(data);
@@ -198,7 +198,7 @@ namespace PrimalLike.Content
 
             return size;
         }
-        private static bool ValidateThresholdValues(GeometryHierarchyStream stream, uint lodCount)
+        static bool ValidateThresholdValues(GeometryHierarchyStream stream, uint lodCount)
         {
             var previousThreshold = stream.Thresholds[0];
 
@@ -234,7 +234,7 @@ namespace PrimalLike.Content
                 }
             }
         }
-        private static bool ValidateLods(GeometryHierarchyStream stream, uint idCount)
+        static bool ValidateLods(GeometryHierarchyStream stream, uint idCount)
         {
             uint lodCount = stream.LodCount;
             LodOffset lodOffset = stream.LodOffsets[(int)lodCount - 1];
@@ -265,7 +265,7 @@ namespace PrimalLike.Content
             }
         }
 
-        private static void DestroyGeometryResource(uint id)
+        static void DestroyGeometryResource(uint id)
         {
             lock (geometryMutex)
             {
@@ -295,33 +295,41 @@ namespace PrimalLike.Content
                 geometryHierarchies.Remove(id);
             }
         }
-        private static IdType GpuIdFromFakePointer(IntPtr pointer)
+        static IdType GpuIdFromFakePointer(IntPtr pointer)
         {
             Debug.Assert((pointer & SingleMeshMarker) != 0);
             return (IdType)((pointer >> shiftBits) & IdDetail.InvalidId);
         }
 
-        private static IdType CreateMaterialResource(IntPtr data)
+        static IdType CreateMaterialResource(IntPtr data)
         {
             Debug.Assert(data != IntPtr.Zero);
             var info = Marshal.PtrToStructure<MaterialInitInfo>(data);
             return Renderer.AddMaterial(info);
         }
-        private static void DestroyMaterialResource(IdType id)
+        static void DestroyMaterialResource(IdType id)
         {
             Renderer.RemoveMaterial(id);
         }
 
-        private static IdType CreateTextureResource(IntPtr data)
+        static IdType CreateTextureResource(IntPtr data)
         {
             Debug.Assert(data != IntPtr.Zero);
             return Renderer.AddTexture(data);
         }
-        private static void DestroyTextureResource(IdType id)
+        static void DestroyTextureResource(IdType id)
         {
             Renderer.RemoveTexture(id);
         }
 
+        public static bool CompileShader(ShaderFileInfo info, string includeDir, out CompiledShader shader)
+        {
+            return Renderer.CompileShader(info, includeDir, [], out shader);
+        }
+        public static bool CompileShader(ShaderFileInfo info, string includeDir, string[] extraArgs, out CompiledShader shader)
+        {
+            return Renderer.CompileShader(info, includeDir, extraArgs, out shader);
+        }
         public static IdType AddShaderGroup(CompiledShader[] shaders, uint[] keys)
         {
             Debug.Assert(shaders?.Length > 0 && keys?.Length > 0);

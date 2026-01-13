@@ -1,5 +1,4 @@
 ﻿using ContentTools;
-using Direct3D12.ShaderCompiler;
 using PrimalLike;
 using PrimalLike.Common;
 using PrimalLike.Content;
@@ -34,7 +33,7 @@ namespace D3D12LibTests
         static void LoadShaders()
         {
             // Let's say our material uses a vertex shader and a pixel shader.
-            ShaderFileInfo info = new(Path.Combine(shadersSourcePath, "TestShader.hlsl"), "TestShaderVS", (uint)ShaderStage.Vertex);
+            ShaderFileInfo info = new(Path.Combine(shadersSourcePath, "TestShader.hlsl"), "TestShaderVS", ShaderTypes.Vertex);
 
             string[] defines = ["ELEMENTS_TYPE=1", "ELEMENTS_TYPE=3"];
             uint[] keys =
@@ -44,21 +43,21 @@ namespace D3D12LibTests
             ];
 
             List<string> extraArgs = [];
-            PrimalLike.Content.CompiledShader[] vertexShaders = new PrimalLike.Content.CompiledShader[2];
+            CompiledShader[] vertexShaders = new CompiledShader[2];
             for (uint i = 0; i < defines.Length; i++)
             {
                 extraArgs.Clear();
                 extraArgs.Add("-D");
                 extraArgs.Add(defines[i]);
-                bool compiledVs = Compiler.Compile(info, shadersIncludeDir, extraArgs, out var vertexShader);
+                bool compiledVs = ContentToEngine.CompileShader(info, shadersIncludeDir, [.. extraArgs], out var vertexShader);
                 Debug.Assert(compiledVs);
                 vertexShaders[i] = vertexShader;
             }
 
             vsId = ContentToEngine.AddShaderGroup(vertexShaders, keys);
 
-            info = new ShaderFileInfo(Path.Combine(shadersSourcePath, "TestShader.hlsl"), "TestShaderPS", (uint)ShaderStage.Pixel);
-            bool compiledPs = Compiler.Compile(info, shadersIncludeDir, out var pixelShader);
+            info = new ShaderFileInfo(Path.Combine(shadersSourcePath, "TestShader.hlsl"), "TestShaderPS", ShaderTypes.Pixel);
+            bool compiledPs = ContentToEngine.CompileShader(info, shadersIncludeDir, out var pixelShader);
             Debug.Assert(compiledPs);
 
             psId = ContentToEngine.AddShaderGroup([pixelShader], [uint.MaxValue]);

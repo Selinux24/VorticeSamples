@@ -13,7 +13,7 @@ namespace PrimalLike.EngineAPI
         /// <summary>
         /// Surface id
         /// </summary>
-        private readonly SurfaceId id = SurfaceId.MaxValue;
+        readonly SurfaceId id = SurfaceId.MaxValue;
 
         /// <summary>
         /// Constructor
