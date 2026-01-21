@@ -5,17 +5,25 @@ using PrimalLike.Graphics;
 using PrimalLike.Platform;
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Numerics;
 
 namespace DX12Windows
 {
     class HelloWorldApp(IPlatformFactory platformFactory, IGraphicsPlatformFactory graphicsFactory)
-        : Application("Content/Game.bin", platformFactory, graphicsFactory)
+        : Application(Path.Combine(ContentFolder, "Game.bin"), platformFactory, graphicsFactory)
     {
+        const string ContentFolder = "./Content/";
+
         public static HelloWorldApp Start<TPlatform, TGraphics>()
             where TPlatform : IPlatformFactory, new()
             where TGraphics : IGraphicsPlatformFactory, new()
         {
+            if (!Directory.Exists(ContentFolder))
+            {
+                Directory.CreateDirectory(ContentFolder);
+            }
+
             return new HelloWorldApp(new TPlatform(), new TGraphics());
         }
 
