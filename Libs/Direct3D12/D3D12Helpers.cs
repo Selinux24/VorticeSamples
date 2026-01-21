@@ -370,15 +370,6 @@ namespace Direct3D12
             return CreateBuffer<byte>(data, bufferSize, isCpuAccessible, state, flags, heap, heapOffset);
         }
         public static ID3D12Resource CreateBuffer<T>(
-            ulong bufferSize,
-            bool isCpuAccessible = false,
-            ResourceStates state = ResourceStates.Common,
-            ResourceFlags flags = ResourceFlags.None,
-            ID3D12Heap heap = null, ulong heapOffset = 0) where T : unmanaged
-        {
-            return CreateBuffer<T>(IntPtr.Zero, bufferSize, isCpuAccessible, state, flags, heap, heapOffset);
-        }
-        public static ID3D12Resource CreateBuffer<T>(
             IntPtr data, ulong bufferSize,
             bool isCpuAccessible = false,
             ResourceStates state = ResourceStates.Common,

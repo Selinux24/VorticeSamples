@@ -39,10 +39,6 @@ namespace Direct3D12.Fx
 
         public static bool Initialize()
         {
-            return CreateFxPsoAndRootSignature();
-        }
-        static bool CreateFxPsoAndRootSignature()
-        {
             Debug.Assert(fxRootSig == null && fxPso == null);
 
             // Create FX root signature
@@ -76,11 +72,11 @@ namespace Direct3D12.Fx
             };
 
             fxPso = D3D12Graphics.Device.CreatePipelineState(pipelineState);
+            Debug.Assert(fxPso != null);
             D3D12Helpers.NameD3D12Object(fxPso, "Post-process FX Pipeline State Object");
 
             return fxRootSig != null && fxPso != null;
         }
-
         public static void Shutdown()
         {
             fxRootSig?.Dispose();
@@ -89,10 +85,10 @@ namespace Direct3D12.Fx
             fxPso = null;
         }
 
-        public static void PostProcess(ID3D12GraphicsCommandList cmdList, ref D3D12FrameInfo d3d12Info, CpuDescriptorHandle targetRtv)
+        public static void PostProcess(ID3D12GraphicsCommandList cmdList, ref D3D12FrameInfo d3d12Info, D3D12Surface surface)
         {
-            uint frameIndex = d3d12Info.FrameIndex;
             uint lightCullingId = d3d12Info.LightCullingId;
+            uint frameIndex = d3d12Info.FrameIndex;
 
             cmdList.SetGraphicsRootSignature(fxRootSig);
             cmdList.SetPipelineState(fxPso);
@@ -106,7 +102,7 @@ namespace Direct3D12.Fx
             // NOTE: we don't need to clear the render target, because each pixel will 
             //       be overwritten by pixels from gpass main buffer.
             //       We also don't need a depth buffer.
-            cmdList.OMSetRenderTargets(targetRtv, null);
+            cmdList.OMSetRenderTargets(surface.GetRtv().Cpu, null);
             cmdList.DrawInstanced(3, 1, 0, 0);
         }
     }

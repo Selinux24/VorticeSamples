@@ -33,7 +33,7 @@ namespace PrimalLikeDLL
 
         public static ErrorCode InitializeEngine(IPlatform platform, IGraphicsPlatform gfx)
         {
-            if (!gfx.CompileShaders())
+            if (!gfx.CompileEngineShaders())
             {
                 Console.WriteLine("Failed to compile engine shaders.");
                 return ErrorCode.ShaderCompilation;

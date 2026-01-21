@@ -1,10 +1,8 @@
 ﻿using PrimalLike.EngineAPI;
 using PrimalLike.Graphics;
-using SharpGen.Runtime;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Utilities;
@@ -12,17 +10,19 @@ using Vortice.Direct3D;
 using Vortice.Direct3D12;
 using Vortice.DXGI;
 
+#if DEBUG
+using Vortice.Direct3D12.Debug;
+using Vortice.DXGI.Debug;
+#endif
+
 [assembly: InternalsVisibleTo("D3D12LibTests")]
 namespace Direct3D12
 {
-    using Direct3D12.ShaderCompiler;
     using Direct3D12.Delight;
     using Direct3D12.Fx;
     using Direct3D12.Lights;
-#if DEBUG
-    using Vortice.Direct3D12.Debug;
-    using Vortice.DXGI.Debug;
-#endif
+    using Direct3D12.ShaderCompiler;
+    using Direct3D12.Shaders;
 
     /// <summary>
     /// D3D12 graphics implementation.
@@ -49,13 +49,6 @@ namespace Direct3D12
         const string EngineShaderPaths = "Content/engineShaders.bin";
         const string EngineSourceShaderPaths = "../../../../../../Libs/Direct3D12/Hlsl/";
         const string EngineSourceShadersIncludeDir = "../../../../../../Libs/Direct3D12/Hlsl/";
-        static readonly ShaderInfo[] engineShaderFiles =
-        [
-            new ((int)EngineShaders.FullScreenTriangleVs, new (Path.Combine(EngineSourceShaderPaths, "FullScreenTriangle.hlsl"), "FullScreenTriangleVS", ShaderTypes.Vertex)),
-            new ((int)EngineShaders.PostProcessPs, new (Path.Combine(EngineSourceShaderPaths, "PostProcess.hlsl"), "PostProcessPS", ShaderTypes.Pixel)),
-            new ((int)EngineShaders.GridFrustumsCs, new (Path.Combine(EngineSourceShaderPaths, "GridFrustums.hlsl"), "ComputeGridFrustumsCS", ShaderTypes.Compute), ["-D", "TILE_SIZE=32"]),
-            new ((int)EngineShaders.LightCullingCs, new (Path.Combine(EngineSourceShaderPaths, "CullLights.hlsl"), "CullLightsCS", ShaderTypes.Compute), ["-D", "TILE_SIZE=32"]),
-        ];
 
         static ID3D12SDKConfiguration1 d3d12SdkConfig;
         static ID3D12DeviceFactory d3d12DeviceFactory;
@@ -76,7 +69,7 @@ namespace Direct3D12
         static readonly DescriptorHeap srvDescHeap = new(DescriptorHeapType.ConstantBufferViewShaderResourceViewUnorderedAccessView);
         static readonly DescriptorHeap uavDescHeap = new(DescriptorHeapType.ConstantBufferViewShaderResourceViewUnorderedAccessView);
 
-        static readonly List<IUnknown>[] deferredReleases = new List<IUnknown>[FrameBufferCount];
+        static readonly List<IDisposable>[] deferredReleases = new List<IDisposable>[FrameBufferCount];
         static readonly int[] deferredReleasesFlags = new int[FrameBufferCount];
         static readonly Lock deferredReleasesMutex = new();
 
@@ -112,21 +105,6 @@ namespace Direct3D12
         /// </summary>
         public static int CurrentFrameIndex { get => gfxCommand.FrameIndex; }
 
-        public static bool IsWindows11OrGreater()
-        {
-            Debug.WriteLine(Environment.OSVersion);
-
-            //Detect windows 11
-            if (Environment.OSVersion.Version.Major >= 10 &&
-                Environment.OSVersion.Version.Minor >= 0 &&
-                Environment.OSVersion.Version.Build >= 22000)
-            {
-                return true;
-            }
-
-            return false;
-        }
-
         /// <summary>
         /// Sets the deferred releases flag.
         /// </summary>
@@ -146,9 +124,9 @@ namespace Direct3D12
             return options.EnableVsync;
         }
 
-        public static bool CompileShaders()
+        public static bool CompileEngineShaders()
         {
-            return Compiler.CompileShaders(engineShaderFiles, EngineSourceShadersIncludeDir, EngineShaderPaths);
+            return Compiler.CompileEngineShaders(EngineSourceShaderPaths, EngineSourceShadersIncludeDir, EngineShaderPaths);
         }
         public static bool CompileShader(ShaderFileInfo info, string includeDir, string[] extraArgs, out CompiledShader shader)
         {
@@ -332,7 +310,7 @@ namespace Direct3D12
             {
                 debugDevice = mainDevice.QueryInterfaceOrNull<ID3D12DebugDevice2>();
             }
-            if (!IsWindows11OrGreater())
+            if (!OS.IsWindows11OrGreater())
             {
                 mainDevice?.Dispose();
                 mainDevice = null;
@@ -355,41 +333,6 @@ namespace Direct3D12
             mainDevice?.Dispose();
             mainDevice = null;
 #endif
-        }
-
-        static IDXGIAdapter4 DetermineMainAdapter()
-        {
-            for (uint i = 0; D3D12Helpers.DxCall(dxgiFactory.EnumAdapterByGpuPreference(i, GpuPreference.HighPerformance, out IDXGIAdapter4 adapter)); i++)
-            {
-                if (D3D12Helpers.DxCall(d3d12DeviceFactory.CreateDevice<D3D12Device>(adapter, MinimumFeatureLevel, out var tmpDevice)))
-                {
-                    tmpDevice.Dispose();
-                    return adapter;
-                }
-
-                adapter.Dispose();
-            }
-
-            return null;
-        }
-        static bool FailedInit()
-        {
-            Shutdown();
-            return false;
-        }
-        static FeatureLevel GetMaxFeatureLevel(IDXGIAdapter4 adapter)
-        {
-            var featureLevels = new[]
-            {
-                FeatureLevel.Level_11_0,
-                FeatureLevel.Level_11_1,
-                FeatureLevel.Level_12_0,
-                FeatureLevel.Level_12_1
-            };
-
-            using var device = d3d12DeviceFactory.CreateDevice<D3D12Device>(adapter, MinimumFeatureLevel);
-
-            return device.CheckMaxSupportedFeatureLevel(featureLevels);
         }
         static void ProcessDeferredReleases(int frameIdx, bool forceRelease = false)
         {
@@ -420,7 +363,43 @@ namespace Direct3D12
                 resources.Clear();
             }
         }
-        public static void DeferredRelease(IUnknown resource)
+
+        static IDXGIAdapter4 DetermineMainAdapter()
+        {
+            for (uint i = 0; D3D12Helpers.DxCall(dxgiFactory.EnumAdapterByGpuPreference(i, GpuPreference.HighPerformance, out IDXGIAdapter4 adapter)); i++)
+            {
+                if (D3D12Helpers.DxCall(d3d12DeviceFactory.CreateDevice(adapter, MinimumFeatureLevel, out D3D12Device tmpDevice)))
+                {
+                    tmpDevice.Dispose();
+                    return adapter;
+                }
+
+                adapter.Dispose();
+            }
+
+            return null;
+        }
+        static bool FailedInit()
+        {
+            Shutdown();
+            return false;
+        }
+        static FeatureLevel GetMaxFeatureLevel(IDXGIAdapter4 adapter)
+        {
+            var featureLevels = new[]
+            {
+                FeatureLevel.Level_11_0,
+                FeatureLevel.Level_11_1,
+                FeatureLevel.Level_12_0,
+                FeatureLevel.Level_12_1
+            };
+
+            using var device = d3d12DeviceFactory.CreateDevice<D3D12Device>(adapter, MinimumFeatureLevel);
+
+            return device.CheckMaxSupportedFeatureLevel(featureLevels);
+        }
+
+        public static void DeferredRelease(IDisposable resource)
         {
             if (resource == null) return;
 
@@ -432,46 +411,11 @@ namespace Direct3D12
             }
         }
 
-        static D3D12FrameInfo GetD3D12FrameInfo(FrameInfo info, D3D12Surface surface, uint frameIdx)
-        {
-            var camera = D3D12Camera.Get(info.CameraId);
-            camera.Update();
-
-            Shaders.GlobalShaderData data = new()
-            {
-                View = camera.View,
-                Projection = camera.Projection,
-                InvProjection = camera.InverseProjection,
-                ViewProjection = camera.ViewProjection,
-                InvViewProjection = camera.InverseViewProjection,
-                CameraPosition = camera.Position,
-                CameraDirection = camera.Direction,
-                ViewWidth = surface.GetViewport().Width,
-                ViewHeight = surface.GetViewport().Height,
-                NumDirectionalLights = D3D12Light.NonCullableLightCount(info.LightSetKey),
-                DeltaTime = info.AverageFrameTime,
-                AmbientLight = D3D12Light.AmbientLight(info.LightSetKey),
-            };
-
-            ulong globalShaderDataAddress = CBuffer.Write(data);
-
-            return new()
-            {
-                FrameInfo = info,
-                Camera = camera,
-                GlobalShaderData = globalShaderDataAddress,
-                SurfaceWidth = surface.Width,
-                SurfaceHeight = surface.Height,
-                LightCullingId = surface.LightCullingId,
-                FrameIndex = frameIdx,
-            };
-        }
-
         public static Surface CreateSurface(Window window)
         {
-            uint id = surfaces.Add(new D3D12Surface(window));
+            uint id = surfaces.Add(new(window));
             surfaces[id].CreateSwapChain(dxgiFactory, gfxCommand.CommandQueue);
-            return new Surface(id);
+            return new(id);
         }
         public static void RemoveSurface(uint id)
         {
@@ -509,7 +453,7 @@ namespace Direct3D12
             }
 
             var surface = surfaces[id];
-            var d3d12Info = GetD3D12FrameInfo(info, surface, (uint)frameIdx);
+            var d3d12Info = GetD3D12FrameInfo(info, surface, frameIdx);
 
             D3D12GPass.SetSize(d3d12Info.SurfaceWidth, d3d12Info.SurfaceHeight);
 
@@ -521,11 +465,7 @@ namespace Direct3D12
             var currentBackBuffer = surface.GetBackbuffer();
 
             // Depth prepass
-            resourceBarriers.AddTransitionBarrier(
-                currentBackBuffer,
-                ResourceStates.Present,
-                ResourceStates.RenderTarget,
-                ResourceBarrierFlags.BeginOnly);
+            resourceBarriers.AddTransitionBarrier(currentBackBuffer, ResourceStates.Present, ResourceStates.RenderTarget, ResourceBarrierFlags.BeginOnly);
             D3D12GPass.AddTransitionsForDepthPrePass(resourceBarriers);
             resourceBarriers.Apply(cmdList);
             D3D12GPass.SetRenderTargetsForDepthPrePass(cmdList);
@@ -541,21 +481,12 @@ namespace Direct3D12
 
             // Post-process
             D3D12GPass.AddTransitionsForPostProcess(resourceBarriers);
-            resourceBarriers.AddTransitionBarrier(
-                currentBackBuffer,
-                ResourceStates.Present,
-                ResourceStates.RenderTarget,
-                ResourceBarrierFlags.EndOnly);
+            resourceBarriers.AddTransitionBarrier(currentBackBuffer, ResourceStates.Present, ResourceStates.RenderTarget, ResourceBarrierFlags.EndOnly);
             resourceBarriers.Apply(cmdList);
-
-            // Will write to the current back buffer, so back buffer is a render target
-            D3D12PostProcess.PostProcess(cmdList, ref d3d12Info, surface.GetRtv().Cpu);
+            D3D12PostProcess.PostProcess(cmdList, ref d3d12Info, surface); // Will write to the current back buffer, so back buffer is a render target
 
             // after post process
-            cmdList.ResourceBarrierTransition(
-                currentBackBuffer,
-                ResourceStates.RenderTarget,
-                ResourceStates.Present);
+            cmdList.ResourceBarrierTransition(currentBackBuffer, ResourceStates.RenderTarget, ResourceStates.Present);
 
             // Done recording commands. Now execute commands,
             // signal and increment the fence value for next frame.
@@ -564,6 +495,44 @@ namespace Direct3D12
 #if DEBUG
             PrintDebugMessage();
 #endif
+        }
+        static D3D12FrameInfo GetD3D12FrameInfo(FrameInfo info, D3D12Surface surface, int frameIdx)
+        {
+            var camera = D3D12Camera.Get(info.CameraId);
+            var viewport = surface.GetViewport();
+            uint numDirectionalLights = D3D12Light.NonCullableLightCount(info.LightSetKey);
+            var ambientLight = D3D12Light.AmbientLight(info.LightSetKey);
+
+            camera.Update();
+
+            GlobalShaderData data = new()
+            {
+                View = camera.View,
+                Projection = camera.Projection,
+                InvProjection = camera.InverseProjection,
+                ViewProjection = camera.ViewProjection,
+                InvViewProjection = camera.InverseViewProjection,
+                CameraPosition = camera.Position,
+                CameraDirection = camera.Direction,
+                ViewWidth = viewport.Width,
+                ViewHeight = viewport.Height,
+                NumDirectionalLights = numDirectionalLights,
+                DeltaTime = info.AverageFrameTime,
+                AmbientLight = ambientLight,
+            };
+
+            ulong globalShaderDataAddress = CBuffer.Write(data);
+
+            return new()
+            {
+                FrameInfo = info,
+                Camera = camera,
+                GlobalShaderData = globalShaderDataAddress,
+                SurfaceWidth = surface.Width,
+                SurfaceHeight = surface.Height,
+                LightCullingId = surface.LightCullingId,
+                FrameIndex = (uint)frameIdx,
+            };
         }
 
         public static void SetOption<T>(RendererOption option, T parameter)

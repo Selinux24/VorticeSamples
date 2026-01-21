@@ -12,9 +12,9 @@ namespace Direct3D12
     class D3D12GraphicsPlatform : IGraphicsPlatform
     {
         /// <inheritdoc/>
-        public bool CompileShaders()
+        public bool CompileEngineShaders()
         {
-            return D3D12Graphics.CompileShaders();
+            return D3D12Graphics.CompileEngineShaders();
         }
         /// <inheritdoc/>
         public bool CompileShader(ShaderFileInfo info, string includeDir, string[] extraArgs, out CompiledShader shader)

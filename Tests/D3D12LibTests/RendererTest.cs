@@ -130,7 +130,7 @@ namespace D3D12LibTests
 
         void InitializeApplication()
         {
-            var resCompile = D3D12Graphics.CompileShaders();
+            var resCompile = D3D12Graphics.CompileEngineShaders();
             Assert.That(resCompile, "Shader compilation error.");
 
             app = TestApp.Start<Win32PlatformFactory, D3D12GraphicsPlatformFactory>();

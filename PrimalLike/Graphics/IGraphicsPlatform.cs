@@ -11,7 +11,7 @@ namespace PrimalLike.Graphics
         /// <summary>
         /// Compiles engine shaders.
         /// </summary>
-        bool CompileShaders();
+        bool CompileEngineShaders();
         /// <summary>
         /// Compiles a shader
         /// </summary>

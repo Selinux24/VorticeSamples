@@ -139,6 +139,7 @@ namespace Direct3D12
             if (!D3D12Helpers.DxCall(device.CreateCommandList(0, type, cmdFrames[0].CmdAllocator, null, out cmdList)))
             {
                 Release();
+                return;
             }
             cmdList.Close();
             string cmdListName = type switch
@@ -152,6 +153,7 @@ namespace Direct3D12
             if (!D3D12Helpers.DxCall(device.CreateFence(0, FenceFlags.None, out fence)))
             {
                 Release();
+                return;
             }
             D3D12Helpers.NameD3D12Object(fence, "D3D12 Fence");
         }
@@ -177,8 +179,8 @@ namespace Direct3D12
             fence?.Dispose();
             fenceValue = 0;
 
-            cmdQueue.Dispose();
-            cmdList.Dispose();
+            cmdQueue?.Dispose();
+            cmdList?.Dispose();
 
             for (int i = 0; i < frameBufferCount; i++)
             {

@@ -28,7 +28,19 @@ namespace Direct3D12.ShaderCompiler
             return DxcCompiler.GetShaderProfile(dxcStage, DefaultShaderModel);
         }
 
-        public static bool CompileShaders(ShaderInfo[] engineShaderFiles, string shadersIncludeDir, string shadersOutputPath, IEnumerable<string> extraArgs = null)
+        public static bool CompileEngineShaders(string engineShaderSourcePath, string engineShaderSourceIncludePath, string outputPath)
+        {
+            ShaderInfo[] engineShaderFiles =
+            [
+                new ((int)EngineShaders.FullScreenTriangleVs, new (Path.Combine(engineShaderSourcePath, "FullScreenTriangle.hlsl"), "FullScreenTriangleVS", ShaderTypes.Vertex)),
+                new ((int)EngineShaders.PostProcessPs, new (Path.Combine(engineShaderSourcePath, "PostProcess.hlsl"), "PostProcessPS", ShaderTypes.Pixel)),
+                new ((int)EngineShaders.GridFrustumsCs, new (Path.Combine(engineShaderSourcePath, "GridFrustums.hlsl"), "ComputeGridFrustumsCS", ShaderTypes.Compute), ["-D", "TILE_SIZE=32"]),
+                new ((int)EngineShaders.LightCullingCs, new (Path.Combine(engineShaderSourcePath, "CullLights.hlsl"), "CullLightsCS", ShaderTypes.Compute), ["-D", "TILE_SIZE=32"]),
+            ];
+
+            return CompileShaders(engineShaderFiles, engineShaderSourceIncludePath, outputPath);
+        }
+        static bool CompileShaders(ShaderInfo[] engineShaderFiles, string shadersIncludeDir, string shadersOutputPath, IEnumerable<string> extraArgs = null)
         {
             shadersIncludeDir = Path.GetFullPath(shadersIncludeDir);
             if (!Directory.Exists(shadersIncludeDir))

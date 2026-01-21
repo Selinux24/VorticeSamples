@@ -78,28 +78,27 @@ namespace Direct3D12
                 ulong newBufferSize = itemsCount * (ulong)StructSize;
                 ulong oldBufferSize = (ulong)buffer.Length;
 
-                if (newBufferSize != oldBufferSize)
-                {
-                    Array.Resize(ref buffer, (int)newBufferSize);
+                if (newBufferSize == oldBufferSize) return;
 
-                    EntityIds = new uint[itemsCount];
-                    SubmeshGpuIds = new uint[itemsCount];
-                    MaterialIds = new uint[itemsCount];
-                    GPassPipelineStates = new ID3D12PipelineState[itemsCount];
-                    DepthPipelineStates = new ID3D12PipelineState[itemsCount];
-                    RootSignatures = new ID3D12RootSignature[itemsCount];
-                    MaterialTypes = new MaterialTypes[itemsCount];
-                    DescriptorIndices = new uint[itemsCount][];
-                    TextureCounts = new uint[itemsCount];
-                    MaterialSurfaces = new MaterialSurface[itemsCount];
-                    PositionBuffers = new ulong[itemsCount];
-                    ElementBuffers = new ulong[itemsCount];
-                    IndexBufferViews = new IndexBufferView[itemsCount];
-                    PrimitiveTopologies = new D3D12PrimitiveTopology[itemsCount];
-                    ElementsTypes = new uint[itemsCount];
-                    PerObjectData = new ulong[itemsCount];
-                    SrvIndices = new ulong[itemsCount];
-                }
+                Array.Resize(ref buffer, (int)newBufferSize);
+
+                EntityIds = new uint[itemsCount];
+                SubmeshGpuIds = new uint[itemsCount];
+                MaterialIds = new uint[itemsCount];
+                GPassPipelineStates = new ID3D12PipelineState[itemsCount];
+                DepthPipelineStates = new ID3D12PipelineState[itemsCount];
+                RootSignatures = new ID3D12RootSignature[itemsCount];
+                MaterialTypes = new MaterialTypes[itemsCount];
+                DescriptorIndices = new uint[itemsCount][];
+                TextureCounts = new uint[itemsCount];
+                MaterialSurfaces = new MaterialSurface[itemsCount];
+                PositionBuffers = new ulong[itemsCount];
+                ElementBuffers = new ulong[itemsCount];
+                IndexBufferViews = new IndexBufferView[itemsCount];
+                PrimitiveTopologies = new D3D12PrimitiveTopology[itemsCount];
+                ElementsTypes = new uint[itemsCount];
+                PerObjectData = new ulong[itemsCount];
+                SrvIndices = new ulong[itemsCount];
             }
 
             public ItemsCache ItemsCache()
@@ -200,84 +199,63 @@ namespace Direct3D12
             gpassDepthBuffer?.Dispose();
 
             // Create the main buffer
+            D3D12TextureInitInfo gpassMainBufferInfo = new()
             {
-                D3D12TextureInitInfo info = new()
+                Desc = new()
                 {
-                    Desc = new()
-                    {
-                        Alignment = 0, // NOTE: 0 is the same as 64KB (or 4MB for MSAA)
-                        DepthOrArraySize = 1,
-                        Dimension = ResourceDimension.Texture2D,
-                        Flags = ResourceFlags.AllowRenderTarget,
-                        Format = MainBufferFormat,
-                        Height = height,
-                        Layout = TextureLayout.Unknown,
-                        MipLevels = 0, // make space for all mip levels
-                        SampleDescription = new(1, 0),
-                        Width = width
-                    },
-                    InitialState = ResourceStates.PixelShaderResource,
-                    ClearValue = new(MainBufferFormat, clearValue),
-                };
-
-                gpassMainBuffer = new D3D12RenderTexture(info);
-            }
+                    Alignment = 0, // NOTE: 0 is the same as 64KB (or 4MB for MSAA)
+                    DepthOrArraySize = 1,
+                    Dimension = ResourceDimension.Texture2D,
+                    Flags = ResourceFlags.AllowRenderTarget,
+                    Format = MainBufferFormat,
+                    Height = height,
+                    Layout = TextureLayout.Unknown,
+                    MipLevels = 0, // make space for all mip levels
+                    SampleDescription = new(1, 0),
+                    Width = width
+                },
+                InitialState = ResourceStates.PixelShaderResource,
+                ClearValue = new(MainBufferFormat, clearValue),
+            };
+            gpassMainBuffer = new(gpassMainBufferInfo);
+            D3D12Helpers.NameD3D12Object(gpassMainBuffer.GetResource(), "GPass Main Buffer");
 
             // Create the depth buffer
+            D3D12TextureInitInfo gpassDepthBufferInfo = new()
             {
-                D3D12TextureInitInfo info = new()
-                {
-                    Desc = ResourceDescription.Texture2D(DepthBufferFormat, width, height, 1, 1, flags: ResourceFlags.AllowDepthStencil),
-                    InitialState = ResourceStates.DepthRead | ResourceStates.NonPixelShaderResource,
-                    ClearValue = new(DepthBufferFormat, 0f, 0),
-                };
-
-                gpassDepthBuffer = new D3D12DepthBuffer(info);
-
-            }
-
-            D3D12Helpers.NameD3D12Object(gpassMainBuffer.GetResource(), "GPass Main Buffer");
+                Desc = ResourceDescription.Texture2D(DepthBufferFormat, width, height, 1, 1, flags: ResourceFlags.AllowDepthStencil),
+                InitialState = ResourceStates.DepthRead | ResourceStates.NonPixelShaderResource,
+                ClearValue = new(DepthBufferFormat, 0f, 0),
+            };
+            gpassDepthBuffer = new(gpassDepthBufferInfo);
             D3D12Helpers.NameD3D12Object(gpassDepthBuffer.GetResource(), "GPass Depth Buffer");
 
             return gpassMainBuffer.GetResource() != null && gpassDepthBuffer.GetResource() != null;
         }
 
-        static void FillPerObjectData(ref D3D12FrameInfo d3d12Info, MaterialsCache materialsCache)
+        public static void Shutdown()
         {
-            uint renderItemsCount = frameCache.Size();
-            uint currentEntityId = uint.MaxValue;
-            ulong currentGpuAddress = 0;
-
-            for (uint i = 0; i < renderItemsCount; i++)
-            {
-                if (currentEntityId != frameCache.EntityIds[i])
-                {
-                    currentEntityId = frameCache.EntityIds[i];
-                    Transform.GetTransformMatrices(currentEntityId, out var world, out var invWorld);
-                    var wvp = Matrix4x4.Multiply(world, d3d12Info.Camera.ViewProjection);
-
-                    var surface = materialsCache.MaterialSurfaces[i];
-
-                    Shaders.PerObjectData data = new()
-                    {
-                        World = world,
-                        InvWorld = invWorld,
-                        WorldViewProjection = wvp,
-
-                        BaseColor = surface.BaseColor,
-                        Emissive = surface.Emissive,
-                        EmissiveIntensity = surface.EmissiveIntensity,
-                        Metallic = surface.Metallic,
-                        Roughness = surface.Roughness,
-                    };
-
-                    currentGpuAddress = D3D12Graphics.CBuffer.Write(data);
-                }
-
-                Debug.Assert(currentGpuAddress != 0);
-                frameCache.PerObjectData[i] = currentGpuAddress;
-            }
+            gpassMainBuffer?.Dispose();
+            gpassMainBuffer = null;
+            gpassDepthBuffer?.Dispose();
+            gpassDepthBuffer = null;
+            dimensionWidth = initialDimensionWidth;
+            dimensionHeight = initialDimensionHeight;
         }
+
+        public static void SetSize(uint width, uint height)
+        {
+            if (width <= dimensionWidth && height <= dimensionHeight)
+            {
+                return;
+            }
+
+            dimensionWidth = Math.Max(width, dimensionWidth);
+            dimensionHeight = Math.Max(height, dimensionHeight);
+
+            CreateBuffers(dimensionWidth, dimensionHeight);
+        }
+
         static void SetRootParameters(ID3D12GraphicsCommandList cmdList, uint cacheIndex)
         {
             Debug.Assert(cacheIndex < frameCache.Size());
@@ -296,6 +274,60 @@ namespace Direct3D12
                     }
                 }
                 break;
+            }
+        }
+
+        public static void AddTransitionsForDepthPrePass(D3D12ResourceBarrier barriers)
+        {
+            barriers.AddTransitionBarrier(
+                gpassMainBuffer.GetResource(),
+                ResourceStates.PixelShaderResource,
+                ResourceStates.RenderTarget,
+                ResourceBarrierFlags.BeginOnly);
+
+            barriers.AddTransitionBarrier(
+                gpassDepthBuffer.GetResource(),
+                ResourceStates.DepthRead | ResourceStates.NonPixelShaderResource,
+                ResourceStates.DepthWrite);
+        }
+        public static void SetRenderTargetsForDepthPrePass(ID3D12GraphicsCommandList cmdList)
+        {
+            var dsv = gpassDepthBuffer.GetDsv();
+            cmdList.ClearDepthStencilView(dsv.Cpu, ClearFlags.Depth | ClearFlags.Stencil, 0f, 0, 0, null);
+            cmdList.OMSetRenderTargets([], dsv.Cpu);
+        }
+        public static void DepthPrePass(ID3D12GraphicsCommandList cmdList, ref D3D12FrameInfo d3d12Info)
+        {
+            PrepareRenderFrame(ref d3d12Info);
+
+            uint itemsCount = frameCache.Size();
+
+            ID3D12RootSignature currentRootSignature = null;
+            ID3D12PipelineState currentPipelineState = null;
+
+            for (uint i = 0; i < itemsCount; i++)
+            {
+                if (currentRootSignature != frameCache.RootSignatures[i])
+                {
+                    currentRootSignature = frameCache.RootSignatures[i];
+                    cmdList.SetGraphicsRootSignature(currentRootSignature);
+                    cmdList.SetGraphicsRootConstantBufferView((uint)OpaqueRootParameter.GlobalShaderData, d3d12Info.GlobalShaderData);
+                }
+
+                if (currentPipelineState != frameCache.DepthPipelineStates[i])
+                {
+                    currentPipelineState = frameCache.DepthPipelineStates[i];
+                    cmdList.SetPipelineState(currentPipelineState);
+                }
+
+                SetRootParameters(cmdList, i);
+
+                IndexBufferView ibv = frameCache.IndexBufferViews[i];
+                uint indexCount = ibv.SizeInBytes >> (ibv.Format == Format.R16_UInt ? 1 : 2);
+
+                cmdList.IASetIndexBuffer(ibv);
+                cmdList.IASetPrimitiveTopology(frameCache.PrimitiveTopologies[i]);
+                cmdList.DrawIndexedInstanced(indexCount, 1, 0, 0, 0);
             }
         }
         static void PrepareRenderFrame(ref D3D12FrameInfo d3d12Info)
@@ -343,65 +375,64 @@ namespace Direct3D12
                 frameCache.SrvIndices[i] = gpuAddress;
             }
         }
-
-        public static void Shutdown()
+        static void FillPerObjectData(ref D3D12FrameInfo d3d12Info, MaterialsCache materialsCache)
         {
-            gpassMainBuffer?.Dispose();
-            gpassMainBuffer = null;
-            gpassDepthBuffer?.Dispose();
-            gpassDepthBuffer = null;
-            dimensionWidth = initialDimensionWidth;
-            dimensionHeight = initialDimensionHeight;
-        }
+            uint renderItemsCount = frameCache.Size();
+            uint currentEntityId = uint.MaxValue;
+            ulong currentGpuAddress = 0;
 
-        public static void SetSize(uint width, uint height)
-        {
-            if (width <= dimensionWidth && height <= dimensionHeight)
+            for (uint i = 0; i < renderItemsCount; i++)
             {
-                return;
-            }
-
-            dimensionWidth = Math.Max(width, dimensionWidth);
-            dimensionHeight = Math.Max(height, dimensionHeight);
-
-            CreateBuffers(dimensionWidth, dimensionHeight);
-        }
-
-        public static void DepthPrePass(ID3D12GraphicsCommandList cmdList, ref D3D12FrameInfo d3d12Info)
-        {
-            PrepareRenderFrame(ref d3d12Info);
-
-            uint itemsCount = frameCache.Size();
-
-            ID3D12RootSignature currentRootSignature = null;
-            ID3D12PipelineState currentPipelineState = null;
-
-            for (uint i = 0; i < itemsCount; i++)
-            {
-                if (currentRootSignature != frameCache.RootSignatures[i])
+                if (currentEntityId != frameCache.EntityIds[i])
                 {
-                    currentRootSignature = frameCache.RootSignatures[i];
-                    cmdList.SetGraphicsRootSignature(currentRootSignature);
-                    cmdList.SetGraphicsRootConstantBufferView((uint)OpaqueRootParameter.GlobalShaderData, d3d12Info.GlobalShaderData);
+                    currentEntityId = frameCache.EntityIds[i];
+                    Transform.GetTransformMatrices(currentEntityId, out var world, out var invWorld);
+                    var wvp = Matrix4x4.Multiply(world, d3d12Info.Camera.ViewProjection);
+
+                    var surface = materialsCache.MaterialSurfaces[i];
+
+                    Shaders.PerObjectData data = new()
+                    {
+                        World = world,
+                        InvWorld = invWorld,
+                        WorldViewProjection = wvp,
+
+                        BaseColor = surface.BaseColor,
+                        Emissive = surface.Emissive,
+                        EmissiveIntensity = surface.EmissiveIntensity,
+                        Metallic = surface.Metallic,
+                        Roughness = surface.Roughness,
+                    };
+
+                    currentGpuAddress = D3D12Graphics.CBuffer.Write(data);
                 }
 
-                if (currentPipelineState != frameCache.DepthPipelineStates[i])
-                {
-                    currentPipelineState = frameCache.DepthPipelineStates[i];
-                    cmdList.SetPipelineState(currentPipelineState);
-                }
-
-                SetRootParameters(cmdList, i);
-
-                IndexBufferView ibv = frameCache.IndexBufferViews[i];
-                uint indexCount = ibv.SizeInBytes >> (ibv.Format == Format.R16_UInt ? 1 : 2);
-
-                cmdList.IASetIndexBuffer(ibv);
-                cmdList.IASetPrimitiveTopology(frameCache.PrimitiveTopologies[i]);
-                cmdList.DrawIndexedInstanced(indexCount, 1, 0, 0, 0);
+                Debug.Assert(currentGpuAddress != 0);
+                frameCache.PerObjectData[i] = currentGpuAddress;
             }
         }
 
+        public static void AddTransitionsForGPass(D3D12ResourceBarrier barriers)
+        {
+            barriers.AddTransitionBarrier(
+                gpassMainBuffer.GetResource(),
+                ResourceStates.PixelShaderResource,
+                ResourceStates.RenderTarget,
+                ResourceBarrierFlags.EndOnly);
+
+            barriers.AddTransitionBarrier(
+                gpassDepthBuffer.GetResource(),
+                ResourceStates.DepthWrite,
+                ResourceStates.DepthRead | ResourceStates.NonPixelShaderResource);
+        }
+        public static void SetRenderTargetsForGPass(ID3D12GraphicsCommandList cmdList)
+        {
+            var rtv = gpassMainBuffer.GetRtv(0);
+            var dsv = gpassDepthBuffer.GetDsv();
+
+            cmdList.ClearRenderTargetView(rtv.Cpu, clearValue, 0, null);
+            cmdList.OMSetRenderTargets(rtv.Cpu, dsv.Cpu);
+        }
         public static void Render(ID3D12GraphicsCommandList cmdList, ref D3D12FrameInfo d3d12Info)
         {
             uint itemsCount = frameCache.Size();
@@ -441,53 +472,12 @@ namespace Direct3D12
             }
         }
 
-        public static void AddTransitionsForDepthPrePass(D3D12ResourceBarrier barriers)
-        {
-            barriers.AddTransitionBarrier(
-                gpassMainBuffer.GetResource(),
-                ResourceStates.PixelShaderResource,
-                ResourceStates.RenderTarget,
-                ResourceBarrierFlags.BeginOnly);
-
-            barriers.AddTransitionBarrier(
-                gpassDepthBuffer.GetResource(),
-                ResourceStates.DepthRead | ResourceStates.NonPixelShaderResource,
-                ResourceStates.DepthWrite);
-        }
-        public static void AddTransitionsForGPass(D3D12ResourceBarrier barriers)
-        {
-            barriers.AddTransitionBarrier(
-                gpassMainBuffer.GetResource(),
-                ResourceStates.PixelShaderResource,
-                ResourceStates.RenderTarget,
-                ResourceBarrierFlags.EndOnly);
-
-            barriers.AddTransitionBarrier(
-                gpassDepthBuffer.GetResource(),
-                ResourceStates.DepthWrite,
-                ResourceStates.DepthRead | ResourceStates.NonPixelShaderResource);
-        }
         public static void AddTransitionsForPostProcess(D3D12ResourceBarrier barriers)
         {
             barriers.AddTransitionBarrier(
                 gpassMainBuffer.GetResource(),
                 ResourceStates.RenderTarget,
                 ResourceStates.PixelShaderResource);
-        }
-
-        public static void SetRenderTargetsForDepthPrePass(ID3D12GraphicsCommandList cmdList)
-        {
-            var dsv = gpassDepthBuffer.GetDsv();
-            cmdList.ClearDepthStencilView(dsv.Cpu, ClearFlags.Depth | ClearFlags.Stencil, 0f, 0, 0, null);
-            cmdList.OMSetRenderTargets([], dsv.Cpu);
-        }
-        public static void SetRenderTargetsForGPass(ID3D12GraphicsCommandList cmdList)
-        {
-            var rtv = gpassMainBuffer.GetRtv(0);
-            var dsv = gpassDepthBuffer.GetDsv();
-
-            cmdList.ClearRenderTargetView(rtv.Cpu, clearValue, 0, null);
-            cmdList.OMSetRenderTargets(rtv.Cpu, dsv.Cpu);
         }
     }
 }

@@ -20,7 +20,7 @@ namespace PrimalLike.Graphics
         {
             SetPlatformInterface(graphicsFactory);
 
-            if (!gfx.CompileShaders())
+            if (!gfx.CompileEngineShaders())
             {
                 return false;
             }
