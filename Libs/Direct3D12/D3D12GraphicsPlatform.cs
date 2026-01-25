@@ -12,6 +12,11 @@ namespace Direct3D12
     class D3D12GraphicsPlatform : IGraphicsPlatform
     {
         /// <inheritdoc/>
+        public string GetEngineShaderPath()
+        {
+            return D3D12Graphics.GetEngineShaderPath();
+        }
+        /// <inheritdoc/>
         public bool CompileEngineShaders()
         {
             return D3D12Graphics.CompileEngineShaders();
@@ -28,11 +33,6 @@ namespace Direct3D12
             }
 
             return result;
-        }
-        /// <inheritdoc/>
-        public string GetEngineShaderPath()
-        {
-            return D3D12Graphics.GetEngineShaderPath();
         }
 
         /// <inheritdoc/>

@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFrameworks>net9.0</TargetFrameworks>
     <Configurations>Debug;Release;ReleaseEditor;DebugEditor</Configurations>
     <Platforms>x64</Platforms>
   </PropertyGroup>

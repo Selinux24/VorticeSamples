@@ -1,4 +1,5 @@
-﻿using PrimalLike.Graphics;
+﻿using Direct3D12.Hlsl;
+using PrimalLike.Graphics;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -28,8 +29,11 @@ namespace Direct3D12.ShaderCompiler
             return DxcCompiler.GetShaderProfile(dxcStage, DefaultShaderModel);
         }
 
-        public static bool CompileEngineShaders(string engineShaderSourcePath, string engineShaderSourceIncludePath, string outputPath)
+        public static bool CompileEngineShaders(string outputPath)
         {
+            string engineShaderSourcePath = HlslHelper.EngineShadersDirectory;
+            string engineShaderSourceIncludePath = HlslHelper.EngineIncludesDirectory;
+
             ShaderInfo[] engineShaderFiles =
             [
                 new ((int)EngineShaders.FullScreenTriangleVs, new (Path.Combine(engineShaderSourcePath, "FullScreenTriangle.hlsl"), "FullScreenTriangleVS", ShaderTypes.Vertex)),
@@ -40,7 +44,7 @@ namespace Direct3D12.ShaderCompiler
 
             return CompileShaders(engineShaderFiles, engineShaderSourceIncludePath, outputPath);
         }
-        static bool CompileShaders(ShaderInfo[] engineShaderFiles, string shadersIncludeDir, string shadersOutputPath, IEnumerable<string> extraArgs = null)
+        public static bool CompileShaders(ShaderInfo[] engineShaderFiles, string shadersIncludeDir, string shadersOutputPath, IEnumerable<string> extraArgs = null)
         {
             shadersIncludeDir = Path.GetFullPath(shadersIncludeDir);
             if (!Directory.Exists(shadersIncludeDir))
@@ -69,7 +73,7 @@ namespace Direct3D12.ShaderCompiler
 
             foreach (var file in engineShaderFiles)
             {
-                string[] fileArgs = [.. (file.ExtraArguments ?? []), .. (extraArgs ?? [])];
+                string[] fileArgs = [.. file.ExtraArguments ?? [], .. extraArgs ?? []];
 
                 if (!CompileInternal(file.Info, shadersIncludeDir, fileArgs, out var compiledShader))
                 {
@@ -114,22 +118,20 @@ namespace Direct3D12.ShaderCompiler
             compiledShader = result ? dxcCompiledShader : default;
             return result;
         }
+
         static bool CompileInternal(ShaderFileInfo info, string shadersIncludeDir, IEnumerable<string> extraArgs, out CompiledShader compiledShader)
         {
             string shadersSourcePath = Path.GetFullPath(info.FileName);
             if (!File.Exists(shadersSourcePath))
             {
-                Debug.WriteLine($"Shader Compilation: Source not found: {shadersSourcePath}");
+                Debug.WriteLine($"Shader Compilation: ERROR - Source not found: {shadersSourcePath}");
                 compiledShader = default;
                 return false;
             }
 
-            string shaderSource = File.ReadAllText(shadersSourcePath);
-            var args = GetArgs(shadersIncludeDir, info, extraArgs);
-
-            if (!DxcCompiler.Utils.CreateDefaultIncludeHandler(out var includeHandler).Success)
+            if (DxcCompiler.Utils.CreateDefaultIncludeHandler(out var includeHandler).Failure)
             {
-                Debug.WriteLine("Shader Compilation: Failed to create DXC include handler instance");
+                Debug.WriteLine("Shader Compilation: ERROR - Failed to create DXC include handler instance");
                 compiledShader = default;
                 return false;
             }
@@ -138,7 +140,10 @@ namespace Direct3D12.ShaderCompiler
             {
                 Debug.WriteLine($"Shader Compilation: {info.Profile} - {info.EntryPoint} {info.FileName}");
 
-                using IDxcResult results = DxcCompiler.Compiler.Compile(shaderSource, args, includeHandler);
+                string shaderSource = File.ReadAllText(shadersSourcePath);
+                var args = GetArgs(shadersIncludeDir, info, extraArgs);
+
+                using var results = DxcCompiler.Compile(shaderSource, args, includeHandler);
                 if (results.GetStatus().Failure)
                 {
                     Debug.WriteLine(results.GetErrors());
@@ -146,26 +151,40 @@ namespace Direct3D12.ShaderCompiler
                     return false;
                 }
 
-                byte[] disassembly = null;
-                if (results.GetOutput(DxcOutKind.Disassembly, out IDxcBlob disassemblyBlob).Success)
+                var byteCode = results.GetObjectBytecodeArray();
+                ShaderHash shaderHash;
+                byte[] disassembly;
+
+                if (results.HasOutput(DxcOutKind.ShaderHash))
                 {
-                    disassembly = disassemblyBlob.AsBytes();
+                    using var hashBlob = results.GetOutput(DxcOutKind.ShaderHash);
+                    shaderHash = Marshal.PtrToStructure<ShaderHash>(hashBlob.BufferPointer);
+                    Debug.WriteLine($"Shader Compilation: HashDigest [{shaderHash.GetHashDigestString()}]");
                 }
                 else
                 {
-                    Debug.WriteLine("Shader Compilation: Failed to get disassembly");
-                }
-
-                if (results.GetOutput(DxcOutKind.ShaderHash, out IDxcBlob hashBlob).Failure)
-                {
-                    Debug.WriteLine("Shader Compilation: Failed to get shader hash");
+                    Debug.WriteLine("Shader Compilation: ERROR - Shader hash not available in compilation results.");
                     compiledShader = default;
                     return false;
                 }
-                var shaderHash = Marshal.PtrToStructure<ShaderHash>(hashBlob.BufferPointer);
-                Debug.WriteLine($"Shader Compilation: HashDigest [{shaderHash.GetHashDigestString()}]");
 
-                compiledShader = new(results.GetObjectBytecodeMemory(), shaderHash, disassembly);
+                DxcBuffer buffer = new()
+                {
+                    Ptr = Marshal.UnsafeAddrOfPinnedArrayElement(byteCode, 0),
+                    Size = (nuint)byteCode.Length,
+                    Encoding = Dxc.DXC_CP_ACP
+                };
+                if (DxcCompiler.Compiler.Disassemble(buffer, out IDxcResult dres).Success)
+                {
+                    disassembly = dres.GetOutput(DxcOutKind.Disassembly).AsBytes();
+                }
+                else
+                {
+                    Debug.WriteLine("Shader Compilation: WARNING - Disassembly not available in compilation results.");
+                    disassembly = [];
+                }
+
+                compiledShader = new(byteCode, shaderHash, disassembly);
             }
 
             return true;
@@ -187,8 +206,6 @@ namespace Direct3D12.ShaderCompiler
                 Dxc.DXC_ARG_OPTIMIZATION_LEVEL3,
 #endif
                 Dxc.DXC_ARG_WARNINGS_ARE_ERRORS,
-                "-HV",
-                "2021",
                 "-Qstrip_reflect",
                 "-Qstrip_debug",
             };

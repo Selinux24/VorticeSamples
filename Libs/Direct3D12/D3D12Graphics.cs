@@ -47,8 +47,6 @@ namespace Direct3D12
         const FeatureLevel MinimumFeatureLevel = FeatureLevel.Level_11_0;
 
         const string EngineShaderPaths = "Content/engineShaders.bin";
-        const string EngineSourceShaderPaths = "../../../../../../Libs/Direct3D12/Hlsl/";
-        const string EngineSourceShadersIncludeDir = "../../../../../../Libs/Direct3D12/Hlsl/";
 
         static ID3D12SDKConfiguration1 d3d12SdkConfig;
         static ID3D12DeviceFactory d3d12DeviceFactory;
@@ -124,17 +122,17 @@ namespace Direct3D12
             return options.EnableVsync;
         }
 
+        public static string GetEngineShaderPath()
+        {
+            return EngineShaderPaths;
+        }
         public static bool CompileEngineShaders()
         {
-            return Compiler.CompileEngineShaders(EngineSourceShaderPaths, EngineSourceShadersIncludeDir, EngineShaderPaths);
+            return Compiler.CompileEngineShaders(EngineShaderPaths);
         }
         public static bool CompileShader(ShaderFileInfo info, string includeDir, string[] extraArgs, out CompiledShader shader)
         {
             return Compiler.CompileShader(info, includeDir, extraArgs, out shader);
-        }
-        public static string GetEngineShaderPath()
-        {
-            return EngineShaderPaths;
         }
 
         public static bool Initialize()

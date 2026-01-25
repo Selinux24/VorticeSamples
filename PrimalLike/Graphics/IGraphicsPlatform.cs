@@ -9,6 +9,10 @@ namespace PrimalLike.Graphics
     public interface IGraphicsPlatform
     {
         /// <summary>
+        /// Gets the engine shader path.
+        /// </summary>
+        string GetEngineShaderPath();
+        /// <summary>
         /// Compiles engine shaders.
         /// </summary>
         bool CompileEngineShaders();
@@ -20,10 +24,6 @@ namespace PrimalLike.Graphics
         /// <param name="extraArgs">Compilation arguments</param>
         /// <param name="shader">Compiled shader</param>
         bool CompileShader(ShaderFileInfo info, string includeDir, string[] extraArgs, out CompiledShader shader);
-        /// <summary>
-        /// Gets the engine shader path.
-        /// </summary>
-        string GetEngineShaderPath();
 
         /// <summary>
         /// Initializes the graphics platform.
