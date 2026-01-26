@@ -9,6 +9,21 @@ namespace PrimalLike.Components
 {
     public static class Transform
     {
+        public struct LocalFrame
+        {
+            public Vector3 Right;
+            public Vector3 Up;
+            public Vector3 Front;
+            public readonly Matrix4x4 Frame => Matrix4x4.CreateWorld(Vector3.Zero, Front, Up);
+
+            public LocalFrame()
+            {
+                Right = new(1f, 0f, 0f);
+                Up = new(0f, 1f, 0f);
+                Front = new(0f, 0f, 1f);
+            }
+        }
+
         static readonly List<Matrix4x4> toWorld = [];
         static readonly List<Matrix4x4> invWorld = [];
         static readonly List<ushort> hasTransforms = [];
@@ -16,7 +31,7 @@ namespace PrimalLike.Components
         static ushort readWriteFlag = 0;
 
         public static List<Quaternion> Rotations { get; } = [];
-        public static List<Vector3> Orientations { get; } = [];
+        public static List<LocalFrame> LocalFrames { get; } = [];
         public static List<Vector3> Positions { get; } = [];
         public static List<Vector3> Scales { get; } = [];
 
@@ -42,27 +57,29 @@ namespace PrimalLike.Components
 
             hasTransforms[(int)index] = 1;
         }
-        static Vector3 CalculateOrientation(Quaternion rotation)
+        static LocalFrame CalculateLocalFrame(Quaternion rotation)
         {
-            return Vector3.Normalize(Vector3.Transform(Vector3.UnitZ, rotation));
+            LocalFrame frame = new();
+
+            var right = Vector3.Normalize(Vector3.Transform(frame.Right, rotation));
+            var up = Vector3.Normalize(Vector3.Transform(frame.Up, rotation));
+            var front = Vector3.Normalize(Vector3.Cross(right, up));
+
+            return new()
+            {
+                Right = right,
+                Up = up,
+                Front = front
+            };
         }
 
         static void SetRotation(TransformId id, Quaternion rotation)
         {
             IdType index = IdDetail.Index(id);
             Rotations[(int)index] = rotation;
-            Orientations[(int)index] = CalculateOrientation(rotation);
+            LocalFrames[(int)index] = CalculateLocalFrame(rotation);
             hasTransforms[(int)index] = 0;
             changesFromPreviousFrame[(int)index] |= TransformFlags.Rotation;
-        }
-        static void SetOrientation(TransformId id, Vector3 orientation)
-        {
-            IdType index = IdDetail.Index(id);
-            Vector3 n = Vector3.Normalize(orientation);
-            Orientations[(int)index] = n;
-            Rotations[(int)index] = Quaternion.CreateFromAxisAngle(n, 0);
-            hasTransforms[(int)index] = 0;
-            changesFromPreviousFrame[(int)index] |= TransformFlags.Orientation;
         }
         static void SetPosition(TransformId id, Vector3 position)
         {
@@ -88,7 +105,7 @@ namespace PrimalLike.Components
             {
                 Positions[(int)entityIndex] = info.Position;
                 Rotations[(int)entityIndex] = info.Rotation;
-                Orientations[(int)entityIndex] = CalculateOrientation(info.Rotation);
+                LocalFrames[(int)entityIndex] = CalculateLocalFrame(info.Rotation);
                 Scales[(int)entityIndex] = info.Scale;
                 hasTransforms[(int)entityIndex] = 0;
                 changesFromPreviousFrame[(int)entityIndex] = TransformFlags.All;
@@ -99,7 +116,7 @@ namespace PrimalLike.Components
                 toWorld.Add(default);
                 invWorld.Add(default);
                 Rotations.Add(info.Rotation);
-                Orientations.Add(CalculateOrientation(info.Rotation));
+                LocalFrames.Add(CalculateLocalFrame(info.Rotation));
                 Positions.Add(info.Position);
                 Scales.Add(info.Scale);
                 hasTransforms.Add(0);
@@ -163,11 +180,6 @@ namespace PrimalLike.Components
                 if (c.Flags.HasFlag(TransformFlags.Rotation))
                 {
                     SetRotation(c.Id, c.Rotation);
-                }
-
-                if (c.Flags.HasFlag(TransformFlags.Orientation))
-                {
-                    SetOrientation(c.Id, c.Orientation);
                 }
 
                 if (c.Flags.HasFlag(TransformFlags.Position))

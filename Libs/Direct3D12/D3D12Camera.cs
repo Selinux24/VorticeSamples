@@ -285,8 +285,9 @@ namespace Direct3D12
         public void Update()
         {
             Entity entity = new(entityId);
-            Position = entity.Transform.Position;
-            Direction = entity.Transform.Orientation;
+            Position = entity.Position;
+            Direction = entity.Front;
+            up = entity.Up;
             view = Matrix4x4.CreateLookTo(Position, Direction, up);
 
             if (isDirty)

@@ -47,8 +47,11 @@ namespace PrimalLike.EngineAPI
         }
 
         public Quaternion Rotation { get => Transform.Rotation; }
-        public Vector3 Orientation { get => Transform.Orientation; }
         public Vector3 Position { get => Transform.Position; }
         public Vector3 Scale { get => Transform.Scale; }
+        public Vector3 Right { get => Transform.Right; }
+        public Vector3 Front { get => Transform.Front; }
+        public Vector3 Up { get => Transform.Up; }
+        public Matrix4x4 LocalFrame { get => Transform.LocalFrame; }
     }
 }

@@ -31,7 +31,7 @@ namespace DX12Windows.Scripts
 
             desiredPosition = position = Position;
 
-            Vector3 dir = Orientation;
+            var dir = Front;
             float theta = MathF.Acos(dir.Y);
             float phi = MathF.Atan2(-dir.Z, dir.X);
             Vector3 rot = new(theta - MathHelper.PiOver2, phi + MathHelper.PiOver2, 0f);

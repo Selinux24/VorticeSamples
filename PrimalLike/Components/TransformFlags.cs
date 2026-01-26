@@ -6,10 +6,9 @@ namespace PrimalLike.Components
     public enum TransformFlags : uint
     {
         Rotation = 0x01,
-        Orientation = 0x02,
-        Position = 0x04,
-        Scale = 0x08,
+        Position = 0x02,
+        Scale = 0x04,
 
-        All = Rotation | Orientation | Position | Scale
+        All = Rotation | Position | Scale
     }
 }

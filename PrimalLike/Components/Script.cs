@@ -59,14 +59,6 @@ namespace PrimalLike.Components
             cache.Rotation = rotation;
             transformCache[(int)index] = cache;
         }
-        public static void SetOrientation(Entity entity, Vector3 orientation)
-        {
-            uint index = GetCache(entity);
-            var cache = transformCache[(int)index];
-            cache.Flags |= TransformFlags.Orientation;
-            cache.Orientation = orientation;
-            transformCache[(int)index] = cache;
-        }
         public static void SetPosition(Entity entity, Vector3 position)
         {
             uint index = GetCache(entity);

@@ -200,7 +200,7 @@ namespace Direct3D12.Lights
                 {
                     Entity entity = new(owner.EntityId);
                     var parameters = nonCullableLights[(int)owner.DataIndex];
-                    parameters.Direction = entity.Orientation;
+                    parameters.Direction = entity.Front;
                     nonCullableLights[(int)owner.DataIndex] = parameters;
                 }
             }
@@ -370,7 +370,7 @@ namespace Direct3D12.Lights
             Debug.Assert(owner.LightType != LightTypes.Directional);
             Debug.Assert(index < cullableLights.Count);
 
-            umbra = Math.Clamp(umbra, 0f, MathF.PI);
+            umbra = Math.Clamp(umbra, 0f, float.Epsilon);
 
             var light = cullableLights[(int)index];
             light.CosUmbra = MathF.Cos(umbra * 0.5f);
@@ -623,7 +623,7 @@ namespace Direct3D12.Lights
             var tip = parameters.Position;
             var direction = parameters.Direction;
             float coneCos = parameters.CosPenumbra;
-            Debug.Assert(coneCos > 0f);
+            Debug.Assert(coneCos > -0.001f); // use a small negative value, so cos(180) wouldn't trigger the assertion.
 
             if (coneCos >= 0.707107f)
             {
@@ -649,7 +649,7 @@ namespace Direct3D12.Lights
             cInfo.Position = parameters.Position = sphere.Center = entity.Position;
             if (owners[cullableOwners[(int)index]].LightType == LightTypes.Spot)
             {
-                cInfo.Direction = parameters.Direction = entity.Orientation;
+                cInfo.Direction = parameters.Direction = entity.Front;
                 CalculateConeBoundingSphere(parameters, ref sphere);
             }
 
