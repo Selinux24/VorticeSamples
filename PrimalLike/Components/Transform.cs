@@ -9,19 +9,12 @@ namespace PrimalLike.Components
 {
     public static class Transform
     {
-        public struct LocalFrame
+        public struct LocalFrame()
         {
-            public Vector3 Right;
-            public Vector3 Up;
-            public Vector3 Front;
+            public Vector3 Right = Vector3.UnitX;
+            public Vector3 Up = Vector3.UnitY;
+            public Vector3 Front = Vector3.UnitZ;
             public readonly Matrix4x4 Frame => Matrix4x4.CreateWorld(Vector3.Zero, Front, Up);
-
-            public LocalFrame()
-            {
-                Right = new(1f, 0f, 0f);
-                Up = new(0f, 1f, 0f);
-                Front = new(0f, 0f, 1f);
-            }
         }
 
         static readonly List<Matrix4x4> toWorld = [];
@@ -35,27 +28,27 @@ namespace PrimalLike.Components
         public static List<Vector3> Positions { get; } = [];
         public static List<Vector3> Scales { get; } = [];
 
-        static void CalculateTransformMatrices(IdType index)
+        static void CalculateTransformMatrices(int index)
         {
             Debug.Assert(Rotations.Count > index);
             Debug.Assert(Positions.Count > index);
             Debug.Assert(Scales.Count > index);
 
-            var r = Rotations[(int)index];
-            var t = Positions[(int)index];
-            var s = Scales[(int)index];
+            var r = Rotations[index];
+            var t = Positions[index];
+            var s = Scales[index];
 
             Matrix4x4 world = Matrix4x4.CreateScale(s) * Matrix4x4.CreateFromQuaternion(r) * Matrix4x4.CreateTranslation(t);
-            toWorld[(int)index] = world;
+            toWorld[index] = world;
 
             world.M41 = 0f;
             world.M42 = 0f;
             world.M43 = 0f;
             world.M44 = 1f;
             Matrix4x4.Invert(world, out Matrix4x4 inverseWorld);
-            invWorld[(int)index] = inverseWorld;
+            invWorld[index] = inverseWorld;
 
-            hasTransforms[(int)index] = 1;
+            hasTransforms[index] = 1;
         }
         static LocalFrame CalculateLocalFrame(Quaternion rotation)
         {
@@ -75,40 +68,46 @@ namespace PrimalLike.Components
 
         static void SetRotation(TransformId id, Quaternion rotation)
         {
-            IdType index = IdDetail.Index(id);
-            Rotations[(int)index] = rotation;
-            LocalFrames[(int)index] = CalculateLocalFrame(rotation);
-            hasTransforms[(int)index] = 0;
-            changesFromPreviousFrame[(int)index] |= TransformFlags.Rotation;
+            int index = (int)IdDetail.Index(id);
+
+            Rotations[index] = rotation;
+            LocalFrames[index] = CalculateLocalFrame(rotation);
+
+            hasTransforms[index] = 0;
+            changesFromPreviousFrame[index] |= TransformFlags.Rotation;
         }
         static void SetPosition(TransformId id, Vector3 position)
         {
-            IdType index = IdDetail.Index(id);
-            Positions[(int)index] = position;
-            hasTransforms[(int)index] = 0;
-            changesFromPreviousFrame[(int)index] |= TransformFlags.Position;
+            int index = (int)IdDetail.Index(id);
+
+            Positions[index] = position;
+
+            hasTransforms[index] = 0;
+            changesFromPreviousFrame[index] |= TransformFlags.Position;
         }
         static void SetScale(TransformId id, Vector3 scale)
         {
-            IdType index = IdDetail.Index(id);
-            Scales[(int)index] = scale;
-            hasTransforms[(int)index] = 0;
-            changesFromPreviousFrame[(int)index] |= TransformFlags.Scale;
+            int index = (int)IdDetail.Index(id);
+
+            Scales[index] = scale;
+
+            hasTransforms[index] = 0;
+            changesFromPreviousFrame[index] |= TransformFlags.Scale;
         }
 
         public static TransformComponent Create(TransformInfo info, Entity entity)
         {
             Debug.Assert(entity.IsValid);
-            IdType entityIndex = IdDetail.Index(entity.Id);
+            int entityIndex = (int)IdDetail.Index(entity.Id);
 
             if (Positions.Count > entityIndex)
             {
-                Positions[(int)entityIndex] = info.Position;
-                Rotations[(int)entityIndex] = info.Rotation;
-                LocalFrames[(int)entityIndex] = CalculateLocalFrame(info.Rotation);
-                Scales[(int)entityIndex] = info.Scale;
-                hasTransforms[(int)entityIndex] = 0;
-                changesFromPreviousFrame[(int)entityIndex] = TransformFlags.All;
+                Positions[entityIndex] = info.Position;
+                Rotations[entityIndex] = info.Rotation;
+                LocalFrames[entityIndex] = CalculateLocalFrame(info.Rotation);
+                Scales[entityIndex] = info.Scale;
+                hasTransforms[entityIndex] = 0;
+                changesFromPreviousFrame[entityIndex] = TransformFlags.All;
             }
             else
             {
@@ -133,15 +132,15 @@ namespace PrimalLike.Components
         public static void GetTransformMatrices(EntityId id, out Matrix4x4 world, out Matrix4x4 inverseWorld)
         {
             Debug.Assert(IdDetail.IsValid(id));
-            IdType index = IdDetail.Index(id);
+            int index = (int)IdDetail.Index(id);
 
-            if (hasTransforms[(int)index] == 0)
+            if (hasTransforms[index] == 0)
             {
                 CalculateTransformMatrices(index);
             }
 
-            world = toWorld[(int)index];
-            inverseWorld = invWorld[(int)index];
+            world = toWorld[index];
+            inverseWorld = invWorld[index];
         }
         public static TransformFlags[] GetUpdatedComponentsFlags(EntityId[] ids)
         {
@@ -153,7 +152,9 @@ namespace PrimalLike.Components
             for (int i = 0; i < ids.Length; i++)
             {
                 Debug.Assert(IdDetail.IsValid(ids[i]));
-                flags[i] = changesFromPreviousFrame[(int)IdDetail.Index(ids[i])];
+
+                int index = (int)IdDetail.Index(ids[i]);
+                flags[i] = changesFromPreviousFrame[index];
             }
 
             return flags;
@@ -174,7 +175,7 @@ namespace PrimalLike.Components
 
             for (int i = 0; i < cache.Length; i++)
             {
-                TransformCache c = cache[i];
+                var c = cache[i];
                 Debug.Assert(IdDetail.IsValid(c.Id));
 
                 if (c.Flags.HasFlag(TransformFlags.Rotation))

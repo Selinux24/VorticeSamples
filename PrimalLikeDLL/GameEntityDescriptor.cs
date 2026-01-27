@@ -3,8 +3,8 @@ namespace PrimalLikeDLL
 {
     public struct GameEntityDescriptor
     {
-        public TransformComponent Transform { get; set; }
-        public ScriptComponent Script { get; set; }
-        public GeometryComponent Geometry { get; set; }
+        public TransformDescriptor Transform { get; set; }
+        public ScriptDescriptor Script { get; set; }
+        public GeometryDescriptor Geometry { get; set; }
     }
 }

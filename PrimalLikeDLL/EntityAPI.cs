@@ -12,8 +12,6 @@ namespace PrimalLikeDLL
     {
         readonly Lock mutex = new();
 
-        TransformCache[] transformCache = [];
-
         static Vector3 GetEulerAnglesFromLocalFrame(Matrix4x4 m)
         {
             float pitch;
@@ -31,7 +29,7 @@ namespace PrimalLikeDLL
                 }
                 else
                 {
-                    // m._32 == -1
+                    // m.M32 == -1
                     pitch = MathF.PI * 0.5f;
                     yaw = -MathF.Atan2(-m.M13, m.M11);
                     roll = 0f;
@@ -39,36 +37,33 @@ namespace PrimalLikeDLL
             }
             else
             {
-                // m._32 == +1
+                // m.M32 == +1
                 pitch = -MathF.PI * 0.5f;
                 yaw = MathF.Atan2(-m.M13, m.M11);
                 roll = 0f;
             }
 
-            return Vector3.RadiansToDegrees(new Vector3(pitch, yaw, roll));
+            return Vector3.RadiansToDegrees(new(pitch, yaw, roll));
         }
         static Vector3 GetLocalPos(Vector3 pos, uint id)
         {
-            PrimalLike.EngineAPI.TransformComponent xform = new(id);
+            TransformComponent xform = new(id);
             return xform.CalculateLocalPosition(pos);
         }
         static Quaternion GetWorldQuat(Vector3 w, uint id)
         {
-            w = Vector3.DegreesToRadians(w);
-            PrimalLike.EngineAPI.TransformComponent xform = new(id);
-            return xform.CalculateWorldRotation(w);
+            TransformComponent xform = new(id);
+            return xform.CalculateWorldRotation(Vector3.DegreesToRadians(w));
         }
         static Quaternion GetLocalQuat(Vector3 w, uint id)
         {
-            w = Vector3.DegreesToRadians(w);
-            PrimalLike.EngineAPI.TransformComponent xform = new(id);
-            return xform.CalculateLocalRotation(w);
+            TransformComponent xform = new(id);
+            return xform.CalculateLocalRotation(Vector3.DegreesToRadians(w));
         }
         static Quaternion GetAbsoluteQuat(Vector3 w, uint id)
         {
-            w = Vector3.DegreesToRadians(w);
-            PrimalLike.EngineAPI.TransformComponent xform = new(id);
-            return xform.CalculateAbsoluteRotation(w);
+            TransformComponent xform = new(id);
+            return xform.CalculateAbsoluteRotation(Vector3.DegreesToRadians(w));
         }
 
         public uint CreateGameEntity(GameEntityDescriptor desc)
@@ -107,7 +102,6 @@ namespace PrimalLikeDLL
                     Script = scriptInfo,
                     Geometry = IdDetail.IsValid(desc.Geometry.GeometryContentId) ? geometryInfo : null,
                 };
-
                 return GameEntity.UpdateComponent(entityId, entityInfo, type);
             }
         }
@@ -137,8 +131,7 @@ namespace PrimalLikeDLL
                 {
                     Debug.Assert(ids[i] == new Entity(ids[i]).Transform.Id);
                     // NOTE: transform id is the same as entity id
-                    uint id = ids[i];
-                    PrimalLike.EngineAPI.TransformComponent t = new(id);
+                    TransformComponent t = new(ids[i]);
                     var pos = t.Position;
                     x[i] = pos.X;
                     y[i] = pos.Y;
@@ -155,8 +148,7 @@ namespace PrimalLikeDLL
                 {
                     Debug.Assert(ids[i] == new Entity(ids[i]).Transform.Id);
                     // NOTE: transform id is the same as entity id
-                    uint id = ids[i];
-                    PrimalLike.EngineAPI.TransformComponent t = new(id);
+                    TransformComponent t = new(ids[i]);
                     var euler = GetEulerAnglesFromLocalFrame(t.LocalFrame);
                     x[i] = euler.X;
                     y[i] = euler.Y;
@@ -173,8 +165,7 @@ namespace PrimalLikeDLL
                 {
                     Debug.Assert(ids[i] == new Entity(ids[i]).Transform.Id);
                     // NOTE: transform id is the same as entity id
-                    uint id = ids[i];
-                    PrimalLike.EngineAPI.TransformComponent t = new(id);
+                    TransformComponent t = new(ids[i]);
                     var scale = t.Scale;
                     x[i] = scale.X;
                     y[i] = scale.Y;
@@ -188,51 +179,55 @@ namespace PrimalLikeDLL
             Debug.Assert(ids != null && count > 0);
             lock (mutex)
             {
-                Array.Resize(ref transformCache, (int)count);
+                var transformCache = new TransformCache[count];
 
                 for (int i = 0; i < count; i++)
                 {
+                    Debug.Assert(ids[i] == new Entity(ids[i]).Transform.Id);
+
                     Vector3 v = new(x[i], y[i], z[i]);
+                    uint id = ids[i];
 
                     var trn = transformCache[i];
-                    trn.Position = !isLocal ? v : GetLocalPos(v, ids[i]);
+
+                    trn.Position = !isLocal ? v : GetLocalPos(v, id);
                     trn.Flags = TransformFlags.Position;
-                    Debug.Assert(ids[i] == new Entity(ids[i]).Transform.Id);
-                    // NOTE: transform id is the same as entity id
-                    trn.Id = ids[i];
+                    trn.Id = id; // NOTE: transform id is the same as entity id
+
                     transformCache[i] = trn;
                 }
 
                 Transform.Update(transformCache);
             }
         }
-        public void SetRotation(uint[] ids, float[] x, float[] y, float[] z, uint count, uint frame)
+        public void SetRotation(uint[] ids, float[] x, float[] y, float[] z, uint count, TransformSpace frame)
         {
             Debug.Assert(ids != null && count > 0);
             lock (mutex)
             {
-                Array.Resize(ref transformCache, (int)count);
+                Func<Vector3, uint, Quaternion> frameFn = frame switch
+                {
+                    TransformSpace.Absolute => GetAbsoluteQuat,
+                    TransformSpace.Local => GetLocalQuat,
+                    TransformSpace.World => GetWorldQuat,
+                    _ => throw new ArgumentOutOfRangeException(nameof(frame), "Invalid TransformSpace value."),
+                };
 
-                var frameFn = GetAbsoluteQuat;
-                if (frame == (uint)TransformSpace.Local)
-                {
-                    frameFn = GetLocalQuat;
-                }
-                else if (frame == (uint)TransformSpace.World)
-                {
-                    frameFn = GetWorldQuat;
-                }
+                var transformCache = new TransformCache[count];
 
                 for (int i = 0; i < count; i++)
                 {
+                    Debug.Assert(ids[i] == new Entity(ids[i]).Transform.Id);
+
                     Vector3 v = new(x[i], y[i], z[i]);
+                    uint id = ids[i];
 
                     var trn = transformCache[i];
-                    trn.Rotation = frameFn(v, ids[i]);
+
+                    trn.Rotation = frameFn(v, id);
                     trn.Flags = TransformFlags.Rotation;
-                    Debug.Assert(ids[i] == new Entity(ids[i]).Transform.Id);
-                    // NOTE: transform id is the same as entity id
-                    trn.Id = ids[i];
+                    trn.Id = id; // NOTE: transform id is the same as entity id
+
                     transformCache[i] = trn;
                 }
 

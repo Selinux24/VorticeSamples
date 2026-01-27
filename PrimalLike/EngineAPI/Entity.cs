@@ -50,8 +50,8 @@ namespace PrimalLike.EngineAPI
         public Vector3 Position { get => Transform.Position; }
         public Vector3 Scale { get => Transform.Scale; }
         public Vector3 Right { get => Transform.Right; }
-        public Vector3 Front { get => Transform.Front; }
         public Vector3 Up { get => Transform.Up; }
+        public Vector3 Front { get => Transform.Front; }
         public Matrix4x4 LocalFrame { get => Transform.LocalFrame; }
     }
 }

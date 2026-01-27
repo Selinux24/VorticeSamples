@@ -2,7 +2,7 @@
 
 namespace PrimalLikeDLL
 {
-    public struct GeometryComponent
+    public struct GeometryDescriptor
     {
         public uint GeometryContentId;
         public uint[] MaterialIds;

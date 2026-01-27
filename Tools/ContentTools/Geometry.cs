@@ -301,8 +301,8 @@ namespace ContentTools
             Debug.Assert(numIndices > 0 && numVertices > 0);
 
             float cosAlpha = MathF.Cos(MathF.PI - smoothingAngle * MathF.PI / 180f);
-            bool isHardEdge = MathF.Abs(smoothingAngle - 180f) < Utils.Epsilon;
-            bool isSoftEdge = MathF.Abs(smoothingAngle) < Utils.Epsilon;
+            bool isHardEdge = MathF.Abs(smoothingAngle - 180f) < MathUtils.Epsilon;
+            bool isSoftEdge = MathF.Abs(smoothingAngle) < MathUtils.Epsilon;
 
             m.Indices.Clear();
             m.Indices.AddRange(new uint[numIndices]);

@@ -3,6 +3,7 @@ using PrimalLike.Components;
 using System;
 using System.Diagnostics;
 using System.Numerics;
+using Utilities;
 
 namespace PrimalLike.EngineAPI
 {
@@ -85,11 +86,10 @@ namespace PrimalLike.EngineAPI
             Debug.Assert(IsValid());
             int index = (int)IdDetail.Index(Id);
             var frame = Transform.LocalFrames[index].Frame;
-            var l_pos = delta;
-            l_pos = Vector3.Transform(l_pos, frame);
-            var w_pos = Transform.Positions[index];
+            var lPos = Vector3.Transform(delta, frame);
+            var wPos = Transform.Positions[index];
 
-            return w_pos + l_pos;
+            return wPos + lPos;
         }
         public readonly Quaternion CalculateAbsoluteRotation(Vector3 rotation)
         {
@@ -110,18 +110,18 @@ namespace PrimalLike.EngineAPI
         {
             Debug.Assert(IsValid());
 
-            Vector3 axis = new(1f, 0f, 0f);
+            var axis = Vector3.UnitX;
             float angle = delta.X;
-            if (MathF.Abs(delta.X) < float.Epsilon)
+            if (MathF.Abs(delta.X) < MathUtils.Epsilon)
             {
-                if (MathF.Abs(delta.Z) < float.Epsilon)
+                if (MathF.Abs(delta.Z) < MathUtils.Epsilon)
                 {
-                    axis = new(0f, 1f, 0f);
+                    axis = Vector3.UnitY;
                     angle = delta.Y;
                 }
-                else if (MathF.Abs(delta.Y) < float.Epsilon)
+                else if (MathF.Abs(delta.Y) < MathUtils.Epsilon)
                 {
-                    axis = new(0f, 0f, 1f);
+                    axis = Vector3.UnitZ;
                     angle = delta.Z;
                 }
             }

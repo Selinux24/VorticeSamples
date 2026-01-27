@@ -370,7 +370,7 @@ namespace Direct3D12.Lights
             Debug.Assert(owner.LightType != LightTypes.Directional);
             Debug.Assert(index < cullableLights.Count);
 
-            umbra = Math.Clamp(umbra, 0f, float.Epsilon);
+            umbra = Math.Clamp(umbra, 0f, MathF.PI - MathUtils.Epsilon);
 
             var light = cullableLights[(int)index];
             light.CosUmbra = MathF.Cos(umbra * 0.5f);
@@ -494,7 +494,9 @@ namespace Direct3D12.Lights
             return new();
         }
 
-        // Return the number of enabled directional lights
+        /// <summary>
+        /// Return the number of enabled directional lights
+        /// </summary>
         public uint NonCullableLightCount()
         {
             uint count = 0;

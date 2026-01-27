@@ -178,7 +178,6 @@ namespace Direct3D12
         Matrix4x4 inverseProjection;
         Matrix4x4 viewProjection;
         Matrix4x4 inverseViewProjection;
-        Vector3 up;
         float nearZ;
         float farZ;
         float fieldOfView; // The field of view for perspective camera or view width in pixels for orthographic camera
@@ -194,14 +193,7 @@ namespace Direct3D12
         public Matrix4x4 InverseViewProjection { get => inverseViewProjection; }
         public Vector3 Position { get; private set; }
         public Vector3 Direction { get; private set; }
-        public Vector3 Up
-        {
-            get => up; set
-            {
-                up = value;
-                isDirty = true;
-            }
-        }
+        public Vector3 Up { get; private set; }
         public float NearZ
         {
             get => nearZ; set
@@ -269,7 +261,7 @@ namespace Direct3D12
 
         public D3D12Camera(CameraInitInfo info)
         {
-            up = info.Up;
+            Up = info.Up;
             nearZ = info.NearZ;
             farZ = info.FarZ;
             fieldOfView = info.FieldOfView;
@@ -287,8 +279,8 @@ namespace Direct3D12
             Entity entity = new(entityId);
             Position = entity.Position;
             Direction = entity.Front;
-            up = entity.Up;
-            view = Matrix4x4.CreateLookTo(Position, Direction, up);
+            Up = entity.Up;
+            view = Matrix4x4.CreateLookTo(Position, Direction, Up);
 
             if (isDirty)
             {

@@ -4,7 +4,7 @@ using System;
 
 namespace PrimalLikeDLL
 {
-    public struct ScriptComponent
+    public struct ScriptDescriptor
     {
         public Func<Entity, EntityScript> ScriptCreator { get; set; }
 
