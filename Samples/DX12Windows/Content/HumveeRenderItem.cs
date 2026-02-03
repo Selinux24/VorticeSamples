@@ -41,7 +41,7 @@ namespace DX12Windows.Content
         uint mtlId = uint.MaxValue;
 
         public Vector3 InitialCameraPosition { get; } = new(0f, 0.8f, -3f);
-        public Quaternion InitialCameraRotation { get; } = Quaternion.CreateFromYawPitchRoll(3.14f, 3.14f, 0f);
+        public Quaternion InitialCameraRotation { get; } = Quaternion.Identity;
 
         public void Load(string assetsFolder, string outputsFolder)
         {

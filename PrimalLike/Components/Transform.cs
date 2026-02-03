@@ -15,6 +15,22 @@ namespace PrimalLike.Components
             public Vector3 Up = Vector3.UnitY;
             public Vector3 Front = Vector3.UnitZ;
             public readonly Matrix4x4 Frame => Matrix4x4.CreateWorld(Vector3.Zero, Front, Up);
+
+            public static LocalFrame CalculateLocalFrame(Quaternion rotation)
+            {
+                var right = Vector3.Normalize(Vector3.Transform(Vector3.UnitX, rotation));
+                var up = Vector3.Normalize(Vector3.Transform(Vector3.UnitY, rotation));
+                var front = Vector3.Normalize(Vector3.Cross(right, up));
+
+                var fn = Vector3.Normalize(Vector3.Transform(Vector3.UnitZ, rotation));
+
+                return new()
+                {
+                    Right = right,
+                    Up = up,
+                    Front = front
+                };
+            }
         }
 
         static readonly List<Matrix4x4> toWorld = [];
@@ -28,50 +44,12 @@ namespace PrimalLike.Components
         public static List<Vector3> Positions { get; } = [];
         public static List<Vector3> Scales { get; } = [];
 
-        static void CalculateTransformMatrices(int index)
-        {
-            Debug.Assert(Rotations.Count > index);
-            Debug.Assert(Positions.Count > index);
-            Debug.Assert(Scales.Count > index);
-
-            var r = Rotations[index];
-            var t = Positions[index];
-            var s = Scales[index];
-
-            Matrix4x4 world = Matrix4x4.CreateScale(s) * Matrix4x4.CreateFromQuaternion(r) * Matrix4x4.CreateTranslation(t);
-            toWorld[index] = world;
-
-            world.M41 = 0f;
-            world.M42 = 0f;
-            world.M43 = 0f;
-            world.M44 = 1f;
-            Matrix4x4.Invert(world, out Matrix4x4 inverseWorld);
-            invWorld[index] = inverseWorld;
-
-            hasTransforms[index] = 1;
-        }
-        static LocalFrame CalculateLocalFrame(Quaternion rotation)
-        {
-            LocalFrame frame = new();
-
-            var right = Vector3.Normalize(Vector3.Transform(frame.Right, rotation));
-            var up = Vector3.Normalize(Vector3.Transform(frame.Up, rotation));
-            var front = Vector3.Normalize(Vector3.Cross(right, up));
-
-            return new()
-            {
-                Right = right,
-                Up = up,
-                Front = front
-            };
-        }
-
         static void SetRotation(TransformId id, Quaternion rotation)
         {
             int index = (int)IdDetail.Index(id);
 
             Rotations[index] = rotation;
-            LocalFrames[index] = CalculateLocalFrame(rotation);
+            LocalFrames[index] = LocalFrame.CalculateLocalFrame(rotation);
 
             hasTransforms[index] = 0;
             changesFromPreviousFrame[index] |= TransformFlags.Rotation;
@@ -104,7 +82,7 @@ namespace PrimalLike.Components
             {
                 Positions[entityIndex] = info.Position;
                 Rotations[entityIndex] = info.Rotation;
-                LocalFrames[entityIndex] = CalculateLocalFrame(info.Rotation);
+                LocalFrames[entityIndex] = LocalFrame.CalculateLocalFrame(info.Rotation);
                 Scales[entityIndex] = info.Scale;
                 hasTransforms[entityIndex] = 0;
                 changesFromPreviousFrame[entityIndex] = TransformFlags.All;
@@ -115,7 +93,7 @@ namespace PrimalLike.Components
                 toWorld.Add(default);
                 invWorld.Add(default);
                 Rotations.Add(info.Rotation);
-                LocalFrames.Add(CalculateLocalFrame(info.Rotation));
+                LocalFrames.Add(LocalFrame.CalculateLocalFrame(info.Rotation));
                 Positions.Add(info.Position);
                 Scales.Add(info.Scale);
                 hasTransforms.Add(0);
@@ -142,6 +120,28 @@ namespace PrimalLike.Components
             world = toWorld[index];
             inverseWorld = invWorld[index];
         }
+        static void CalculateTransformMatrices(int index)
+        {
+            Debug.Assert(Rotations.Count > index);
+            Debug.Assert(Positions.Count > index);
+            Debug.Assert(Scales.Count > index);
+
+            var r = Matrix4x4.CreateFromQuaternion(Rotations[index]);
+            var t = Matrix4x4.CreateTranslation(Positions[index]);
+            var s = Matrix4x4.CreateScale(Scales[index]);
+            var world = s * r * t;
+            toWorld[index] = world;
+
+            world.M41 = 0f;
+            world.M42 = 0f;
+            world.M43 = 0f;
+            world.M44 = 1f;
+            Matrix4x4.Invert(world, out Matrix4x4 inverseWorld);
+            invWorld[index] = inverseWorld;
+
+            hasTransforms[index] = 1;
+        }
+
         public static TransformFlags[] GetUpdatedComponentsFlags(EntityId[] ids)
         {
             Debug.Assert(ids.Length > 0);
