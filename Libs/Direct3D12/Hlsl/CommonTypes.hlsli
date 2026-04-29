@@ -126,11 +126,4 @@ struct PerObjectData
     float4x4 World;
     float4x4 InvWorld;
     float4x4 WorldViewProjection;
-
-    float4 BaseColor;
-    float3 Emissive;
-    float EmissiveIntensity;
-    float Metallic;
-    float Roughness;
-    uint2 _pad;
 };

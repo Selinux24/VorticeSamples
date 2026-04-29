@@ -6,7 +6,6 @@ using PrimalLike.Common;
 using PrimalLike.Components;
 using PrimalLike.Content;
 using PrimalLike.Graphics;
-using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -52,7 +51,7 @@ namespace DX12Windows.Content
         uint iblDiffuseId = uint.MaxValue;
         uint iblSpecularId = uint.MaxValue;
 
-        uint mtlId = uint.MaxValue;
+        readonly uint[] mtlIds = new uint[6];
 
         public Vector3 InitialCameraPosition { get; } = new(0, 10f, -45f);
         public Quaternion InitialCameraRotation { get; } = Quaternion.Identity;
@@ -119,7 +118,7 @@ namespace DX12Windows.Content
             {
                 GeometryInfo geometryInfo = new()
                 {
-                    MaterialIds = [mtlId],
+                    MaterialIds = [mtlIds[0]],
                     GeometryContentId = model1Id
                 };
                 entity1Id = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, rotation, geometryInfo).Id;
@@ -127,7 +126,7 @@ namespace DX12Windows.Content
             {
                 GeometryInfo geometryInfo = new()
                 {
-                    MaterialIds = [mtlId],
+                    MaterialIds = [mtlIds[1]],
                     GeometryContentId = model2Id
                 };
                 entity2Id = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, rotation, geometryInfo).Id;
@@ -135,7 +134,7 @@ namespace DX12Windows.Content
             {
                 GeometryInfo geometryInfo = new()
                 {
-                    MaterialIds = [mtlId],
+                    MaterialIds = [mtlIds[2]],
                     GeometryContentId = model3Id
                 };
                 entity3Id = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, rotation, geometryInfo).Id;
@@ -143,7 +142,7 @@ namespace DX12Windows.Content
             {
                 GeometryInfo geometryInfo = new()
                 {
-                    MaterialIds = [mtlId],
+                    MaterialIds = [mtlIds[3]],
                     GeometryContentId = model4Id
                 };
                 entity4Id = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, rotation, geometryInfo).Id;
@@ -151,7 +150,7 @@ namespace DX12Windows.Content
             {
                 GeometryInfo geometryInfo = new()
                 {
-                    MaterialIds = [mtlId],
+                    MaterialIds = [mtlIds[4]],
                     GeometryContentId = model5Id
                 };
                 entity5Id = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, rotation, geometryInfo).Id;
@@ -159,7 +158,7 @@ namespace DX12Windows.Content
             {
                 GeometryInfo geometryInfo = new()
                 {
-                    MaterialIds = [mtlId],
+                    MaterialIds = [mtlIds[5]],
                     GeometryContentId = model6Id
                 };
                 entity6Id = HelloWorldApp.CreateOneGameEntity(Vector3.Zero, rotation, geometryInfo).Id;
@@ -169,16 +168,31 @@ namespace DX12Windows.Content
         {
             Debug.Assert(IdDetail.IsValid(TestShader.VsId) && IdDetail.IsValid(TestShader.PsId));
 
+            (byte Metallic, byte Roughness, PrimalLike.Graphics.Color4 BaseColor)[] mats =
+            [
+                new(64, (byte)(255*0.0f), new(0.5f, 0.1f, 0.1f, 1f)),
+                new(64, (byte)(255*0.2f), new(1.0f, 0.1f, 0.1f, 1f)),
+                new(64, (byte)(255*0.4f), new(0.1f, 0.5f, 0.1f, 1f)),
+                new(64, (byte)(255*0.6f), new(0.1f, 1.0f, 0.1f, 1f)),
+                new(64, (byte)(255*0.8f), new(0.1f, 0.1f, 0.5f, 1f)),
+                new(64, (byte)(255*1.0f), new(0.1f, 0.1f, 1.0f, 1f)),
+            ];
+
             MaterialInitInfo info = new();
             info.ShaderIds[(uint)ShaderTypes.Vertex] = TestShader.VsId;
             info.ShaderIds[(uint)ShaderTypes.Pixel] = TestShader.PsId;
             info.Type = MaterialTypes.Opaque;
 
-            info.Surface.BaseColor = new(0.1f, 0.1f, 0.1f, 1f);
-            info.Surface.Roughness = 0.2f;
-            info.Surface.Metallic = 1.0f;
+            ref var s = ref info.Surface;
 
-            mtlId = ContentToEngine.CreateResource(info, AssetTypes.Material);
+            for (int i = 0; i < mtlIds.Length; i++)
+            {
+                s.Metallic = mats[i].Metallic;
+                s.Roughness = mats[i].Roughness;
+                s.BaseColor = mats[i].BaseColor;
+
+                mtlIds[i] = ContentToEngine.CreateResource(info, AssetTypes.Material);
+            }
         }
 
         public void DestroyRenderItems()
@@ -198,9 +212,12 @@ namespace DX12Windows.Content
             ITestRenderItem.RemoveModel(model6Id);
 
             // remove material
-            if (IdDetail.IsValid(mtlId))
+            foreach (uint id in mtlIds)
             {
-                ContentToEngine.DestroyResource(mtlId, AssetTypes.Material);
+                if (IdDetail.IsValid(id))
+                {
+                    ContentToEngine.DestroyResource(id, AssetTypes.Material);
+                }
             }
 
             if (IdDetail.IsValid(iblBrdfLutId))

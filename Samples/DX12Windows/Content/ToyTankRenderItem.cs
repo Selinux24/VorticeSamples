@@ -103,8 +103,8 @@ namespace DX12Windows.Content
             info.Type = MaterialTypes.Opaque;
 
             info.Surface.BaseColor = new(0.5f, 1f, 0.5f, 1f);
-            info.Surface.Roughness = 0.2f;
-            info.Surface.Metallic = 1.0f;
+            info.Surface.Roughness = (byte)(255 * 0.2f);
+            info.Surface.Metallic = 255;
 
             mtlId = ContentToEngine.CreateResource(info, AssetTypes.Material);
         }

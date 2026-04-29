@@ -126,7 +126,7 @@ namespace Direct3D12.Content
                     parameters[(uint)OpaqueRootParameter.PerObjectData] = D3D12Helpers.AsCbv(dataVisibility, 1);
                     parameters[(uint)OpaqueRootParameter.PositionBuffer] = D3D12Helpers.AsSrv(bufferVisibility, 0);
                     parameters[(uint)OpaqueRootParameter.ElementBuffer] = D3D12Helpers.AsSrv(bufferVisibility, 1);
-                    parameters[(uint)OpaqueRootParameter.SrvIndices] = D3D12Helpers.AsSrv(ShaderVisibility.Pixel, 2); // TODO: needs to be visible to any stages that need to sample textures.
+                    parameters[(uint)OpaqueRootParameter.MaterialData] = D3D12Helpers.AsSrv(ShaderVisibility.Pixel, 2); // TODO: needs to be visible to any stages that need to sample textures.
                     parameters[(uint)OpaqueRootParameter.DirectionalLights] = D3D12Helpers.AsSrv(ShaderVisibility.Pixel, 3);
                     parameters[(uint)OpaqueRootParameter.CullableLights] = D3D12Helpers.AsSrv(ShaderVisibility.Pixel, 4);
                     parameters[(uint)OpaqueRootParameter.LightGrid] = D3D12Helpers.AsSrv(ShaderVisibility.Pixel, 5);

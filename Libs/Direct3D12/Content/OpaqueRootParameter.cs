@@ -7,7 +7,7 @@ namespace Direct3D12.Content
         PerObjectData,
         PositionBuffer,
         ElementBuffer,
-        SrvIndices,
+        MaterialData,
         DirectionalLights,
         CullableLights,
         LightGrid,

@@ -165,7 +165,7 @@ namespace DX12Windows.Content
                 GeometryInfo geometryInfo = new()
                 {
                     GeometryContentId = fembotModelId,
-                    MaterialIds = [fembotMtlId, fembotMtlId]
+                    MaterialIds = [pbrMtlIds[7], pbrMtlIds[1]]
                 };
                 fembotEntityId = HelloWorldApp.CreateOneGameEntity(new(-6f, 0f, 10f), Quaternion.CreateFromYawPitchRoll(MathF.PI, 0f, 0f), geometryInfo).Id;
             }
@@ -199,20 +199,20 @@ namespace DX12Windows.Content
             }
 
             {
-                Vector2[] metalRough =
+                (byte Metallic, byte Roughness)[] metalRough =
                 [
-                    new(0f, 0.0f),
-                    new(0f, 0.2f),
-                    new(0f, 0.4f),
-                    new(0f, 0.6f),
-                    new(0f, 0.8f),
-                    new(0f, 1f),
-                    new(1f, 0.0f),
-                    new(1f, 0.2f),
-                    new(1f, 0.4f),
-                    new(1f, 0.6f),
-                    new(1f, 0.8f),
-                    new(1f, 1f),
+                    new(0, (byte)(255*0.0f)),
+                    new(0, (byte)(255*0.2f)),
+                    new(0, (byte)(255*0.4f)),
+                    new(0, (byte)(255*0.6f)),
+                    new(0, (byte)(255*0.8f)),
+                    new(0, (byte)(255*1f)),
+                    new(255, (byte)(255*0.0f)),
+                    new(255, (byte)(255*0.2f)),
+                    new(255, (byte)(255*0.4f)),
+                    new(255, (byte)(255*0.6f)),
+                    new(255, (byte)(255*0.8f)),
+                    new(255, (byte)(255*1f)),
                 ];
 
                 MaterialInitInfo info = new();
@@ -225,8 +225,8 @@ namespace DX12Windows.Content
 
                 for (int i = 0; i < pbrMtlIds.Length; i++)
                 {
-                    s.Metallic = metalRough[i].X;
-                    s.Roughness = metalRough[i].Y;
+                    s.Metallic = metalRough[i].Metallic;
+                    s.Roughness = metalRough[i].Roughness;
 
                     pbrMtlIds[i] = ContentToEngine.CreateResource(info, AssetTypes.Material);
                 }

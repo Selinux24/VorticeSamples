@@ -70,7 +70,8 @@ namespace DX12Windows
                 Console.WriteLine("2. ToyTank");
                 Console.WriteLine("3. Humvee");
                 Console.WriteLine("4. M-24");
-                Console.WriteLine("5. Exit");
+                Console.WriteLine("5. Talking on phone");
+                Console.WriteLine("6. Exit");
                 key = Console.ReadKey(true).KeyChar;
             }
 
@@ -95,6 +96,11 @@ namespace DX12Windows
                 return 4;
             }
             else if (key == '5')
+            {
+                renderItem = new TalkingOnPhoneRenderItem();
+                return 5;
+            }
+            else if (key == '6')
             {
                 return 0;
             }

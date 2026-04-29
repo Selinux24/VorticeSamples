@@ -42,7 +42,7 @@ namespace Direct3D12
             public D3D12PrimitiveTopology[] PrimitiveTopologies = null;
             public uint[] ElementsTypes = null;
             public ulong[] PerObjectData = null;
-            public ulong[] SrvIndices = null;
+            public ulong[] MaterialData = null;
 
             static readonly int StructSize =
                 sizeof(uint) +                      // entity_ids
@@ -61,7 +61,7 @@ namespace Direct3D12
                 sizeof(D3D12PrimitiveTopology) +    // primitive_topologies
                 sizeof(uint) +                      // elements_types
                 sizeof(ulong) +                     // per_object_data
-                sizeof(ulong);                      // srv_indices
+                sizeof(ulong);                      // material_data
 
             public readonly uint Size()
             {
@@ -98,7 +98,7 @@ namespace Direct3D12
                 PrimitiveTopologies = new D3D12PrimitiveTopology[itemsCount];
                 ElementsTypes = new uint[itemsCount];
                 PerObjectData = new ulong[itemsCount];
-                SrvIndices = new ulong[itemsCount];
+                MaterialData = new ulong[itemsCount];
             }
 
             public ItemsCache ItemsCache()
@@ -268,10 +268,7 @@ namespace Direct3D12
                     cmdList.SetGraphicsRootShaderResourceView((uint)OpaqueRootParameter.PositionBuffer, frameCache.PositionBuffers[cacheIndex]);
                     cmdList.SetGraphicsRootShaderResourceView((uint)OpaqueRootParameter.ElementBuffer, frameCache.ElementBuffers[cacheIndex]);
                     cmdList.SetGraphicsRootConstantBufferView((uint)OpaqueRootParameter.PerObjectData, frameCache.PerObjectData[cacheIndex]);
-                    if (frameCache.TextureCounts[cacheIndex] > 0)
-                    {
-                        cmdList.SetGraphicsRootShaderResourceView((uint)OpaqueRootParameter.SrvIndices, frameCache.SrvIndices[cacheIndex]);
-                    }
+                    cmdList.SetGraphicsRootShaderResourceView((uint)OpaqueRootParameter.MaterialData, frameCache.MaterialData[cacheIndex]);
                 }
                 break;
             }
@@ -335,6 +332,8 @@ namespace Direct3D12
             Debug.Assert(d3d12Info.Camera != null);
 
             frameCache.Clear();
+            if (d3d12Info.FrameInfo.RenderItemIds?.Length <= 0 || d3d12Info.FrameInfo.RenderItemCount <= 0) return;
+
             RenderItem.GetD3D12RenderItemIds(ref d3d12Info.FrameInfo, ref frameCache.D3D12RenderItemIds);
             frameCache.Resize();
 
@@ -352,30 +351,33 @@ namespace Direct3D12
             Material.GetMaterials(itemsCache.MaterialIds, ref materialsCache, ref frameCache.DescriptorIndexCount);
             frameCache.SetMaterials(materialsCache);
 
-            FillPerObjectData(ref d3d12Info, materialsCache);
-
-            if (frameCache.DescriptorIndexCount == 0)
-            {
-                return;
-            }
-
             var cbuffer = D3D12Graphics.CBuffer;
 
             uint itemsCount = frameCache.Size();
             for (uint i = 0; i < itemsCount; i++)
             {
-                frameCache.SrvIndices[i] = 0;
+                var surface = materialsCache.MaterialSurfaces[i];
+                MaterialSurface materialData = new()
+                {
+                    BaseColor = surface.BaseColor,
+                    Emissive = surface.Emissive,
+                    EmissiveIntensity = surface.EmissiveIntensity,
+                    Metallic = surface.Metallic,
+                    Roughness = surface.Roughness,
+                };
+                frameCache.MaterialData[i] = cbuffer.Write(materialData);
 
                 if (frameCache.TextureCounts[i] == 0)
                 {
                     continue;
                 }
 
-                var gpuAddress = cbuffer.Write(frameCache.DescriptorIndices[i]);
-                frameCache.SrvIndices[i] = gpuAddress;
+                frameCache.MaterialData[i] = cbuffer.Write(frameCache.DescriptorIndices[i]);
             }
+
+            FillPerObjectData(ref d3d12Info);
         }
-        static void FillPerObjectData(ref D3D12FrameInfo d3d12Info, MaterialsCache materialsCache)
+        static void FillPerObjectData(ref D3D12FrameInfo d3d12Info)
         {
             uint renderItemsCount = frameCache.Size();
             uint currentEntityId = uint.MaxValue;
@@ -389,19 +391,11 @@ namespace Direct3D12
                     Transform.GetTransformMatrices(currentEntityId, out var world, out var invWorld);
                     var wvp = Matrix4x4.Multiply(world, d3d12Info.Camera.ViewProjection);
 
-                    var surface = materialsCache.MaterialSurfaces[i];
-
                     Shaders.PerObjectData data = new()
                     {
                         World = world,
                         InvWorld = invWorld,
                         WorldViewProjection = wvp,
-
-                        BaseColor = surface.BaseColor,
-                        Emissive = surface.Emissive,
-                        EmissiveIntensity = surface.EmissiveIntensity,
-                        Metallic = surface.Metallic,
-                        Roughness = surface.Roughness,
                     };
 
                     currentGpuAddress = D3D12Graphics.CBuffer.Write(data);

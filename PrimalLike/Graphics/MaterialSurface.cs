@@ -1,13 +1,13 @@
-﻿using System.Numerics;
-
+﻿
 namespace PrimalLike.Graphics
 {
     public struct MaterialSurface()
     {
-        public Vector4 BaseColor = Vector4.One;
-        public Vector3 Emissive = Vector3.Zero;
-        public float EmissiveIntensity = 1.0f;
-        public float Metallic = 0.0f;
-        public float Roughness = 1.0f;
+        public Color4 BaseColor = Color4.One;
+        public Color3 Emissive = Color3.Zero;
+        public byte Metallic = 0;
+        public byte Roughness = 255;
+        public byte InputMask = 0; // A set bit means to use a texture for the corresponding surface property
+        public ushort EmissiveIntensity = 0;
     }
 }
