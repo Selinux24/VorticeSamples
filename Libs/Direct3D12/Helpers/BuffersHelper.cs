@@ -7,15 +7,31 @@ namespace Direct3D12.Helpers
 {
     static class BuffersHelper
     {
-        public static unsafe void WriteUnaligned<T>(T data, IntPtr dst) where T : unmanaged
+        /// <summary>
+        /// Writes the specified data to the destination pointer without any alignment requirements. The size of the data is determined by the type parameter T.
+        /// </summary>
+        /// <typeparam name="T">Data type</typeparam>
+        /// <param name="data">The data to write</param>
+        /// <param name="dst">The destination pointer</param>
+        /// <returns>The size of the written data in bytes</returns>
+        public static unsafe uint WriteUnaligned<T>(T data, IntPtr dst) where T : unmanaged
         {
             Debug.Assert(dst != IntPtr.Zero);
 
             uint size = (uint)Marshal.SizeOf<T>();
 
             Unsafe.CopyBlockUnaligned(dst.ToPointer(), Unsafe.AsPointer(ref data), size);
+
+            return size;
         }
-        public static unsafe void WriteUnaligned<T>(T[] data, IntPtr dst) where T : unmanaged
+        /// <summary>
+        /// Writes the specified data to the destination pointer without any alignment requirements. The size of the data is determined by the type parameter T.
+        /// </summary>
+        /// <typeparam name="T">Data type</typeparam>
+        /// <param name="data">The data to write</param>
+        /// <param name="dst">The destination pointer</param>
+        /// <returns>The size of the written data in bytes</returns>
+        public static unsafe uint WriteUnaligned<T>(T[] data, IntPtr dst) where T : unmanaged
         {
             Debug.Assert(dst != IntPtr.Zero);
             Debug.Assert(data?.Length > 0);
@@ -28,6 +44,8 @@ namespace Direct3D12.Helpers
 
                 dst += (IntPtr)size;
             }
+       
+            return size * (uint)data.Length;
         }
 
         public static unsafe void WriteAligned(IntPtr src, IntPtr dst, ulong srcSizeInBytes, ulong dstSizeInBytes)

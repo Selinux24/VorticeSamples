@@ -353,30 +353,37 @@ namespace Direct3D12
 
             var cbuffer = D3D12Graphics.CBuffer;
 
+            // Allocate a single chunk of memory for all material surfaces and descriptor indices, and fill the cache arrays with the corresponding GPU addresses.
+            uint surfaceSize = (uint)Marshal.SizeOf<MaterialSurface>();
+            uint descriptorIndexSize = sizeof(uint);
+            uint size = (frameCache.Size() * surfaceSize) + (frameCache.DescriptorIndexCount * descriptorIndexSize);
+            IntPtr materialData = cbuffer.Allocate(size);
+            uint mtlDataOffset = 0;
+
             uint itemsCount = frameCache.Size();
             for (uint i = 0; i < itemsCount; i++)
             {
-                var surface = materialsCache.MaterialSurfaces[i];
-                MaterialSurface materialData = new()
-                {
-                    BaseColor = surface.BaseColor,
-                    Emissive = surface.Emissive,
-                    EmissiveIntensity = surface.EmissiveIntensity,
-                    Metallic = surface.Metallic,
-                    Roughness = surface.Roughness,
-                };
-                frameCache.MaterialData[i] = cbuffer.Write(materialData);
+                // Get the GPU address for the material surface and descriptor indices
+                frameCache.MaterialData[i] = cbuffer.GetGpuAddress(materialData, mtlDataOffset);
 
-                if (frameCache.TextureCounts[i] == 0)
+                // Copy the material surface data to the allocated memory
+                mtlDataOffset += cbuffer.InsertAt(materialData, mtlDataOffset, materialsCache.MaterialSurfaces[i]);
+
+                uint textureCount = frameCache.TextureCounts[i];
+                if (textureCount == 0)
                 {
                     continue;
                 }
 
-                frameCache.MaterialData[i] = cbuffer.Write(frameCache.DescriptorIndices[i]);
+                // Copy the descriptor indices to the allocated memory
+                mtlDataOffset += cbuffer.InsertAt(materialData, mtlDataOffset, frameCache.DescriptorIndices[i]);
             }
+
+            Debug.Assert(mtlDataOffset == size);
 
             FillPerObjectData(ref d3d12Info);
         }
+
         static void FillPerObjectData(ref D3D12FrameInfo d3d12Info)
         {
             uint renderItemsCount = frameCache.Size();

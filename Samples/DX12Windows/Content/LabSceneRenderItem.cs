@@ -165,7 +165,7 @@ namespace DX12Windows.Content
                 GeometryInfo geometryInfo = new()
                 {
                     GeometryContentId = fembotModelId,
-                    MaterialIds = [pbrMtlIds[7], pbrMtlIds[1]]
+                    MaterialIds = [fembotMtlId, fembotMtlId]
                 };
                 fembotEntityId = HelloWorldApp.CreateOneGameEntity(new(-6f, 0f, 10f), Quaternion.CreateFromYawPitchRoll(MathF.PI, 0f, 0f), geometryInfo).Id;
             }

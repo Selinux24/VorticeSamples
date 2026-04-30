@@ -171,6 +171,8 @@ namespace Direct3D12.Content
         {
             D3D12PipelineStateSubobjectStream stream = new();
 
+            CompiledShader depthPrepassVertexShader;
+
             lock (materialMutex)
             {
                 D3D12MaterialStream material = new(materials[materialId]);
@@ -184,14 +186,25 @@ namespace Direct3D12.Content
                 stream.DepthStencil1 = D3D12Helpers.DepthStatesCollection.ReversedReadonly;
                 stream.Blend = D3D12Helpers.BlendStatesCollection.Disabled;
 
+                var shaderFlags = material.ShaderFlags;
+                bool usePositionOnlyForDepthPrepass =
+                    !(shaderFlags.HasFlag(ShaderFlags.Amplification) ||
+                    shaderFlags.HasFlag(ShaderFlags.Geometry) ||
+                    shaderFlags.HasFlag(ShaderFlags.Hull) ||
+                    shaderFlags.HasFlag(ShaderFlags.Domain));
+
                 stream.Vs = new(shaders[(uint)ShaderTypes.Vertex].ByteCode.Span);
-                stream.Ps = new(shaders[(uint)ShaderTypes.Pixel].ByteCode.Span);
-                stream.Ds = new(shaders[(uint)ShaderTypes.Domain].ByteCode.Span);
-                stream.Hs = new(shaders[(uint)ShaderTypes.Hull].ByteCode.Span);
                 stream.Gs = new(shaders[(uint)ShaderTypes.Geometry].ByteCode.Span);
+                stream.Hs = new(shaders[(uint)ShaderTypes.Hull].ByteCode.Span);
+                stream.Ds = new(shaders[(uint)ShaderTypes.Domain].ByteCode.Span);
                 stream.Cs = new(shaders[(uint)ShaderTypes.Compute].ByteCode.Span);
+                stream.Ps = new(shaders[(uint)ShaderTypes.Pixel].ByteCode.Span);
                 stream.As = new(shaders[(uint)ShaderTypes.Amplification].ByteCode.Span);
                 stream.Ms = new(shaders[(uint)ShaderTypes.Mesh].ByteCode.Span);
+
+                depthPrepassVertexShader = usePositionOnlyForDepthPrepass ? 
+                    GetShaderByteCode(ShaderTypes.Vertex, 0, material, 0) : 
+                    shaders[(uint)ShaderTypes.Vertex];
             }
 
             uint gPassPsoId = RenderItem.CreatePsoIfNeeded(stream, false);
@@ -199,6 +212,7 @@ namespace Direct3D12.Content
             lock (materialMutex)
             {
                 stream.Ps = new([]);
+                stream.Vs = new(depthPrepassVertexShader.ByteCode.Span);
                 stream.DepthStencil1 = D3D12Helpers.DepthStatesCollection.Reversed;
             }
 
@@ -222,20 +236,18 @@ namespace Direct3D12.Content
         }
         static CompiledShader[] GetMaterialShaders(D3D12MaterialStream material, uint elementsType)
         {
-            var flags = material.ShaderFlags;
+            var shaderFlags = material.ShaderFlags;
             var shaders = new CompiledShader[(uint)ShaderTypes.Count];
 
             uint shaderIndex = 0;
             for (uint i = 0; i < (uint)ShaderTypes.Count; i++)
             {
-                ShaderFlags shaderFlags = (ShaderFlags)(1u << (int)i);
-                if (!flags.HasFlag(shaderFlags)) continue;
+                ShaderFlags flag = (ShaderFlags)(1u << (int)i);
+                if (!shaderFlags.HasFlag(flag)) continue;
 
-                ShaderTypes shaderType = GetShaderType(shaderFlags);
-                uint key = shaderType == ShaderTypes.Vertex ? elementsType : uint.MaxValue;
-                uint shaderId = material.ShaderIds[shaderIndex];
-                shaders[i] = ContentToEngine.GetShader(shaderId, key);
-                Debug.Assert(shaders[i].ByteCodeSize > 0);
+                ShaderTypes shaderType = GetShaderType(flag);
+                shaders[i] = GetShaderByteCode(shaderType, elementsType, material, shaderIndex);
+
                 shaderIndex++;
             }
 
@@ -244,6 +256,15 @@ namespace Direct3D12.Content
         static ShaderTypes GetShaderType(ShaderFlags flag)
         {
             return (ShaderTypes)BitOperations.TrailingZeroCount((uint)flag);
+        }
+        static CompiledShader GetShaderByteCode(ShaderTypes shaderType, uint elementsType, D3D12MaterialStream material, uint shaderIndex)
+        {
+            // NOTE: each type of shader may have keys that are generated from different properties of the submesh or material.
+            //       At the moment, we only have different kinds of vertex shaders depending on elements_type 
+            uint key = shaderType == ShaderTypes.Vertex ? elementsType : uint.MaxValue;
+            var shader = ContentToEngine.GetShader(material.ShaderIds[shaderIndex], key);
+            Debug.Assert(shader.IsValid());
+            return shader;
         }
     }
 }

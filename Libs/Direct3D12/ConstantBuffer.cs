@@ -53,41 +53,11 @@ namespace Direct3D12
         }
 
         /// <summary>
-        /// Write data to the constant buffer. This is a slow operation.
-        /// </summary>
-        /// <typeparam name="T">Data type</typeparam>
-        /// <param name="data">Data</param>
-        /// <returns>Returns the GPU address</returns>
-        public ulong Write<T>(T data) where T : unmanaged
-        {
-            // NOTE: be careful not to read from this buffer. Reads are really really slow.
-            var p = Allocate<T>(1);
-            // TODO: handle the case when cbuffer is full.
-            BuffersHelper.WriteUnaligned(data, p);
-
-            return GetGpuAddress<T>(p);
-        }
-        /// <summary>
-        /// Write data to the constant buffer. This is a slow operation.
-        /// </summary>
-        /// <typeparam name="T">Data type</typeparam>
-        /// <param name="array">Array</param>
-        /// <returns>Returns the GPU address</returns>
-        public ulong Write<T>(T[] array) where T : unmanaged
-        {
-            // NOTE: be careful not to read from this buffer. Reads are really really slow.
-            var p = Allocate<T>(array.Length);
-            // TODO: handle the case when cbuffer is full.
-            BuffersHelper.WriteUnaligned(array, p);
-
-            return GetGpuAddress<T>(p);
-        }
-        /// <summary>
         /// Allocates memory in the constant buffer.
         /// </summary>
         /// <typeparam name="T">Data type</typeparam>
         /// <returns>Returns the CPU address</returns>
-        IntPtr Allocate<T>(int arraySize) where T : unmanaged
+        public IntPtr Allocate<T>(int arraySize) where T : unmanaged
         {
             lock (mutex)
             {
@@ -105,12 +75,82 @@ namespace Direct3D12
             }
         }
         /// <summary>
-        /// Gets the GPU address of the CPU allocation.
+        /// Allocates memory in the constant buffer.
+        /// </summary>
+        /// <param name="size">Allocation size</param>
+        /// <returns>Returns the CPU address</returns>
+        public IntPtr Allocate(uint size)
+        {
+            lock (mutex)
+            {
+                uint alignedSize = (uint)D3D12Helpers.AlignSizeForConstantBuffer(size);
+                Debug.Assert(cpuOffset + alignedSize <= buffer.Size);
+                if (cpuOffset + alignedSize <= buffer.Size)
+                {
+                    IntPtr address = cpuAddress + (IntPtr)cpuOffset;
+                    cpuOffset += alignedSize;
+                    return address;
+                }
+
+                return IntPtr.Zero;
+            }
+        }
+        /// <summary>
+        /// Write data to the constant buffer. This is a slow operation.
         /// </summary>
         /// <typeparam name="T">Data type</typeparam>
+        /// <param name="data">Data</param>
+        /// <returns>Returns the GPU address</returns>
+        public ulong Write<T>(T data) where T : unmanaged
+        {
+            // NOTE: be careful not to read from this buffer. Reads are really really slow.
+            var p = Allocate<T>(1);
+            // TODO: handle the case when cbuffer is full.
+            BuffersHelper.WriteUnaligned(data, p);
+
+            return GetGpuAddress(p);
+        }
+        /// <summary>
+        /// Write data to the constant buffer. This is a slow operation.
+        /// </summary>
+        /// <typeparam name="T">Data type</typeparam>
+        /// <param name="array">Array</param>
+        /// <returns>Returns the GPU address</returns>
+        public ulong Write<T>(T[] array) where T : unmanaged
+        {
+            // NOTE: be careful not to read from this buffer. Reads are really really slow.
+            var p = Allocate<T>(array.Length);
+            // TODO: handle the case when cbuffer is full.
+            BuffersHelper.WriteUnaligned(array, p);
+
+            return GetGpuAddress(p);
+        }
+
+        public uint InsertAt<T>(IntPtr p, uint offset, T data) where T : unmanaged
+        {
+            // Verify that the offset is within the bounds of the buffer.
+            Debug.Assert(p != IntPtr.Zero);
+            Debug.Assert(offset >= 0);
+            Debug.Assert(p + offset < cpuAddress + cpuOffset);
+
+            return BuffersHelper.WriteUnaligned(data, p + (IntPtr)offset);
+        }
+        
+        public uint InsertAt<T>(IntPtr p, uint offset, T[] array) where T : unmanaged
+        {
+            // Verify that the offset is within the bounds of the buffer.
+            Debug.Assert(p != IntPtr.Zero);
+            Debug.Assert(offset >= 0);
+            Debug.Assert(p + offset < cpuAddress + cpuOffset);
+
+            return BuffersHelper.WriteUnaligned(array, p + (IntPtr)offset);
+        }
+        /// <summary>
+        /// Gets the GPU address of the CPU allocation.
+        /// </summary>
         /// <param name="allocation">CPU allocation</param>
         /// <returns>Returns the GPU address</returns>
-        ulong GetGpuAddress<T>(IntPtr allocation) where T : unmanaged
+        public ulong GetGpuAddress(IntPtr allocation)
         {
             lock (mutex)
             {
@@ -124,9 +164,19 @@ namespace Direct3D12
 
                 Debug.Assert(address <= (cpuAddress + cpuOffset));
                 Debug.Assert(address >= cpuAddress);
-                IntPtr offset = address - cpuAddress;
-                return buffer.GpuAddress + (ulong)offset;
+                ulong offset = (ulong)(address - cpuAddress);
+                return buffer.GpuAddress + offset;
             }
+        }
+        /// <summary>
+        /// Gets the GPU address of the CPU allocation.
+        /// </summary>
+        /// <param name="allocation">CPU allocation</param>
+        /// <param name="offset">CPU data offset</param>
+        /// <returns>Returns the GPU address</returns>
+        public ulong GetGpuAddress(IntPtr allocation, uint offset)
+        {
+            return GetGpuAddress(allocation + (IntPtr)offset);
         }
 
         /// <summary>
