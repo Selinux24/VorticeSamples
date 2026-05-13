@@ -17,12 +17,30 @@ namespace Direct3D12
         IntPtr cpuAddress;
         uint cpuOffset;
 
+        /// <summary>
+        /// Buffer
+        /// </summary>
         public ID3D12Resource Buffer => buffer.Buffer;
+        /// <summary>
+        /// CPU Addess
+        /// </summary>
         public IntPtr CpuAddress => cpuAddress;
+        /// <summary>
+        /// GPU Address
+        /// </summary>
         public ulong GpuAddress => buffer.GpuAddress;
+        /// <summary>
+        /// Buffer size
+        /// </summary>
         public uint Size => buffer.Size;
+        /// <summary>
+        /// CPU offset
+        /// </summary>
         public uint CpuOffset => cpuOffset;
 
+        /// <summary>
+        /// Constructor
+        /// </summary>
         public ConstantBuffer(D3D12BufferInitInfo info)
         {
             buffer = new(info, true);
@@ -59,20 +77,7 @@ namespace Direct3D12
         /// <returns>Returns the CPU address</returns>
         public IntPtr Allocate<T>(int arraySize) where T : unmanaged
         {
-            lock (mutex)
-            {
-                uint size = (uint)(Marshal.SizeOf<T>() * arraySize);
-                uint alignedSize = (uint)D3D12Helpers.AlignSizeForConstantBuffer(size);
-                Debug.Assert(cpuOffset + alignedSize <= buffer.Size);
-                if (cpuOffset + alignedSize <= buffer.Size)
-                {
-                    IntPtr address = cpuAddress + (IntPtr)cpuOffset;
-                    cpuOffset += alignedSize;
-                    return address;
-                }
-
-                return IntPtr.Zero;
-            }
+            return Allocate((uint)(Marshal.SizeOf<T>() * arraySize));
         }
         /// <summary>
         /// Allocates memory in the constant buffer.
@@ -101,6 +106,7 @@ namespace Direct3D12
         /// <typeparam name="T">Data type</typeparam>
         /// <param name="data">Data</param>
         /// <returns>Returns the GPU address</returns>
+        /// <remarks>Allocates the data aligned for constant buffer requirements.</remarks>
         public ulong Write<T>(T data) where T : unmanaged
         {
             // NOTE: be careful not to read from this buffer. Reads are really really slow.
@@ -111,11 +117,12 @@ namespace Direct3D12
             return GetGpuAddress(p);
         }
         /// <summary>
-        /// Write data to the constant buffer. This is a slow operation.
+        /// Write data array to the constant buffer. This is a slow operation.
         /// </summary>
         /// <typeparam name="T">Data type</typeparam>
         /// <param name="array">Array</param>
         /// <returns>Returns the GPU address</returns>
+        /// <remarks>Allocates the data aligned for constant buffer requirements.</remarks>
         public ulong Write<T>(T[] array) where T : unmanaged
         {
             // NOTE: be careful not to read from this buffer. Reads are really really slow.
@@ -125,7 +132,15 @@ namespace Direct3D12
 
             return GetGpuAddress(p);
         }
-
+        /// <summary>
+        /// Inserts data at the specified offset. This is a slow operation.
+        /// </summary>
+        /// <typeparam name="T">Data type</typeparam>
+        /// <param name="p">CPU address</param>
+        /// <param name="offset">Address Offset</param>
+        /// <param name="data">Data</param>
+        /// <returns>Returns the size of the data written</returns>
+        /// <remarks>Writes the data unaligned.</remarks>
         public uint InsertAt<T>(IntPtr p, uint offset, T data) where T : unmanaged
         {
             // Verify that the offset is within the bounds of the buffer.
@@ -135,7 +150,15 @@ namespace Direct3D12
 
             return BuffersHelper.WriteUnaligned(data, p + (IntPtr)offset);
         }
-        
+        /// <summary>
+        /// Inserts data array at the specified offset. This is a slow operation.
+        /// </summary>
+        /// <typeparam name="T">Data type</typeparam>
+        /// <param name="p">CPU address</param>
+        /// <param name="offset">Address Offset</param>
+        /// <param name="array">Data array</param>
+        /// <returns>Returns the size of the data written</returns>
+        /// <remarks>Writes the data unaligned.</remarks>
         public uint InsertAt<T>(IntPtr p, uint offset, T[] array) where T : unmanaged
         {
             // Verify that the offset is within the bounds of the buffer.

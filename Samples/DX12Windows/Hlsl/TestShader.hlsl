@@ -82,7 +82,7 @@ SamplerState                                    PointSampler        : register(s
 SamplerState                                    LinearSampler       : register(s1, space0);
 SamplerState                                    AnisotropicSampler  : register(s2, space0);
 
-VertexOut MainVS(in uint VertexIdx: SV_VertexID)
+VertexOut MainVS(in uint VertexIdx : SV_VertexID)
 {
     VertexOut vsOut;
 
@@ -124,21 +124,19 @@ VertexOut MainVS(in uint VertexIdx: SV_VertexID)
     vsOut.WorldNormal = normalize(mul(normal, (float3x3)PerObjectBuffer.InvWorld));
     vsOut.WorldTangent = float4(normalize(mul(tangent, (float3x3)PerObjectBuffer.InvWorld)), hSign);
     vsOut.UV = element.UV;
-    
 #else
-    
 #undef ELEMENTS_TYPE
     vsOut.HomogeneousPosition = mul(PerObjectBuffer.WorldViewProjection, position);
     vsOut.WorldPosition = worldPosition.xyz;
     vsOut.WorldNormal = 0.f;
     vsOut.WorldTangent = 0.f;
     vsOut.UV = 0.f;
-    
 #endif
     return vsOut;
 }
 
 #define TILE_SIZE 32
+#define NO_LIGHT_ATTENUATION 0
 
 float4 Sample(uint index, SamplerState sampler, float2 uv)
 {
@@ -158,6 +156,16 @@ float4 SampleCube(uint index, SamplerState sampler, float3 n)
 float4 SampleCube(uint index, SamplerState sampler, float3 n, float mip)
 {
     return TextureCube(ResourceDescriptorHeap[index]).SampleLevel(sampler, n, mip);
+}
+
+float3 PhongBRDF(float3 N, float3 L, float3 V, float3 diffuseColor, float3 specularColor, float shininess)
+{
+    float3 color = diffuseColor;
+    const float3 R = reflect(-L, N);
+    const float VoR = max(dot(V, R), 0.f);
+    color += pow(VoR, max(shininess, 1.f)) * specularColor;
+
+    return color;
 }
 
 float3 CookTorranceBRDF(Surface S, float3 L)
@@ -190,9 +198,15 @@ float3 CookTorranceBRDF(Surface S, float3 L)
 
 float3 CalculateLighting(Surface S, float3 L, float3 lightColor)
 {
+#if 0 // PHONG
+    const float3 N = S.Normal;
+    const float NoL = saturate(dot(N, L));
+    return PhongBRDF(N, L, S.V, S.BaseColor, 1.f, (1 - S.PerceptualRoughness) * 100.f) * (NoL / PI) * lightColor;
+#else // PBR
     // We don't have light-units and therefore we don't know what intensity value of 1 corresponds to.
     // For now, let's multiply by PI to make a scene a bit lighter.
     return CookTorranceBRDF(S, L) * lightColor * PI;
+#endif
 }
 
 float3 PointLight(Surface S, float3 worldPosition, LightParameters light)
@@ -200,7 +214,15 @@ float3 PointLight(Surface S, float3 worldPosition, LightParameters light)
     float3 L = light.Position - worldPosition;
     const float dSq = dot(L, L);
     float3 color = 0.f;
-
+#if NO_LIGHT_ATTENUATION
+    const float3 N = S.Normal;
+    if (dSq < light.Range * light.Range)
+    {
+        const float dRcp = rsqrt(dSq);
+        L *= dRcp;
+        color = saturate(dot(N, L)) * light.Color * light.Intensity * 0.05f;
+    }
+#else
     if (dSq < light.Range * light.Range)
     {
         const float dRcp = rsqrt(dSq);
@@ -208,7 +230,7 @@ float3 PointLight(Surface S, float3 worldPosition, LightParameters light)
         const float attenuation = 1.f - smoothstep(0.1f * light.Range, light.Range, rcp(dRcp));
         color = CalculateLighting(S, L, light.Color * light.Intensity * attenuation);
     }
-
+#endif
     return color;
 }
 
@@ -217,7 +239,17 @@ float3 Spotlight(Surface S, float3 worldPosition, LightParameters light)
     float3 L = light.Position - worldPosition;
     const float dSq = dot(L, L);
     float3 color = 0.f;
-
+#if NO_LIGHT_ATTENUATION
+    const float3 N = S.Normal;
+    if (dSq < light.Range * light.Range)
+    {
+        const float dRcp = rsqrt(dSq);
+        L *= dRcp;
+        const float CosAngleToLight = saturate(dot(-L, light.Direction));
+        const float angularAttenuation = float(light.CosPenumbra < CosAngleToLight);
+        color = saturate(dot(N, L)) * light.Color * light.Intensity * angularAttenuation * 0.05f;
+    }
+#else
     if (dSq < light.Range * light.Range)
     {
         const float dRcp = rsqrt(dSq);
@@ -227,7 +259,7 @@ float3 Spotlight(Surface S, float3 worldPosition, LightParameters light)
         const float angularAttenuation = smoothstep(light.CosPenumbra, light.CosUmbra, CosAngleToLight);
         color = CalculateLighting(S, L, light.Color * light.Intensity * attenuation * angularAttenuation);
     }
-
+#endif
     return color;
 }
 
@@ -292,7 +324,7 @@ Surface GetSurface(VertexOut psIn, float3 V)
     Surface S;
 
     GetSurfaceData(S);
-
+    
     S.Normal = normalize(psIn.WorldNormal);
     S.AmbientOcclusion = 1.f;
 
@@ -316,6 +348,7 @@ Surface GetSurface(VertexOut psIn, float3 V)
     const float3x3 TBN = float3x3(T, B, N);
     // Transform from tangent-space to world-space.
     S.Normal = normalize(mul(n, TBN));
+
 #endif
 
     S.V = V;
@@ -344,8 +377,9 @@ PixelOut MainPS(in VertexOut psIn)
     Surface S = GetSurface(psIn, viewDir);
 
     float3 color = 0;
-    uint i = 0;
+#if 0
 
+    uint i = 0;
     for (i = 0; i < GlobalData.NumDirectionalLights; ++i)
     {
         DirectionalLightParameters light = DirectionalLights[i];
@@ -372,12 +406,14 @@ PixelOut MainPS(in VertexOut psIn)
         LightParameters light = CullableLights[lightIndex];
         color += Spotlight(S, psIn.WorldPosition, light);
     }
-
+#else
 
     if (GlobalData.AmbientLight.Intensity > 0)
     {
       color += EvaluateIBL(S);
     }
+
+#endif
     
 #if TEXTURED_MTL
     float VoN = S.NoV * 1.3f;
