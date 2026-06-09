@@ -9,7 +9,6 @@ using PrimalLike.Content;
 using PrimalLike.Graphics;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Numerics;
 using TexturesImporter;
 
@@ -45,29 +44,14 @@ namespace DX12Windows.Content
 
         public void Load(string assetsFolder, string outputsFolder)
         {
-            string[] modelNames =
-            [
-                Path.Combine(outputsFolder, model1Name),
-                Path.Combine(outputsFolder, model2Name),
-            ];
-
-            if (modelNames.Any(f => !File.Exists(f)))
-            {
-                string[] assets = [.. AssimpImporter.Read(modelHumvee, new(), assetsFolder)];
-                Debug.Assert(assets.Length == modelNames.Length);
-                for (int i = 0; i < assets.Length; i++)
-                {
-                    if (string.IsNullOrEmpty(assets[i]))
-                    {
-                        continue;
-                    }
-
-                    AssimpImporter.PackForEngine(assets[i], modelNames[i]);
-                }
-            }
+            Importer.ImportModels(
+                () => AssimpImporter.Read(modelHumvee, new(), assetsFolder),
+                [
+                    Path.Combine(outputsFolder, model1Name),
+                    Path.Combine(outputsFolder, model2Name),
+                ]);
 
             using TextureImporter importer = new();
-
             string brdfLutPath = Path.Combine(outputsFolder, iblBrdfLutTextureName);
             string diffusePath = Path.Combine(outputsFolder, iblDiffuseTextureName);
             string specularPath = Path.Combine(outputsFolder, iblSpecularTextureName);

@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Numerics;
 using System.Runtime.InteropServices;
-using System.Text;
 using Utilities;
 
 namespace ContentTools
@@ -156,32 +154,38 @@ namespace ContentTools
 
             BlobStreamWriter blob = new(buffer, sceneSize);
 
+            var lods = scene.LODGroups[0].LODs;
+
             // number of LODs
-            blob.Write(scene.LODGroups[0].LODs.Count);
+            blob.Write(lods.Count);
+            lods.ForEach(lod => blob.Write(lod.LodThreshold));
+            lods.ForEach(lod => blob.Write(lod.Meshes.Count));
 
-            foreach (var lod in scene.LODGroups[0].LODs)
+            var sizeOfSubmeshesPosition = blob.Position;
+            blob.Write(0);
+
+            lods.ForEach(lod =>
             {
-                // threshols
-                blob.Write(lod.LodThreshold);
-
-                // number of meshes in this LOD
-                blob.Write(lod.Meshes.Count);
-
-                var sizeOfSubmeshesPosition = blob.Position;
-                blob.Write(0);
-
-                foreach (var m in lod.Meshes)
+                lod.Meshes.ForEach(mesh =>
                 {
-                    PackMeshForEngine(m, blob);
-                }
+                    PackMeshDataForEngine(mesh, blob);
+                });
+            });
 
-                var endOfSubmeshes = blob.Position;
-                var sizeOfSubmeshes = (int)(endOfSubmeshes - sizeOfSubmeshesPosition - sizeof(int));
+            var endOfSubmeshes = blob.Position;
+            var sizeOfSubmeshes = (int)(endOfSubmeshes - sizeOfSubmeshesPosition - sizeof(int));
 
-                blob.Position = sizeOfSubmeshesPosition;
-                blob.Write(sizeOfSubmeshes);
-                blob.Position = endOfSubmeshes;
-            }
+            blob.Position = sizeOfSubmeshesPosition;
+            blob.Write(sizeOfSubmeshes);
+            blob.Position = endOfSubmeshes;
+
+            lods.ForEach(lod =>
+            {
+                lod.Meshes.ForEach(mesh =>
+                {
+                    PackMeshForEngine(mesh, blob);
+                });
+            });
 
             Debug.Assert(sceneSize == blob.Offset);
 
@@ -194,9 +198,9 @@ namespace ContentTools
             foreach (var lod in scene.LODGroups[0].LODs)
             {
                 int lodSize =
-                        sizeof(float) +         // LOD threshold
-                        sizeof(int) +           // number of meshes in this LOD
-                        sizeof(int);            // size of submeshes
+                    sizeof(float) +         // LOD threshold
+                    sizeof(int) +           // number of meshes in this LOD
+                    sizeof(int);            // size of submeshes
 
                 foreach (var m in lod.Meshes)
                 {
@@ -212,7 +216,7 @@ namespace ContentTools
         {
             int positionBufferSize = (int)AlignSizeUp(m.Positions.Length, 4);
             int elementBufferSize = (int)AlignSizeUp(m.Elements.Length, 4);
-            int indexBufferSize = m.Indices.Length;
+            int indexBufferSize = (int)AlignSizeUp(m.Indices.Length, 4);
 
             int size =
                 sizeof(int) +                               // vertex element size (vertex size excluding position element)
@@ -226,23 +230,26 @@ namespace ContentTools
 
             return size;
         }
-        private static void PackMeshForEngine(Mesh m, BlobStreamWriter blob)
+        private static void PackMeshDataForEngine(Mesh mesh, BlobStreamWriter blob)
         {
-            blob.Write(m.ElementSize);
-            blob.Write(m.VertexCount);
-            blob.Write(m.IndexCount);
-            blob.Write((uint)m.ElementsType);
-            blob.Write((uint)m.PrimitiveTopology);
-
-            // position buffer
-            var alignedPositionBuffer = new byte[AlignSizeUp(m.Positions.Length, 4)];
-            Array.Copy(m.Positions, alignedPositionBuffer, m.Positions.Length);
-            var alignedElementBuffer = new byte[AlignSizeUp(m.Elements.Length, 4)];
-            Array.Copy(m.Elements, alignedElementBuffer, m.Elements.Length);
+            var alignedPositionBuffer = new byte[AlignSizeUp(mesh.Positions.Length, 4)];
+            Array.Copy(mesh.Positions, alignedPositionBuffer, mesh.Positions.Length);
+            var alignedElementBuffer = new byte[AlignSizeUp(mesh.Elements.Length, 4)];
+            Array.Copy(mesh.Elements, alignedElementBuffer, mesh.Elements.Length);
+            var alignedIndexBuffer = new byte[AlignSizeUp(mesh.Indices.Length, 4)];
+            Array.Copy(mesh.Indices, alignedIndexBuffer, mesh.Indices.Length);
 
             blob.Write(alignedPositionBuffer);
             blob.Write(alignedElementBuffer);
-            blob.Write(m.Indices);
+            blob.Write(alignedIndexBuffer);
+        }
+        private static void PackMeshForEngine(Mesh mesh, BlobStreamWriter blob)
+        {
+            blob.Write(mesh.ElementSize);
+            blob.Write(mesh.VertexCount);
+            blob.Write(mesh.IndexCount);
+            blob.Write((uint)mesh.ElementsType);
+            blob.Write((uint)mesh.PrimitiveTopology);
         }
         private static long AlignSizeUp(long size, long alignment)
         {

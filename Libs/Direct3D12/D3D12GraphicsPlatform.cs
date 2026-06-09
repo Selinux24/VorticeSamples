@@ -141,14 +141,14 @@ namespace Direct3D12
         }
 
         /// <inheritdoc/>
-        public uint AddSubmesh(ref IntPtr data)
+        public uint[] AddMesh(ref IntPtr data, uint count)
         {
-            return Submesh.Add(ref data);
+            return Submesh.Add(ref data, count);
         }
         /// <inheritdoc/>
-        public void RemoveSubmesh(uint id)
+        public void RemoveMesh(uint[] ids, uint count)
         {
-            Submesh.Remove(id);
+            Submesh.Remove(ids, count);
         }
         /// <inheritdoc/>
         public uint AddMaterial(MaterialInitInfo data)

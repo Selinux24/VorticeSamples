@@ -141,15 +141,18 @@ namespace PrimalLike.Graphics
         void GetParameter<T>(CameraId id, CameraParameters parameter, out T data) where T : unmanaged;
 
         /// <summary>
-        /// Adds a submesh.
+        /// Adds a mesh.
         /// </summary>
         /// <param name="data">Submesh data</param>
-        IdType AddSubmesh(ref IntPtr data);
+        /// <param name="count">Number of submeshes</param>
+        /// <returns>Array of submesh ids</returns>
+        IdType[] AddMesh(ref IntPtr data, uint count);
         /// <summary>
-        /// Removes a submesh.
+        /// Removes a mesh.
         /// </summary>
-        /// <param name="id">Submesh id</param>
-        void RemoveSubmesh(IdType id);
+        /// <param name="ids">Array of submesh ids</param>
+        /// <param name="count">Number of submeshes</param>
+        void RemoveMesh(IdType[] ids, uint count);
         /// <summary>
         /// Adds a material.
         /// </summary>

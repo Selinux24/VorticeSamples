@@ -90,7 +90,6 @@ namespace DX12Windows.Content
                 Path.Combine(outputsFolder, sphereModelName));
 
             using TextureImporter importer = new();
-
             Importer.ImportAmbientOcclusionTexture(importer, ambientOcclusionTexture, outputsFolder, ambientOcclusionTextureName);
             Importer.ImportBaseColorTexture(importer, baseColorTexture, outputsFolder, baseColorTextureName);
             Importer.ImportEmissiveTexture(importer, emissiveTexture, outputsFolder, emissiveTextureName);

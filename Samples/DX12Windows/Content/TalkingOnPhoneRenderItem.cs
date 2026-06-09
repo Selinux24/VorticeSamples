@@ -19,7 +19,7 @@ namespace DX12Windows.Content
     {
         const string assetFolder = "../../../../../../Assets/";
 
-        const string modelToyTank = assetFolder + "Talking On Phone.fbx";
+        const string modelTalkingOnPhone = assetFolder + "Talking On Phone.fbx";
         const string envMapTexture = assetFolder + "belfast_sunset_puresky_4k.hdr";
 
         const string modelName1 = "talking_on_phone_Cloth.model";
@@ -58,30 +58,16 @@ namespace DX12Windows.Content
 
         public void Load(string assetsFolder, string outputsFolder)
         {
-            string[] modelNames =
-            [
-                Path.Combine(outputsFolder, modelName1),
-                Path.Combine(outputsFolder, modelName2),
-                Path.Combine(outputsFolder, modelName3),
-                Path.Combine(outputsFolder, modelName4),
-                Path.Combine(outputsFolder, modelName5),
-                Path.Combine(outputsFolder, modelName6),
-            ];
-
-            //if (modelNames.Any(f => !File.Exists(f)))
-            {
-                string[] assets = [.. AssimpImporter.Read(modelToyTank, new(), assetsFolder)];
-                Debug.Assert(assets.Length == modelNames.Length);
-                for (int i = 0; i < assets.Length; i++)
-                {
-                    if (string.IsNullOrEmpty(assets[i]))
-                    {
-                        continue;
-                    }
-
-                    AssimpImporter.PackForEngine(assets[i], modelNames[i]);
-                }
-            }
+            Importer.ImportModels(
+                () => AssimpImporter.Read(modelTalkingOnPhone, new(), assetsFolder),
+                [
+                    Path.Combine(outputsFolder, modelName1),
+                    Path.Combine(outputsFolder, modelName2),
+                    Path.Combine(outputsFolder, modelName3),
+                    Path.Combine(outputsFolder, modelName4),
+                    Path.Combine(outputsFolder, modelName5),
+                    Path.Combine(outputsFolder, modelName6),
+                ]);
 
             using TextureImporter importer = new();
             string brdfLutPath = Path.Combine(outputsFolder, iblBrdfLutTextureName);

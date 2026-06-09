@@ -58,31 +58,16 @@ namespace DX12Windows.Content
 
         public void Load(string assetsFolder, string outputsFolder)
         {
-            string[] modelNames =
-            [
-                Path.Combine(outputsFolder, model1Name),
-                Path.Combine(outputsFolder, model2Name),
-                Path.Combine(outputsFolder, model3Name),
-                Path.Combine(outputsFolder, model4Name),
-                Path.Combine(outputsFolder, model5Name),
-                Path.Combine(outputsFolder, model6Name),
-            ];
-
-            if (modelNames.Any(f => !File.Exists(f)))
-            {
-                string[] assets = [.. AssimpImporter.Read(modelM24, new(), assetsFolder)];
-
-                Debug.Assert(assets.Length == modelNames.Length);
-                for (int i = 0; i < assets.Length; i++)
-                {
-                    if (string.IsNullOrEmpty(assets[i]))
-                    {
-                        continue;
-                    }
-
-                    AssimpImporter.PackForEngine(assets[i], modelNames[i]);
-                }
-            }
+            Importer.ImportModels(
+                () => AssimpImporter.Read(modelM24, new(), assetsFolder),
+                [
+                    Path.Combine(outputsFolder, model1Name),
+                    Path.Combine(outputsFolder, model2Name),
+                    Path.Combine(outputsFolder, model3Name),
+                    Path.Combine(outputsFolder, model4Name),
+                    Path.Combine(outputsFolder, model5Name),
+                    Path.Combine(outputsFolder, model6Name),
+                ]);
 
             using TextureImporter importer = new();
             string brdfLutPath = Path.Combine(outputsFolder, iblBrdfLutTextureName);

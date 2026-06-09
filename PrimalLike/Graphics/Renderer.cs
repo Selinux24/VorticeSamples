@@ -103,13 +103,13 @@ namespace PrimalLike.Graphics
             gfx.GetParameter(id, parameter, out value);
         }
 
-        public static IdType AddSubmesh(ref IntPtr data)
+        public static IdType[] AddMesh(ref IntPtr data, uint count)
         {
-            return gfx.AddSubmesh(ref data);
+            return gfx.AddMesh(ref data, count);
         }
-        public static void RemoveSubmesh(IdType id)
+        public static void RemoveMesh(IdType[] ids, uint count)
         {
-            gfx.RemoveSubmesh(id);
+            gfx.RemoveMesh(ids, count);
         }
         public static IdType AddMaterial(MaterialInitInfo info)
         {

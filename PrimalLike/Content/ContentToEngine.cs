@@ -84,6 +84,47 @@ namespace PrimalLike.Content
             }
         }
 
+        /// <summary>
+        /// Creates a geometry resource. The geometry resource can represent a single mesh or a hierarchy of meshes with multiple LODs. The function determines the type of geometry based on the input data and creates the appropriate resource accordingly.
+        /// </summary>
+        /// <param name="data">Pointer to the geometry data.</param>
+        /// <returns>Returns the ID of the created geometry resource.</returns>
+        /// <remarks>
+        /// NOTE: Expects 'data' to contain:
+        /// struct{
+        ///     u32 lod_count,
+        ///     f32 lod_thresholds[lod_count],
+        ///     u32 submesh_counts[lod_count],
+        ///     u32 size_of_mesh_data,
+        ///     struct{
+        ///         u8 positions[sizeof(f32) * 3 * vertex_count],     // sizeof(positions) must be a multiple of 4 bytes. Pad if needed.
+        ///         u8 elements[elements_size * vertex_count],        // sizeof(elements) must be a multiple of 4 bytes. Pad if needed.
+        ///         u8 indices[index_size * index_count],             // sizeof(indices) must be a multiple of 4 bytes. Pad if needed.
+        ///     } submesh_data[total_submesh_count]
+        /// 
+        ///     struct{
+        ///         u32 elements_size, u32 vertex_count,
+        ///         u32 index_count, u32 elements_type, u32 primitive_topology
+        ///      } submesh_info[total_submesh_count]
+        /// } geometry;
+        ///
+        /// Output format:
+        ///
+        /// If geometry has more than one LOD or submesh:
+        /// struct {
+        ///     u32 lod_count,
+        ///     f32 thresholds[lod_count],
+        ///     struct {
+        ///         u16 offset,
+        ///         u16 count
+        ///     } lod_offsets[lod_count],
+        ///     id::id_type gpu_ids[total_number_of_submeshes]
+        /// } geometry_hierarchy
+        /// 
+        /// If geometry has a single LOD and submesh:
+        ///
+        /// (gpu_id << 32) | 0x01
+        /// </remarks>
         static uint CreateGeometryResource(IntPtr data)
         {
             Debug.Assert(data != IntPtr.Zero);
@@ -107,14 +148,14 @@ namespace PrimalLike.Content
             Debug.Assert(data != IntPtr.Zero);
             BlobStreamReader blob = new(data);
 
-            // skip lod_count, lod_threshold, submesh_count and size_of_submeshes
-            blob.Skip(sizeof(uint) + sizeof(float) + sizeof(uint) + sizeof(uint));
-
+            // skip lod_count, lod_threshold, submesh_count
+            blob.Skip(sizeof(uint) + sizeof(float) + sizeof(uint));
             IntPtr at = blob.Position;
-            uint gpuId = Renderer.AddSubmesh(ref at);
+            IdType[] gpuIds = Renderer.AddMesh(ref at, 1);
+            Debug.Assert(IdDetail.IsValid(gpuIds[0]));
 
             // create a fake pointer and put it in the geometry_hierarchies.
-            IntPtr fakePointer = CreateGpuIdFakePointer(gpuId);
+            IntPtr fakePointer = CreateGpuIdFakePointer(gpuIds[0]);
             lock (geometryMutex)
             {
                 return geometryHierarchies.Add(fakePointer);
@@ -135,13 +176,16 @@ namespace PrimalLike.Content
             Debug.Assert(lodCount > 0);
 
             GeometryHierarchyStream stream = new(size, lodCount);
-            uint submeshIndex = 0;
 
             for (int lodIdx = 0; lodIdx < lodCount; ++lodIdx)
             {
                 float trheshold = blob.Read<float>();
                 stream.Thresholds.Add(trheshold);
+            }
 
+            uint submeshIndex = 0;
+            for (int lodIdx = 0; lodIdx < lodCount; ++lodIdx)
+            {
                 uint id = blob.Read<uint>();
                 Debug.Assert(id < ushort.MaxValue);
                 ushort idCount = (ushort)id;
@@ -150,19 +194,15 @@ namespace PrimalLike.Content
                     Offset = (ushort)submeshIndex,
                     Count = idCount
                 });
+                submeshIndex += idCount;
 
-                // skip over size_of_submeshes
-                blob.Skip(sizeof(uint));
-
-                for (ushort idIdx = 0; idIdx < idCount; idIdx++)
-                {
-                    IntPtr at = blob.Position;
-                    stream.GpuIds.Add(Renderer.AddSubmesh(ref at));
-                    submeshIndex++;
-                    blob.Skip((uint)(at - blob.Position));
-                    Debug.Assert(submeshIndex < ushort.MaxValue);
-                }
+                Debug.Assert(submeshIndex < ushort.MaxValue);
             }
+
+            IntPtr at = blob.Position;
+            IdType[] gpuIds = Renderer.AddMesh(ref at, submeshIndex);
+            stream.GpuIds.Clear();
+            stream.GpuIds.AddRange(gpuIds);
 
             Debug.Assert(ValidateThresholdValues(stream, lodCount));
 
@@ -179,22 +219,18 @@ namespace PrimalLike.Content
 
             uint lodCount = blob.Read<uint>();
             Debug.Assert(lodCount > 0);
+            blob.Skip(sizeof(float) * lodCount); // skip thresholds
+
             // add size of  lod_count, thresholds and lod offsets to the size of hierarchy.
             int size = sizeof(uint) + (sizeof(float) + LodOffset.Stride) * (int)lodCount;
 
+            uint meshCount = 0;
             for (var lodIdx = 0; lodIdx < lodCount; lodIdx++)
             {
-                // skip threshold
-                blob.Skip(sizeof(float));
-
-                // add size of gpu_ids (sizeof(IdType) * submesh_count)
-                uint submeshCount = blob.Read<uint>();
-                size += sizeof(IdType) * (int)submeshCount;
-
-                // skip submesh data and go to the next LOD
-                uint sizeOfSubmeshes = blob.Read<uint>();
-                blob.Skip(sizeOfSubmeshes);
+                meshCount += blob.Read<uint>();
             }
+
+            size += sizeof(IdType) * (int)meshCount;
 
             return size;
         }
@@ -273,21 +309,15 @@ namespace PrimalLike.Content
                 if ((pointer & SingleMeshMarker) != 0)
                 {
                     IdType fakePointer = GpuIdFromFakePointer(pointer);
-                    Renderer.RemoveSubmesh(fakePointer);
+                    Renderer.RemoveMesh([fakePointer], 1);
                 }
                 else
                 {
                     GeometryHierarchyStream stream = new(pointer);
                     uint lodCount = stream.LodCount;
-                    int idIndex = 0;
-                    for (int lod = 0; lod < lodCount; lod++)
-                    {
-                        for (ushort i = 0; i < stream.LodOffsets[lod].Count; i++)
-                        {
-                            uint submeshId = stream.GpuIds[idIndex++];
-                            Renderer.RemoveSubmesh(submeshId);
-                        }
-                    }
+                    var lodOffset = stream.LodOffsets[(int)lodCount - 1];
+                    uint gpuIdCount = lodOffset.Offset + (uint)lodOffset.Count;
+                    Renderer.RemoveMesh([.. stream.GpuIds], gpuIdCount);
 
                     Marshal.FreeHGlobal(pointer);
                 }
