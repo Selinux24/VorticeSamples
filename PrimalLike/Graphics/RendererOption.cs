@@ -6,7 +6,8 @@ namespace PrimalLike.Graphics
         VSync = 0,
         RayTracing,
         MSAA,
-        
+        RenderIndirectly,
+
         Count
     }
 }

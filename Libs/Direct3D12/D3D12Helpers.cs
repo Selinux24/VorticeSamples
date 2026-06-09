@@ -279,6 +279,23 @@ namespace Direct3D12
             return new(rootConstants, visibility);
         }
 
+        public static IndirectArgumentDescription AsConstants(
+            uint rootParamIndex,
+            uint offset,
+            uint count)
+        {
+            return new()
+            {
+                Type = IndirectArgumentType.Constant,
+                Constant = new()
+                {
+                    RootParameterIndex = rootParamIndex,
+                    DestOffsetIn32BitValues = offset,
+                    Num32BitValuesToSet = count
+                }
+            };
+        }
+
         public static RootParameter1 AsDescriptor(
             RootParameterType type,
             ShaderVisibility visibility,
@@ -300,6 +317,18 @@ namespace Direct3D12
             return AsDescriptor(RootParameterType.ConstantBufferView, visibility, shaderRegister, space, flags);
         }
 
+        public static IndirectArgumentDescription AsCbv(uint rootParamIndex)
+        {
+            return new()
+            {
+                Type = IndirectArgumentType.ConstantBufferView,
+                ConstantBufferView = new()
+                {
+                    RootParameterIndex = rootParamIndex
+                }
+            };
+        }
+
         public static RootParameter1 AsSrv(
             ShaderVisibility visibility,
             uint shaderRegister,
@@ -309,6 +338,18 @@ namespace Direct3D12
             return AsDescriptor(RootParameterType.ShaderResourceView, visibility, shaderRegister, space, flags);
         }
 
+        public static IndirectArgumentDescription AsSrv(uint rootParamIndex)
+        {
+            return new()
+            {
+                Type = IndirectArgumentType.ShaderResourceView,
+                ShaderResourceView = new()
+                {
+                    RootParameterIndex = rootParamIndex
+                }
+            };
+        }
+
         public static RootParameter1 AsUav(
             ShaderVisibility visibility,
             uint shaderRegister,
@@ -316,6 +357,55 @@ namespace Direct3D12
             RootDescriptorFlags flags = RootDescriptorFlags.None)
         {
             return AsDescriptor(RootParameterType.UnorderedAccessView, visibility, shaderRegister, space, flags);
+        }
+
+        public static IndirectArgumentDescription AsUav(uint rootParamIndex)
+        {
+            return new()
+            {
+                Type = IndirectArgumentType.UnorderedAccessView,
+                UnorderedAccessView = new()
+                {
+                    RootParameterIndex = rootParamIndex
+                }
+            };
+        }
+
+        public static IndirectArgumentDescription AsIncCons(uint rootParamIndex, uint offset)
+        {
+            return new()
+            {
+                Type = IndirectArgumentType.IncrementingConstant,
+                IncrementingConstant = new()
+                {
+                    RootParameterIndex = rootParamIndex,
+                    DestOffsetIn32BitValues = offset
+                }
+            };
+        }
+
+        public static IndirectArgumentDescription AsIndexBufferView()
+        {
+            return new()
+            {
+                Type = IndirectArgumentType.IndexBufferView
+            };
+        }
+
+        public static IndirectArgumentDescription AsDrawIndexed()
+        {
+            return new()
+            {
+                Type = IndirectArgumentType.DrawIndexed
+            };
+        }
+
+        public static IndirectArgumentDescription AsDispatch()
+        {
+            return new()
+            {
+                Type = IndirectArgumentType.Dispatch
+            };
         }
 
         public static RootParameter1 AsDescriptorTable(
@@ -340,12 +430,29 @@ namespace Direct3D12
                 Debug.WriteLine(error.AsString());
                 Debug.WriteLine(SEPARATOR_END, [caller]);
 
+                signatureBlob?.Dispose();
+                error?.Dispose();
+
                 return null;
             }
 
             if (!DxCall(D3D12Graphics.Device.CreateRootSignature(0, signatureBlob.BufferPointer, signatureBlob.BufferSize, out ID3D12RootSignature signature)))
             {
                 signature.Dispose();
+            }
+
+            return signature;
+        }
+
+        public static ID3D12CommandSignature CreateCommandSignature(CommandSignatureDescription desc, ID3D12RootSignature rootSignature)
+        {
+            Debug.Assert(rootSignature != null);
+
+            if (!DxCall(D3D12Graphics.Device.CreateCommandSignature<ID3D12CommandSignature>(desc, rootSignature, out var signature)))
+            {
+                signature?.Dispose();
+           
+                return null;
             }
 
             return signature;

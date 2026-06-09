@@ -82,6 +82,27 @@ namespace PrimalLike
         }
 
         /// <summary>
+        /// Sets a renderer option.
+        /// </summary>
+        /// <typeparam name="T">Type of the option value</typeparam>
+        /// <param name="option">Renderer option to set</param>
+        /// <param name="parameter">Value of the option</param>
+        public static void SetRendererOption<T>(RendererOption option, T parameter)
+        {
+            Renderer.SetOption(option, parameter);
+        }
+        /// <summary>
+        /// Gets a renderer option.
+        /// </summary>
+        /// <typeparam name="T">Type of the option value</typeparam>
+        /// <param name="option">Renderer option to get</param>
+        /// <returns>Value of the renderer option</returns>
+        public static T GetRendererOption<T>(RendererOption option)
+        {
+            return Renderer.GetOption<T>(option);
+        }
+
+        /// <summary>
         /// Creates a render component.
         /// </summary>
         /// <typeparam name="T">Render component type</typeparam>
@@ -331,7 +352,7 @@ namespace PrimalLike
                 IsRunning = false;
             }
         }
-        
+
         /// <summary>
         /// Updates the application.
         /// </summary>

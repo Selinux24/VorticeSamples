@@ -14,7 +14,7 @@ namespace Direct3D12.Helpers
         /// <param name="data">The data to write</param>
         /// <param name="dst">The destination pointer</param>
         /// <returns>The size of the written data in bytes</returns>
-        public static unsafe uint WriteUnaligned<T>(T data, IntPtr dst) where T : unmanaged
+        public static unsafe uint WriteUnaligned<T>(T data, IntPtr dst)
         {
             Debug.Assert(dst != IntPtr.Zero);
 
@@ -31,7 +31,7 @@ namespace Direct3D12.Helpers
         /// <param name="data">The data to write</param>
         /// <param name="dst">The destination pointer</param>
         /// <returns>The size of the written data in bytes</returns>
-        public static unsafe uint WriteUnaligned<T>(T[] data, IntPtr dst) where T : unmanaged
+        public static unsafe uint WriteUnaligned<T>(T[] data, IntPtr dst)
         {
             Debug.Assert(dst != IntPtr.Zero);
             Debug.Assert(data?.Length > 0);
@@ -44,7 +44,7 @@ namespace Direct3D12.Helpers
 
                 dst += (IntPtr)size;
             }
-       
+
             return size * (uint)data.Length;
         }
 

@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
+using System.Runtime.InteropServices;
 using System.Threading;
 using Utilities;
 using Vortice.Direct3D12;
@@ -15,6 +16,7 @@ namespace Direct3D12.Content
     static class Material
     {
         static readonly List<ID3D12RootSignature> rootSignatures = [];
+        static readonly List<ID3D12CommandSignature> cmdSignatures = [];
         static readonly Dictionary<ulong, uint> mtlRsMap = []; // maps a material's type and shader flags to an index in the array of root signatures.
         static readonly FreeList<IntPtr> materials = new();
         static readonly Lock materialMutex = new();
@@ -30,8 +32,14 @@ namespace Direct3D12.Content
                 item.Dispose();
             }
 
+            foreach (var item in cmdSignatures)
+            {
+                item.Dispose();
+            }
+
             mtlRsMap.Clear();
             rootSignatures.Clear();
+            cmdSignatures.Clear();
         }
 
         public static uint Add(MaterialInitInfo info)
@@ -65,6 +73,7 @@ namespace Direct3D12.Content
                     var stream = new D3D12MaterialStream(materials[materialIds[i]]);
 
                     cache.RootSignatures[i] = rootSignatures[(int)stream.RootSignatureId];
+                    cache.CmdSignatures[i] = cmdSignatures[(int)stream.RootSignatureId];
                     cache.MaterialTypes[i] = stream.MaterialType;
                     cache.DescriptorIndices[i] = stream.DescriptorIndices;
                     cache.TextureCounts[i] = stream.TextureCount;
@@ -92,7 +101,7 @@ namespace Direct3D12.Content
             {
                 case MaterialTypes.Opaque:
                 {
-                    RootParameter1[] parameters = new RootParameter1[(uint)OpaqueRootParameter.Count];
+                    var parameters = new RootParameter1[(uint)OpaqueRootParameter.Count];
 
                     ShaderVisibility bufferVisibility = new();
                     ShaderVisibility dataVisibility = new();
@@ -152,6 +161,8 @@ namespace Direct3D12.Content
             mtlRsMap[key] = id;
             D3D12Helpers.NameD3D12Object(rootSignature, key, "GPass Root Signature - key");
 
+            CreateCommandSignature(type, id);
+
             return id;
         }
         static RootSignatureFlags GetRootSignatureFlags(ShaderFlags flags)
@@ -165,6 +176,42 @@ namespace Direct3D12.Content
             if (flags.HasFlag(ShaderFlags.Amplification)) defaultFlags &= ~RootSignatureFlags.DenyAmplificationShaderRootAccess;
             if (flags.HasFlag(ShaderFlags.Mesh)) defaultFlags &= ~RootSignatureFlags.DenyMeshShaderRootAccess;
             return defaultFlags;
+        }
+        static void CreateCommandSignature(MaterialTypes type, uint rootSigId)
+        {
+            Debug.Assert(rootSigId < rootSignatures.Count);
+            Debug.Assert(rootSigId == cmdSignatures.Count);
+
+            ID3D12CommandSignature cmdSignature = null;
+
+            switch (type)
+            {
+                case MaterialTypes.Opaque:
+                {
+                    var parameters = new IndirectArgumentDescription[(uint)OpaqueRootParameter.Count + 2];
+
+                    parameters[(uint)OpaqueRootParameter.GlobalShaderData] = D3D12Helpers.AsCbv((uint)OpaqueRootParameter.GlobalShaderData);
+                    parameters[(uint)OpaqueRootParameter.PerObjectData] = D3D12Helpers.AsCbv((uint)OpaqueRootParameter.PerObjectData);
+                    parameters[(uint)OpaqueRootParameter.PositionBuffer] = D3D12Helpers.AsSrv((uint)OpaqueRootParameter.PositionBuffer);
+                    parameters[(uint)OpaqueRootParameter.ElementBuffer] = D3D12Helpers.AsSrv((uint)OpaqueRootParameter.ElementBuffer);
+                    parameters[(uint)OpaqueRootParameter.MaterialData] = D3D12Helpers.AsSrv((uint)OpaqueRootParameter.MaterialData);
+                    parameters[(uint)OpaqueRootParameter.DirectionalLights] = D3D12Helpers.AsSrv((uint)OpaqueRootParameter.DirectionalLights);
+                    parameters[(uint)OpaqueRootParameter.CullableLights] = D3D12Helpers.AsSrv((uint)OpaqueRootParameter.CullableLights);
+                    parameters[(uint)OpaqueRootParameter.LightGrid] = D3D12Helpers.AsSrv((uint)OpaqueRootParameter.LightGrid);
+                    parameters[(uint)OpaqueRootParameter.LightIndexList] = D3D12Helpers.AsSrv((uint)OpaqueRootParameter.LightIndexList);
+
+                    parameters[(uint)OpaqueRootParameter.Count] = D3D12Helpers.AsIndexBufferView();
+
+                    parameters[(uint)OpaqueRootParameter.Count + 1] = D3D12Helpers.AsDrawIndexed();
+
+                    cmdSignature = D3D12CommandSignatureDesc.Create(Marshal.SizeOf<DrawIndexedIndirectCommand>(), parameters, rootSignatures[(int)rootSigId]);
+                }
+                break;
+            }
+
+            Debug.Assert(cmdSignature != null);
+            cmdSignatures.Add(cmdSignature);
+            Debug.Assert(rootSigId == cmdSignatures.Count - 1);
         }
 
         public static PsoId CreatePso(uint materialId, D3DPrimitiveTopology primitiveTopology, uint elementsType)
@@ -202,8 +249,8 @@ namespace Direct3D12.Content
                 stream.As = new(shaders[(uint)ShaderTypes.Amplification].ByteCode.Span);
                 stream.Ms = new(shaders[(uint)ShaderTypes.Mesh].ByteCode.Span);
 
-                depthPrepassVertexShader = usePositionOnlyForDepthPrepass ? 
-                    GetShaderByteCode(ShaderTypes.Vertex, 0, material, 0) : 
+                depthPrepassVertexShader = usePositionOnlyForDepthPrepass ?
+                    GetShaderByteCode(ShaderTypes.Vertex, 0, material, 0) :
                     shaders[(uint)ShaderTypes.Vertex];
             }
 

@@ -23,7 +23,12 @@ namespace Direct3D12
             private byte[] buffer = [];
 
             public uint[] D3D12RenderItemIds = [];
+            public int[] DrawIndirectPsoSortFlags = [];
+            public uint[] GPassGroupedIndices = [];
+            public uint[] DepthGroupedIndices = [];
             public uint DescriptorIndexCount = 0;
+            public uint GPassPsoCount = 0;
+            public uint DepthPsoCount = 0;
 
             // NOTE: when adding new arrays, make sure to update resize() and struct_size.
             public uint[] EntityIds = null;
@@ -32,6 +37,7 @@ namespace Direct3D12
             public ID3D12PipelineState[] GPassPipelineStates = null;
             public ID3D12PipelineState[] DepthPipelineStates = null;
             public ID3D12RootSignature[] RootSignatures = null;
+            public ID3D12CommandSignature[] CmdSignatures = null;
             public MaterialTypes[] MaterialTypes = null;
             public uint[][] DescriptorIndices = null;
             public uint[] TextureCounts = null;
@@ -51,6 +57,7 @@ namespace Direct3D12
                 Marshal.SizeOf<IntPtr>() +          // gpass_pipeline_states
                 Marshal.SizeOf<IntPtr>() +          // depth_pipeline_states
                 Marshal.SizeOf<IntPtr>() +          // root_signatures
+                Marshal.SizeOf<IntPtr>() +          // cmd_signatures
                 sizeof(MaterialTypes) +             // material_types
                 sizeof(uint) +                      // TODO: descriptor_indices
                 sizeof(uint) +                      // texture_counts
@@ -80,6 +87,10 @@ namespace Direct3D12
 
                 if (newBufferSize == oldBufferSize) return;
 
+                Array.Resize(ref DrawIndirectPsoSortFlags, (int)itemsCount);
+                Array.Resize(ref GPassGroupedIndices, (int)itemsCount);
+                Array.Resize(ref DepthGroupedIndices, (int)itemsCount);
+
                 Array.Resize(ref buffer, (int)newBufferSize);
 
                 EntityIds = new uint[itemsCount];
@@ -88,6 +99,7 @@ namespace Direct3D12
                 GPassPipelineStates = new ID3D12PipelineState[itemsCount];
                 DepthPipelineStates = new ID3D12PipelineState[itemsCount];
                 RootSignatures = new ID3D12RootSignature[itemsCount];
+                CmdSignatures = new ID3D12CommandSignature[itemsCount];
                 MaterialTypes = new MaterialTypes[itemsCount];
                 DescriptorIndices = new uint[itemsCount][];
                 TextureCounts = new uint[itemsCount];
@@ -128,6 +140,7 @@ namespace Direct3D12
                 return new()
                 {
                     RootSignatures = RootSignatures,
+                    CmdSignatures = CmdSignatures,
                     MaterialTypes = MaterialTypes,
                     DescriptorIndices = DescriptorIndices,
                     TextureCounts = TextureCounts,
@@ -172,6 +185,7 @@ namespace Direct3D12
         static uint dimensionHeight = initialDimensionHeight;
 
         static GPassCache frameCache = new();
+        static readonly CommandBuffer[] commandBuffers = new CommandBuffer[D3D12Graphics.FrameBufferCount];
 
 #if DEBUG
         static readonly Color clearValue = new(0.5f, 0.5f, 0.5f, 1.0f);
@@ -190,6 +204,11 @@ namespace Direct3D12
 
         public static bool Initialize()
         {
+            for (int i = 0; i < commandBuffers.Length; i++)
+            {
+                commandBuffers[i] = new();
+            }
+
             return CreateBuffers(initialDimensionWidth, initialDimensionHeight);
         }
         static bool CreateBuffers(uint width, uint height)
@@ -241,6 +260,12 @@ namespace Direct3D12
             gpassDepthBuffer = null;
             dimensionWidth = initialDimensionWidth;
             dimensionHeight = initialDimensionHeight;
+
+            for (uint i = 0; i < D3D12Graphics.FrameBufferCount; i++)
+            {
+                commandBuffers[i]?.Dispose();
+                commandBuffers[i] = null;
+            }
         }
 
         public static void SetSize(uint width, uint height)
@@ -319,13 +344,154 @@ namespace Direct3D12
 
                 SetRootParameters(cmdList, i);
 
-                IndexBufferView ibv = frameCache.IndexBufferViews[i];
+                var ibv = frameCache.IndexBufferViews[i];
                 uint indexCount = ibv.SizeInBytes >> (ibv.Format == Format.R16_UInt ? 1 : 2);
 
                 cmdList.IASetIndexBuffer(ibv);
                 cmdList.IASetPrimitiveTopology(frameCache.PrimitiveTopologies[i]);
                 cmdList.DrawIndexedInstanced(indexCount, 1, 0, 0, 0);
             }
+        }
+        public static void DepthPrePassIndirect(ID3D12GraphicsCommandList cmdList, ref D3D12FrameInfo d3d12Info)
+        {
+            PrepareRenderFrame(ref d3d12Info);
+
+            uint itemsCount = frameCache.Size();
+            if (itemsCount == 0) return;
+
+            uint frameIdx = d3d12Info.FrameIndex;
+            var cmdBuffer = commandBuffers[frameIdx];
+            cmdBuffer.Resize(itemsCount);
+            GroupByPso();
+
+            uint psoCount = frameCache.DepthPsoCount;
+            uint[] newPsoIndices = new uint[psoCount];
+            RecordDepthCommandBuffer(ref d3d12Info, newPsoIndices, psoCount);
+
+            for (uint i = 0; i < psoCount; i++)
+            {
+                uint cacheIndex = frameCache.DepthGroupedIndices[(int)newPsoIndices[i]];
+                var currentRootSignature = frameCache.RootSignatures[cacheIndex];
+                var currentPso = frameCache.DepthPipelineStates[cacheIndex];
+                var topology = frameCache.PrimitiveTopologies[cacheIndex];
+
+                uint cmdCount = i + 1 < psoCount ? newPsoIndices[i + 1] - newPsoIndices[i] : itemsCount - newPsoIndices[i];
+
+                cmdList.SetGraphicsRootSignature(currentRootSignature);
+                cmdList.SetPipelineState(currentPso);
+                cmdList.IASetPrimitiveTopology(topology);
+
+                cmdList.ExecuteIndirect(
+                    frameCache.CmdSignatures[cacheIndex], cmdCount,
+                    cmdBuffer.Buffer,
+                    cmdBuffer.Size + newPsoIndices[i] * (uint)Marshal.SizeOf<DrawIndexedIndirectCommand>(),
+                    null, 0);
+            }
+        }
+        static void GroupByPso()
+        {
+            uint itemsCount = frameCache.Size();
+            if (itemsCount == 0) return;
+
+            Debug.Assert(frameCache.DrawIndirectPsoSortFlags.Length == itemsCount);
+            Debug.Assert(frameCache.GPassGroupedIndices.Length == itemsCount);
+            Debug.Assert(frameCache.DepthGroupedIndices.Length == itemsCount);
+
+            Array.Fill(frameCache.DrawIndirectPsoSortFlags, 0, 0, (int)itemsCount);
+            Array.Fill(frameCache.GPassGroupedIndices, uint.MaxValue, 0, (int)itemsCount);
+            Array.Fill(frameCache.DepthGroupedIndices, uint.MaxValue, 0, (int)itemsCount);
+
+            for (uint pass = 0; pass < 2; pass++)
+            {
+                uint itemIndex = 0;
+                uint psoCount = 0;
+                byte passMask = pass == 0 ? (byte)0x0f : (byte)0xf0;
+                byte flagSet = pass == 0 ? (byte)0x01 : (byte)0x10;
+                byte flagNewPso = pass == 0 ? (byte)0x02 : (byte)0x20;
+                var groupedIndices = pass == 0 ? frameCache.GPassGroupedIndices : frameCache.DepthGroupedIndices;
+                var pipelineStates = pass == 0 ? frameCache.GPassPipelineStates : frameCache.DepthPipelineStates;
+
+                for (; ; )
+                {
+                    uint index = 0;
+                    while (index < itemsCount && (frameCache.DrawIndirectPsoSortFlags[index] & passMask) != 0) index++;
+                    if (index >= itemsCount) break;
+
+                    var currentPso = pipelineStates[index];
+
+                    // mark the first item that's using the current pso
+                    frameCache.DrawIndirectPsoSortFlags[index] |= flagNewPso;
+                    psoCount++;
+
+                    for (uint i = index; i < itemsCount; i++)
+                    {
+                        if ((frameCache.DrawIndirectPsoSortFlags[i] & flagSet) == 0 && currentPso == pipelineStates[i])
+                        {
+                            frameCache.DrawIndirectPsoSortFlags[i] |= flagSet;
+                            groupedIndices[itemIndex++] = i;
+                        }
+                    }
+                }
+
+                Debug.Assert(psoCount > 0);
+                Debug.Assert(Array.IndexOf(groupedIndices, uint.MaxValue) == -1);
+
+                if (pass == 0)
+                {
+                    frameCache.GPassPsoCount = psoCount;
+                }
+                else
+                {
+                    frameCache.DepthPsoCount = psoCount;
+                }
+            }
+        }
+        static void RecordDepthCommandBuffer(ref D3D12FrameInfo d3d12Info, uint[] newPsoIndices, uint psoIndexCount)
+        {
+            Debug.Assert(frameCache.DepthPsoCount == psoIndexCount);
+            uint frameIdx = d3d12Info.FrameIndex;
+            uint itemsCount = frameCache.Size();
+            var cmdBuffer = commandBuffers[frameIdx];
+
+            uint psoIndex = 0;
+
+            for (uint i = 0; i < itemsCount; i++)
+            {
+                Debug.Assert((frameCache.DrawIndirectPsoSortFlags[i] & 0xf0) != 0 && frameCache.DepthGroupedIndices[i] != uint.MaxValue);
+                uint cacheIndex = frameCache.DepthGroupedIndices[i];
+
+                if ((frameCache.DrawIndirectPsoSortFlags[cacheIndex] & 0x20) != 0)
+                {
+                    newPsoIndices[psoIndex++] = i;
+                }
+
+                ref var cmd = ref cmdBuffer.Commands[i];
+
+                switch (frameCache.MaterialTypes[cacheIndex])
+                {
+                    case MaterialTypes.Opaque:
+                    {
+                        cmd.SetParameter(OpaqueRootParameter.GlobalShaderData, d3d12Info.GlobalShaderData);
+                        cmd.SetParameter(OpaqueRootParameter.PerObjectData, frameCache.PerObjectData[cacheIndex]);
+                        cmd.SetParameter(OpaqueRootParameter.PositionBuffer, frameCache.PositionBuffers[cacheIndex]);
+                        cmd.SetParameter(OpaqueRootParameter.ElementBuffer, frameCache.ElementBuffers[cacheIndex]);
+                        cmd.SetParameter(OpaqueRootParameter.MaterialData, frameCache.MaterialData[cacheIndex]);
+
+                        var ibv = frameCache.IndexBufferViews[cacheIndex];
+                        cmd.IndexBufferView = ibv;
+
+                        uint indexCount = ibv.SizeInBytes >> (ibv.Format == Format.R16_UInt ? 1 : 2);
+                        cmd.DrawIndexedArgs.IndexCountPerInstance = indexCount;
+                        cmd.DrawIndexedArgs.InstanceCount = 1;
+                        cmd.DrawIndexedArgs.StartIndexLocation = 0;
+                        cmd.DrawIndexedArgs.BaseVertexLocation = 0;
+                        cmd.DrawIndexedArgs.StartInstanceLocation = 0;
+                    }
+                    break;
+                }
+            }
+
+            cmdBuffer.UploadDepthCommands();
         }
         static void PrepareRenderFrame(ref D3D12FrameInfo d3d12Info)
         {
@@ -471,6 +637,97 @@ namespace Direct3D12
                 cmdList.IASetPrimitiveTopology(frameCache.PrimitiveTopologies[i]);
                 cmdList.DrawIndexedInstanced(indexCount, 1, 0, 0, 0);
             }
+        }
+        public static void RenderIndirect(ID3D12GraphicsCommandList cmdList, ref D3D12FrameInfo d3d12Info)
+        {
+            uint itemsCount = frameCache.Size();
+
+            if (itemsCount == 0) return;
+
+            uint frameIndex = d3d12Info.FrameIndex;
+            var cmdBuffer = commandBuffers[frameIndex];
+            uint psoCount = frameCache.GPassPsoCount;
+            uint[] newPsoIndices = new uint[psoCount];
+
+            RecordGPassCommandBuffer(ref d3d12Info, newPsoIndices, psoCount);
+
+            for (uint i = 0; i < psoCount; i++)
+            {
+                uint cacheIndex = frameCache.GPassGroupedIndices[newPsoIndices[i]];
+                var currentRootSignature = frameCache.RootSignatures[cacheIndex];
+                var currentPso = frameCache.GPassPipelineStates[cacheIndex];
+                var topology = frameCache.PrimitiveTopologies[cacheIndex];
+
+                uint cmdCount = i + 1 < psoCount ?
+                    newPsoIndices[i + 1] - newPsoIndices[i] :
+                    itemsCount - newPsoIndices[i];
+
+                cmdList.SetGraphicsRootSignature(currentRootSignature);
+                cmdList.SetPipelineState(currentPso);
+                cmdList.IASetPrimitiveTopology(topology);
+
+                cmdList.ExecuteIndirect(
+                    frameCache.CmdSignatures[cacheIndex], cmdCount,
+                    cmdBuffer.Buffer,
+                    newPsoIndices[i] * (uint)Marshal.SizeOf<DrawIndexedIndirectCommand>(),
+                    null, 0);
+            }
+        }
+        static void RecordGPassCommandBuffer(ref D3D12FrameInfo d3d12Info, uint[] newPsoIndices, uint psoIndexCount)
+        {
+            Debug.Assert(frameCache.GPassPsoCount == psoIndexCount);
+            uint frameIdx = d3d12Info.FrameIndex;
+            uint itemsCount = frameCache.Size();
+            var cmdBuffer = commandBuffers[frameIdx];
+
+            uint lightCullingId = d3d12Info.LightCullingId;
+            ulong nonCullableLights = D3D12Light.NonCullableLightBuffer(frameIdx);
+            ulong cullableLights = D3D12Light.CullableLightBuffer(frameIdx);
+            ulong lightGrid = D3D12LightCulling.LightGridOpaque(lightCullingId, frameIdx);
+            ulong lightIndexList = D3D12LightCulling.LightIndexListOpaque(lightCullingId, frameIdx);
+            uint psoIndex = 0;
+
+            for (uint i = 0; i < itemsCount; i++)
+            {
+                Debug.Assert((frameCache.DrawIndirectPsoSortFlags[i] & 0x0f) != 0 && frameCache.GPassGroupedIndices[i] != uint.MaxValue);
+                uint cacheIndex = frameCache.GPassGroupedIndices[i];
+
+                if ((frameCache.DrawIndirectPsoSortFlags[cacheIndex] & 0x02) != 0)
+                {
+                    newPsoIndices[psoIndex++] = i;
+                }
+
+                ref var cmd = ref cmdBuffer.Commands[i];
+
+                switch (frameCache.MaterialTypes[cacheIndex])
+                {
+                    case MaterialTypes.Opaque:
+                    {
+                        cmd.SetParameter(OpaqueRootParameter.GlobalShaderData, d3d12Info.GlobalShaderData);
+                        cmd.SetParameter(OpaqueRootParameter.PerObjectData, frameCache.PerObjectData[cacheIndex]);
+                        cmd.SetParameter(OpaqueRootParameter.PositionBuffer, frameCache.PositionBuffers[cacheIndex]);
+                        cmd.SetParameter(OpaqueRootParameter.ElementBuffer, frameCache.ElementBuffers[cacheIndex]);
+                        cmd.SetParameter(OpaqueRootParameter.MaterialData, frameCache.MaterialData[cacheIndex]);
+                        cmd.SetParameter(OpaqueRootParameter.DirectionalLights, nonCullableLights);
+                        cmd.SetParameter(OpaqueRootParameter.CullableLights, cullableLights);
+                        cmd.SetParameter(OpaqueRootParameter.LightGrid, lightGrid);
+                        cmd.SetParameter(OpaqueRootParameter.LightIndexList, lightIndexList);
+
+                        var ibv = frameCache.IndexBufferViews[cacheIndex];
+                        cmd.IndexBufferView = ibv;
+
+                        uint indexCount = ibv.SizeInBytes >> (ibv.Format == Format.R16_UInt ? 1 : 2);
+                        cmd.DrawIndexedArgs.IndexCountPerInstance = indexCount;
+                        cmd.DrawIndexedArgs.InstanceCount = 1;
+                        cmd.DrawIndexedArgs.StartIndexLocation = 0;
+                        cmd.DrawIndexedArgs.BaseVertexLocation = 0;
+                        cmd.DrawIndexedArgs.StartInstanceLocation = 0;
+                    }
+                    break;
+                }
+            }
+
+            cmdBuffer.UploadGPassCommands();
         }
 
         public static void AddTransitionsForPostProcess(D3D12ResourceBarrier barriers)

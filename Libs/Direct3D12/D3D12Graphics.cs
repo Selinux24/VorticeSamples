@@ -102,6 +102,10 @@ namespace Direct3D12
         /// Gets the current frame index.
         /// </summary>
         public static int CurrentFrameIndex { get => gfxCommand.FrameIndex; }
+        /// <summary>
+        /// Gets or sets a value indicating whether to render indirectly or not.
+        /// </summary>
+        public static bool RenderIndirectly { get; set; } = true;
 
         /// <summary>
         /// Sets the deferred releases flag.
@@ -467,7 +471,14 @@ namespace Direct3D12
             D3D12GPass.AddTransitionsForDepthPrePass(resourceBarriers);
             resourceBarriers.Apply(cmdList);
             D3D12GPass.SetRenderTargetsForDepthPrePass(cmdList);
-            D3D12GPass.DepthPrePass(cmdList, ref d3d12Info);
+            if (RenderIndirectly)
+            {
+                D3D12GPass.DepthPrePassIndirect(cmdList, ref d3d12Info);
+            }
+            else
+            {
+                D3D12GPass.DepthPrePass(cmdList, ref d3d12Info);
+            }
 
             // Geometry and lighting pass
             D3D12GPass.AddTransitionsForGPass(resourceBarriers);
@@ -475,7 +486,14 @@ namespace Direct3D12
             D3D12LightCulling.CullLights(cmdList, ref d3d12Info, resourceBarriers);
             resourceBarriers.Apply(cmdList);
             D3D12GPass.SetRenderTargetsForGPass(cmdList);
-            D3D12GPass.Render(cmdList, ref d3d12Info);
+            if (RenderIndirectly)
+            {
+                D3D12GPass.RenderIndirect(cmdList, ref d3d12Info);
+            }
+            else
+            {
+                D3D12GPass.Render(cmdList, ref d3d12Info);
+            }
 
             // Post-process
             D3D12GPass.AddTransitionsForPostProcess(resourceBarriers);
@@ -555,6 +573,10 @@ namespace Direct3D12
                         options.MSAASamples = msaaSamples;
                     }
                     break;
+                case RendererOption.RenderIndirectly:
+                    Debug.Assert(parameter is bool);
+                    RenderIndirectly = (bool)(object)parameter;
+                    break;
                 default:
                     break;
             }
@@ -572,6 +594,9 @@ namespace Direct3D12
                 case RendererOption.MSAA:
                     Debug.Assert(typeof(T) == typeof(uint));
                     return (T)(object)options.MSAASamples;
+                case RendererOption.RenderIndirectly:
+                    Debug.Assert(typeof(T) == typeof(bool));
+                    return (T)(object)RenderIndirectly;
                 default:
                     return default;
             }
