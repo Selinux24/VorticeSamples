@@ -433,7 +433,7 @@ namespace Direct3D12
                     }
                 }
 
-                Debug.Assert(psoCount > 0);
+                Debug.Assert(psoCount > 0 && itemIndex == itemsCount);
                 Debug.Assert(Array.IndexOf(groupedIndices, uint.MaxValue) == -1);
 
                 if (pass == 0)

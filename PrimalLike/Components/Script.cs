@@ -140,7 +140,7 @@ namespace PrimalLike.Components
             idMapping[(int)IdDetail.Index(lastId)] = index;
             idMapping[(int)IdDetail.Index(id)] = IdDetail.InvalidId;
 
-            if (generations[(int)index] < IdDetail.MaxGeneration)
+            if (generations[(int)IdDetail.Index(id)] < IdDetail.MaxGeneration)
             {
                 freeIds.Enqueue(id);
             }

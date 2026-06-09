@@ -14,7 +14,7 @@ namespace Direct3D12
     /// </summary>
     class D3D12Surface : IDisposable
     {
-        const int BufferCount = 3;
+        const int BufferCount = 4;
 
         struct RenderTargetData
         {
@@ -118,7 +118,9 @@ namespace Direct3D12
         }
         static SwapChainFlags GetFlags()
         {
-            return D3D12Graphics.AllowTearing() ? SwapChainFlags.AllowTearing : SwapChainFlags.None;
+            return D3D12Graphics.AllowTearing() ?
+                SwapChainFlags.FrameLatencyWaitableObject | SwapChainFlags.AllowTearing :
+                SwapChainFlags.FrameLatencyWaitableObject;
         }
 
         /// <summary>
@@ -193,6 +195,8 @@ namespace Direct3D12
             // set viewport and scissor rect
             viewport = new(width, height);
             scissorRect = new(0, 0, (int)width, (int)height);
+
+            swapChain.MaximumFrameLatency = BufferCount;
         }
 
         /// <summary>
